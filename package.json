@@ -1,0 +1,35 @@
+{
+  "name": "FantasticFrame",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "bun --bun nuxt build",
+    "dev": "bun --bun nuxt dev",
+    "generate": "bun --bun nuxt generate",
+    "preview": "bun --bun nuxt preview",
+    "postinstall": "bun --bun nuxt prepare",
+    "lint": "oxlint .",
+    "desktop:dev": "electrobun dev",
+    "desktop:dev:watch": "electrobun dev --watch",
+    "desktop:start": "electrobun run",
+    "desktop:build": "electrobun build",
+    "desktop:build:stable": "electrobun build --env=stable"
+  },
+  "dependencies": {
+    "@pinia/nuxt": "^1.0.1",
+    "electrobun": "^1.18.1",
+    "exifr": "^7.1.3",
+    "nuxt": "^4.5.1",
+    "takumi-js": "^2.5.4",
+    "vue": "^3.5.40",
+    "vue-router": "^5.2.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/bun": "latest",
+    "oxlint": "^1.76.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~5.9.0",
+    "vue-tsc": "^3.3.9"
+  }
+}

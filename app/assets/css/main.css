@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+@theme {
+  --color-nord-0: #2E3440;
+  --color-nord-1: #3B4252;
+  --color-nord-2: #434C5E;
+  --color-nord-3: #4C566A;
+  --color-nord-4: #D8DEE9;
+  --color-nord-5: #E5E9F0;
+  --color-nord-6: #ECEFF4;
+  --color-nord-7: #8FBCBB;
+  --color-nord-8: #88C0D0;
+  --color-nord-9: #81A1C1;
+  --color-nord-10: #5E81AC;
+  --color-nord-11: #BF616A;
+  --color-nord-12: #D08770;
+  --color-nord-13: #EBCB8B;
+  --color-nord-14: #A3BE8C;
+  --color-nord-15: #B48EAD;
+
+  /* Default Nord font family */
+  --font-sans: 'Inter', system-ui, sans-serif;
+}
+
+body {
+  @apply bg-nord-0 text-nord-4 font-sans;
+}
+
+/* 设置浮动窗过渡 */
+.settings-drawer-enter-active,
+.settings-drawer-leave-active {
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+.settings-drawer-enter-from,
+.settings-drawer-leave-to {
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+/* EXIF 浮动窗过渡（左侧滑入） */
+.exif-drawer-enter-active,
+.exif-drawer-leave-active {
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+.exif-drawer-enter-from,
+.exif-drawer-leave-to {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+/* 批量进度条从顶部滑入 */
+.slide-down-enter-active,
+.slide-down-leave-active {
+  transition: max-height 0.2s ease, opacity 0.2s ease;
+  overflow: hidden;
+}
+.slide-down-enter-from,
+.slide-down-leave-to {
+  max-height: 0;
+  opacity: 0;
+}
+.slide-down-enter-to,
+.slide-down-leave-from {
+  max-height: 4px;
+  opacity: 1;
+}
+
+/* 批量导出结果 Toast */
+.toast-enter-active,
+.toast-leave-active {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
+}
+.toast-enter-from,
+.toast-leave-to {
+  transform: translateX(120%);
+  opacity: 0;
+}
