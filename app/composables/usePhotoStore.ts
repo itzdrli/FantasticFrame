@@ -1,116 +1,113 @@
-import { defineStore } from 'pinia'
-import type { ExportOptions, Photo, TemplateConfig } from '~/types'
+import { defineStore } from "pinia";
+import type { ExportOptions, Photo, TemplateConfig } from "~/types";
 
 /**
- * 照片状态管理 Store
+ * Photo state management store
  *
- * 管理所有已导入照片的生命周期：增删选中、EXIF 绑定、模板配置覆写。
+ * Manages the lifecycle of all imported photos: add/remove/select, EXIF binding, template config overrides.
  */
-export const usePhotoStore = defineStore('photos', () => {
-  /** 所有照片列表 */
-  const photos = ref<Photo[]>([])
+export const usePhotoStore = defineStore("photos", () => {
+  /** List of all photos */
+  const photos = ref<Photo[]>([]);
 
-  /** 当前选中照片的 ID */
-  const selectedId = ref<string | null>(null)
+  /** ID of the currently selected photo */
+  const selectedId = ref<string | null>(null);
 
-  /** 默认导出选项 */
+  /** Default export options */
   const exportOptions = ref<ExportOptions>({
-    format: 'png',
+    format: "png",
     quality: 95,
-  })
+  });
 
   // ==================== Getters ====================
 
-  /** 当前选中的照片 */
-  const selectedPhoto = computed(() =>
-    photos.value.find(p => p.id === selectedId.value) ?? null,
-  )
+  /** Currently selected photo */
+  const selectedPhoto = computed(() => photos.value.find((p) => p.id === selectedId.value) ?? null);
 
-  /** 照片总数 */
-  const count = computed(() => photos.value.length)
+  /** Total number of photos */
+  const count = computed(() => photos.value.length);
 
-  /** 是否有照片 */
-  const hasPhotos = computed(() => photos.value.length > 0)
+  /** Whether there are any photos */
+  const hasPhotos = computed(() => photos.value.length > 0);
 
   // ==================== Actions ====================
 
-  /** 添加一张照片 */
+  /** Adds a photo */
   function addPhoto(photo: Photo) {
-    photos.value.push(photo)
-    // 如果是第一张，自动选中
+    photos.value.push(photo);
+    // Auto-select the first photo
     if (photos.value.length === 1) {
-      selectedId.value = photo.id
+      selectedId.value = photo.id;
     }
   }
 
-  /** 批量添加照片 */
+  /** Adds multiple photos */
   function addPhotos(newPhotos: Photo[]) {
-    const wasEmpty = photos.value.length === 0
-    photos.value.push(...newPhotos)
+    const wasEmpty = photos.value.length === 0;
+    photos.value.push(...newPhotos);
     if (wasEmpty && photos.value.length > 0) {
-      selectedId.value = photos.value[0].id
+      selectedId.value = photos.value[0].id;
     }
   }
 
-  /** 移除一张照片 */
+  /** Removes a photo */
   function removePhoto(id: string) {
-    const index = photos.value.findIndex(p => p.id === id)
-    if (index === -1) return
+    const index = photos.value.findIndex((p) => p.id === id);
+    if (index === -1) return;
 
-    photos.value.splice(index, 1)
+    photos.value.splice(index, 1);
 
-    // 如果移除的是当前选中的，切换到相邻照片
+    // If the removed photo was selected, select a neighboring photo
     if (selectedId.value === id) {
       if (photos.value.length === 0) {
-        selectedId.value = null
-      }
-      else {
-        const newIndex = Math.min(index, photos.value.length - 1)
-        selectedId.value = photos.value[newIndex].id
+        selectedId.value = null;
+      } else {
+        const newIndex = Math.min(index, photos.value.length - 1);
+        selectedId.value = photos.value[newIndex].id;
       }
     }
   }
 
-  /** 清空所有照片 */
+  /** Clears all photos */
   function clearAll() {
-    photos.value = []
-    selectedId.value = null
+    photos.value = [];
+    selectedId.value = null;
   }
 
-  /** 选中指定照片 */
+  /** Selects the given photo */
   function selectPhoto(id: string) {
-    if (photos.value.some(p => p.id === id)) {
-      selectedId.value = id
+    if (photos.value.some((p) => p.id === id)) {
+      selectedId.value = id;
     }
   }
 
-  /** 更新照片的模板配置覆写 */
+  /** Updates a photo's template config overrides */
   function updateTemplateOverrides(id: string, overrides: Partial<TemplateConfig>) {
-    const photo = photos.value.find(p => p.id === id)
+    const photo = photos.value.find((p) => p.id === id);
     if (photo) {
       photo.templateOverrides = {
         ...photo.templateOverrides,
         ...overrides,
-      }
+      };
     }
   }
 
-  /** 切换照片使用的模板 */
+  /** Switches the template used by a photo */
   function setPhotoTemplate(id: string, templateId: string) {
-    const photo = photos.value.find(p => p.id === id)
+    const photo = photos.value.find((p) => p.id === id);
     if (photo) {
-      photo.templateId = templateId
-      // 切换模板时清空个性化覆写
-      photo.templateOverrides = undefined
+      photo.templateId = templateId;
+      // Clear per-photo overrides when switching templates
+      photo.templateOverrides = undefined;
     }
   }
 
-  /** 为所有照片批量应用同一模板 */
+  /** Applies the same template to all photos */
   function applyTemplateToAll(templateId: string) {
     photos.value.forEach((photo) => {
-      photo.templateId = templateId
-      photo.templateOverrides = undefined
-    })
+      photo.templateId = templateId;
+      photo.templateOverrides = undefined;
+    });
   }
 
   return {
@@ -129,11 +126,11 @@ export const usePhotoStore = defineStore('photos', () => {
     clearAll,
     selectPhoto,
     updateTemplateOverrides,
-    /** 别名：组件使用 updatePhotoOverrides */
+    /** Alias: components use updatePhotoOverrides */
     updatePhotoOverrides: updateTemplateOverrides,
     setPhotoTemplate,
-    /** 别名：组件使用 updatePhotoTemplate */
+    /** Alias: components use updatePhotoTemplate */
     updatePhotoTemplate: setPhotoTemplate,
     applyTemplateToAll,
-  }
-})
+  };
+});

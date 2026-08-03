@@ -1,7 +1,7 @@
-import { defineEventHandler, readBody, createError } from 'h3';
+import { defineEventHandler, readBody, createError } from "h3";
 // @ts-ignore
-import { render } from 'takumi-js';
-import { buildRenderTree } from '../../shared/render';
+import { render } from "takumi-js";
+import { buildRenderTree } from "../../shared/render";
 
 export default defineEventHandler(async (event) => {
   try {
@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
     if (!photoBase64 || !templateConfig) {
       throw createError({
         statusCode: 400,
-        message: 'Missing required parameters: photoBase64 or templateConfig',
+        message: "Missing required parameters: photoBase64 or templateConfig",
       });
     }
 
@@ -25,8 +25,9 @@ export default defineEventHandler(async (event) => {
     });
 
     const buf = Buffer.from(imageBuffer);
-    const mimeType = format === 'png' ? 'image/png' : format === 'webp' ? 'image/webp' : 'image/jpeg';
-    const imageBase64 = `data:${mimeType};base64,${buf.toString('base64')}`;
+    const mimeType =
+      format === "png" ? "image/png" : format === "webp" ? "image/webp" : "image/jpeg";
+    const imageBase64 = `data:${mimeType};base64,${buf.toString("base64")}`;
 
     return {
       imageBase64,
@@ -37,7 +38,7 @@ export default defineEventHandler(async (event) => {
   } catch (error: any) {
     throw createError({
       statusCode: 500,
-      message: error.message || 'Render failed',
+      message: error.message || "Render failed",
     });
   }
 });

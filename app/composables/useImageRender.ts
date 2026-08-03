@@ -1,29 +1,52 @@
-import { ref } from '#imports';
-import { buildRenderTree } from '~~/shared/render';
+import { ref } from "#imports";
+import { buildRenderTree } from "~~/shared/render";
 
 interface ExifData {
-  make?: string; model?: string; fNumber?: number; exposureTime?: number;
-  exposureTimeFormatted?: string; iso?: number; focalLength?: number;
-  focalLengthIn35mm?: number; dateTimeOriginal?: Date; lensModel?: string;
-  latitude?: number; longitude?: number; exposureBias?: number;
+  make?: string;
+  model?: string;
+  fNumber?: number;
+  exposureTime?: number;
+  exposureTimeFormatted?: string;
+  iso?: number;
+  focalLength?: number;
+  focalLengthIn35mm?: number;
+  dateTimeOriginal?: Date;
+  lensModel?: string;
+  latitude?: number;
+  longitude?: number;
+  exposureBias?: number;
 }
 
 interface TemplateConfig {
-  borderWidth: number; borderColor: string; borderRadius: number;
-  backgroundColor: string; backgroundGradient?: string;
-  photoScale: number; paddingTop: number; paddingBottom: number; paddingHorizontal: number;
-  showLogo: boolean; logoPosition: 'left' | 'center' | 'right';
-  logoText?: string; logoImageUrl?: string; logoWidth?: number; logoHeight?: number;
-  infoLayout: 'grid' | 'list' | 'horizontal';
+  borderWidth: number;
+  borderColor: string;
+  borderRadius: number;
+  backgroundColor: string;
+  backgroundGradient?: string;
+  photoScale: number;
+  paddingTop: number;
+  paddingBottom: number;
+  paddingHorizontal: number;
+  showLogo: boolean;
+  logoPosition: "left" | "center" | "right";
+  logoText?: string;
+  logoImageUrl?: string;
+  logoWidth?: number;
+  logoHeight?: number;
+  infoLayout: "grid" | "list" | "horizontal";
   visibleFields: string[];
-  fontFamily: string; fontSize: number; fontColor: string; modelFontSize: number;
-  canvasMode: 'original' | 'fixed' | 'social';
-  canvasWidth?: number; canvasHeight?: number;
-  socialPreset?: 'instagram' | 'xiaohongshu' | 'wechat' | 'weibo';
+  fontFamily: string;
+  fontSize: number;
+  fontColor: string;
+  modelFontSize: number;
+  canvasMode: "original" | "fixed" | "social";
+  canvasWidth?: number;
+  canvasHeight?: number;
+  socialPreset?: "instagram" | "xiaohongshu" | "wechat" | "weibo";
 }
 
 interface ExportOptions {
-  format: 'png' | 'jpeg' | 'webp';
+  format: "png" | "jpeg" | "webp";
   quality: number;
 }
 
@@ -47,20 +70,20 @@ export interface RenderResponse {
 }
 
 export interface BatchExportProgress {
-  /** 正在处理的照片索引（0-based） */
+  /** Index of the photo currently being processed (0-based) */
   current: number;
-  /** 照片总数 */
+  /** Total number of photos */
   total: number;
-  /** 当前操作的文件名 */
+  /** File name of the current operation */
   filename: string;
-  /** 状态 */
-  status: 'rendering' | 'saving' | 'done' | 'error';
-  /** 错误信息（仅 status=error 时有值） */
+  /** Status */
+  status: "rendering" | "saving" | "done" | "error";
+  /** Error message (only set when status=error) */
   errorMessage?: string;
 }
 
 const bytesToBase64 = (bytes: Uint8Array) => {
-  let binary = '';
+  let binary = "";
   const chunk = 0x8000;
   for (let i = 0; i < bytes.length; i += chunk) {
     binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
@@ -68,33 +91,33 @@ const bytesToBase64 = (bytes: Uint8Array) => {
   return btoa(binary);
 };
 
-let wasmPromise: Promise<typeof import('takumi-js')> | null = null;
+let wasmPromise: Promise<typeof import("takumi-js")> | null = null;
 const getTakumi = () => {
-  wasmPromise ??= import('takumi-js');
+  wasmPromise ??= import("takumi-js");
   return wasmPromise;
 };
 
-/** 从 base64 data URL 中推断文件扩展名 */
+/** Infers the file extension from a base64 data URL */
 function extFromDataUrl(dataUrl: string): string {
   const m = dataUrl.match(/^data:image\/(png|jpeg|jpg|webp);base64,/);
-  if (!m) return 'jpg';
-  return m[1] === 'jpeg' ? 'jpg' : m[1];
+  if (!m) return "jpg";
+  return m[1] === "jpeg" ? "jpg" : m[1];
 }
 
-/** 构造导出文件名：去掉原始扩展名 + 新扩展名 */
+/** Builds an export file name: strips the original extension and adds the new one */
 function buildExportFilename(originalName: string, ext: string): string {
-  return originalName.replace(/\.[^.]+$/, '') + '.' + ext;
+  return originalName.replace(/\.[^.]+$/, "") + "." + ext;
 }
 
 export const useImageRender = () => {
   const isRendering = ref(false);
   const error = ref<string | null>(null);
-  const exportFormat = ref<ExportOptions['format']>('png');
+  const exportFormat = ref<ExportOptions["format"]>("png");
   const exportQuality = ref<number>(95);
   const batchProgress = ref<BatchExportProgress | null>(null);
 
   /**
-   * 内部渲染核心（不操作 isRendering，供 renderImage / batchExport 复用）
+   * Internal render core (does not touch isRendering, shared by renderImage / batchExport)
    */
   const _renderOne = async (payload: RenderPayload): Promise<RenderResponse | null> => {
     const finalPayload = payload.exportOptions
@@ -109,7 +132,7 @@ export const useImageRender = () => {
   };
 
   /**
-   * 单张渲染（含状态管理）
+   * Renders a single image (with state management)
    */
   const renderImage = async (payload: RenderPayload): Promise<RenderResponse | null> => {
     isRendering.value = true;
@@ -117,8 +140,8 @@ export const useImageRender = () => {
     try {
       return await _renderOne(payload);
     } catch (err: any) {
-      error.value = err.message || '渲染失败';
-      console.error('Render error:', err);
+      error.value = err.message || "Render failed";
+      console.error("Render error:", err);
       return null;
     } finally {
       isRendering.value = false;
@@ -126,13 +149,14 @@ export const useImageRender = () => {
   };
 
   /**
-   * 浏览器端 WASM 渲染（takumi-js 在浏览器环境自动使用 WASM 后端）
+   * Client-side WASM rendering (takumi-js automatically uses the WASM backend in browsers)
    */
   const renderClientSide = async (payload: RenderPayload): Promise<RenderResponse | null> => {
     const takumi = await getTakumi();
     const { nodeTree, width, height, format, quality } = buildRenderTree(payload);
     const buf = await takumi.render(nodeTree, { width, height, format, quality });
-    const mimeType = format === 'png' ? 'image/png' : format === 'webp' ? 'image/webp' : 'image/jpeg';
+    const mimeType =
+      format === "png" ? "image/png" : format === "webp" ? "image/webp" : "image/jpeg";
     return {
       imageBase64: `data:${mimeType};base64,${bytesToBase64(new Uint8Array(buf))}`,
       mimeType,
@@ -142,30 +166,30 @@ export const useImageRender = () => {
   };
 
   /**
-   * 调用后端渲染接口（WASM 渲染失败时的回退）
+   * Calls the backend render API (fallback when WASM rendering fails)
    */
   const renderServerSide = async (payload: RenderPayload): Promise<RenderResponse | null> => {
     try {
-      const response = await $fetch<RenderResponse>('/api/render', {
-        method: 'POST',
+      const response = await $fetch<RenderResponse>("/api/render", {
+        method: "POST",
         body: payload,
       });
       return response;
     } catch (err: any) {
-      error.value = err.message || '渲染失败';
-      console.error('Render API error:', err);
+      error.value = err.message || "Render failed";
+      console.error("Render API error:", err);
       return null;
     }
   };
 
   /**
-   * 下载返回的 Base64 图片（浏览器下载）
-   * @param base64 完整的 base64 图片字符串 (包含 data:image/...)
-   * @param filename 下载文件名，不含扩展名
+   * Downloads the returned Base64 image (browser download)
+   * @param base64 Complete base64 image string (includes data:image/...)
+   * @param filename Download file name, without extension
    */
-  const downloadImage = (base64: string, filename = 'exported-image') => {
+  const downloadImage = (base64: string, filename = "exported-image") => {
     try {
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = base64;
       const ext = extFromDataUrl(base64);
       link.download = buildExportFilename(filename, ext);
@@ -173,22 +197,22 @@ export const useImageRender = () => {
       link.click();
       document.body.removeChild(link);
     } catch (err) {
-      console.error('Download error:', err);
+      console.error("Download error:", err);
     }
   };
 
   /**
-   * 将单张图片保存（触发浏览器下载）
+   * Saves a single image (triggers a browser download)
    */
   const saveImage = (base64: string, originalFilename: string): void => {
     downloadImage(base64, originalFilename);
   };
 
   /**
-   * 批量渲染并导出照片。
+   * Batch-renders and exports photos.
    *
-   * @param items  每张照片的渲染参数及原始文件名
-   * @param onProgress 进度回调（可选）
+   * @param items Render params and original file name for each photo
+   * @param onProgress Progress callback (optional)
    */
   const batchExport = async (
     items: Array<{ payload: RenderPayload; originalFilename: string }>,
@@ -209,7 +233,7 @@ export const useImageRender = () => {
           current: i,
           total: items.length,
           filename: originalFilename,
-          status: 'rendering',
+          status: "rendering",
         };
         batchProgress.value = prog;
         onProgress?.(prog);
@@ -217,11 +241,11 @@ export const useImageRender = () => {
         try {
           const res = await _renderOne(payload);
           if (!res?.imageBase64) {
-            throw new Error('渲染结果为空');
+            throw new Error("Render result is empty");
           }
 
-          batchProgress.value = { ...prog, status: 'saving' };
-          onProgress?.({ ...prog, status: 'saving' });
+          batchProgress.value = { ...prog, status: "saving" };
+          onProgress?.({ ...prog, status: "saving" });
 
           await saveImage(res.imageBase64, originalFilename);
           success++;
@@ -229,8 +253,8 @@ export const useImageRender = () => {
           failed++;
           const errProg: BatchExportProgress = {
             ...prog,
-            status: 'error',
-            errorMessage: err?.message || '未知错误',
+            status: "error",
+            errorMessage: err?.message || "Unknown error",
           };
           batchProgress.value = errProg;
           onProgress?.(errProg);
@@ -242,8 +266,8 @@ export const useImageRender = () => {
       batchProgress.value = {
         current: items.length,
         total: items.length,
-        filename: '',
-        status: 'done',
+        filename: "",
+        status: "done",
       };
     }
 
