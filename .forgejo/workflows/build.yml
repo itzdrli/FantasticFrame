@@ -14,7 +14,7 @@ jobs:
   build-linux:
     name: Build · Linux
     # label 对应 forgejo-runner 注册时 --labels 的值
-    runs-on: self-hosted-linux
+    runs-on: runner-1
     steps:
       - name: 检出代码
         uses: https://data.forgejo.org/actions/checkout@v4
