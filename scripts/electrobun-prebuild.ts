@@ -6,7 +6,7 @@
 const env = process.env.ELECTROBUN_BUILD_ENV;
 
 if (env === "canary" || env === "stable") {
-	const result = Bun.spawnSync(["bun", "run", "build"], { stdio: "inherit" });
+	const result = Bun.spawnSync(["bun", "run", "build"], { stdio: ["inherit", "inherit", "inherit"] });
 	if (result.exitCode !== 0) {
 		process.exit(result.exitCode ?? 1);
 	}

@@ -6,7 +6,7 @@
  * 在普通浏览器中（web 模式），所有调用均退化为 no-op / 返回空值。
  */
 
-import type { FantasticFrameRPCSchema } from '../../shared/rpc';
+import type { FantasticFrameRPCSchema } from '~~/shared/rpc';
 
 type RpcInstance = Awaited<ReturnType<typeof initRpc>>;
 
@@ -19,7 +19,9 @@ async function initRpc(): Promise<ReturnType<typeof import('electrobun/browser')
     return null;
   }
   try {
-    const { Electroview } = await import('electrobun/view');
+    // 使用变量避开 Rollup/Nitro 服务端构建时的静态分析
+    const viewPkg = 'electrobun/view';
+    const { Electroview } = await import(/* @vite-ignore */ viewPkg);
     const rpc = Electroview.defineRPC<FantasticFrameRPCSchema>({
       handlers: {
         requests: {},

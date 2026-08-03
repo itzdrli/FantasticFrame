@@ -11,12 +11,6 @@ export default defineNuxtConfig({
     plugins: [
       tailwindcss(),
     ],
-    // electrobun/view 仅在 Electrobun webview 运行时有效，
-    // SSR 构建时需将其排除，避免服务端打包失败。
-    // 运行时 guard 已在 useElectrobunRpc.ts 中通过 typeof window 检测。
-    ssr: {
-      external: ['electrobun', 'electrobun/view', 'electrobun/bun'],
-    },
   },
 
   modules: [

@@ -1,5 +1,5 @@
 import { ref } from '#imports';
-import { buildRenderTree } from '../../shared/render';
+import { buildRenderTree } from '~~/shared/render';
 import { useElectrobunRpc } from '~/composables/useElectrobunRpc';
 
 interface ExifData {
