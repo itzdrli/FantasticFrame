@@ -6,10 +6,6 @@
 .cache
 dist
 
-# Electrobun build outputs
-build
-artifacts
-
 # Node dependencies
 node_modules
 

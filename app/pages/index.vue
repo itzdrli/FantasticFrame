@@ -15,8 +15,7 @@ const {
   renderImage, saveImage, batchExport,
   isRendering, error,
   exportFormat, exportQuality,
-  exportDir, pickExportDir,
-  batchProgress, isDesktop,
+  batchProgress,
 } = useImageRender()
 const { getResolvedConfig } = useTemplate()
 
@@ -95,14 +94,6 @@ const exportButtonDisabled = computed(() =>
 const batchExportDisabled = computed(() =>
   isRendering.value || photoStore.photos.length === 0 || isBatchExporting.value
 )
-
-// 目录显示（截短长路径）
-const exportDirDisplay = computed(() => {
-  if (!exportDir.value) return ''
-  const parts = exportDir.value.replace(/\\/g, '/').split('/')
-  if (parts.length <= 3) return exportDir.value
-  return '…/' + parts.slice(-2).join('/')
-})
 </script>
 
 <template>
@@ -190,7 +181,6 @@ const exportDirDisplay = computed(() => {
         </svg>
         <span v-if="batchResult.failed === 0">
           全部 {{ batchResult.success }} 张导出成功
-          <span v-if="exportDir && isDesktop()"> → {{ exportDirDisplay }}</span>
         </span>
         <span v-else>
           {{ batchResult.success }} 成功 / {{ batchResult.failed }} 失败
@@ -299,41 +289,6 @@ const exportDirDisplay = computed(() => {
                 <p v-if="exportFormat === 'png'" class="text-[10px] text-nord-4/70">PNG 为无损格式，无需质量设置</p>
                 <p v-else-if="exportFormat === 'webp'" class="text-[10px] text-nord-4/70">浏览器端 WebP 为无损编码，质量滑杆仅服务端生效</p>
                 <p v-else class="text-[10px] text-nord-4/70">JPEG 有损压缩，质量越高文件越大</p>
-
-                <!-- 导出目录（仅桌面端显示） -->
-                <template v-if="isDesktop()">
-                  <hr class="border-nord-2 my-1" />
-                  <div class="flex flex-col gap-2">
-                    <div class="flex items-center justify-between">
-                      <span class="text-xs text-nord-4">导出目录</span>
-                      <button
-                        @click="pickExportDir"
-                        class="px-2 py-1 text-xs bg-nord-2 border border-nord-3 rounded-lg text-nord-4 hover:border-nord-8 hover:text-nord-8 transition-colors flex items-center gap-1"
-                      >
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
-                        </svg>
-                        选择
-                      </button>
-                    </div>
-                    <div
-                      class="flex items-center gap-2 px-3 py-2 bg-nord-2 rounded-lg border border-nord-3 min-h-[34px]"
-                      :class="exportDir ? 'border-nord-3' : 'border-dashed'"
-                    >
-                      <svg class="w-3.5 h-3.5 shrink-0 text-nord-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
-                      </svg>
-                      <span v-if="exportDirDisplay" class="text-[11px] text-nord-6 font-mono truncate" :title="exportDir">{{ exportDirDisplay }}</span>
-                      <span v-else class="text-[11px] text-nord-3 italic">未设置（默认触发下载）</span>
-                      <button v-if="exportDir" @click="exportDir = ''"
-                        class="ml-auto text-nord-3 hover:text-nord-11 transition-colors text-xs shrink-0"
-                        title="清除">
-                        ✕
-                      </button>
-                    </div>
-                    <p class="text-[10px] text-nord-4/60">设置后导出将直接保存到该目录，不弹出另存框</p>
-                  </div>
-                </template>
               </div>
             </section>
           </div>

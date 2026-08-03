@@ -1,6 +1,5 @@
 import { ref } from '#imports';
 import { buildRenderTree } from '~~/shared/render';
-import { useElectrobunRpc } from '~/composables/useElectrobunRpc';
 
 interface ExifData {
   make?: string; model?: string; fNumber?: number; exposureTime?: number;
@@ -92,10 +91,7 @@ export const useImageRender = () => {
   const error = ref<string | null>(null);
   const exportFormat = ref<ExportOptions['format']>('png');
   const exportQuality = ref<number>(95);
-  const exportDir = ref<string>('');
   const batchProgress = ref<BatchExportProgress | null>(null);
-
-  const { isDesktop, selectExportDir: rpcSelectDir, saveFile: rpcSaveFile } = useElectrobunRpc();
 
   /**
    * 内部渲染核心（不操作 isRendering，供 renderImage / batchExport 复用）
@@ -163,7 +159,7 @@ export const useImageRender = () => {
   };
 
   /**
-   * 下载返回的 Base64 图片（浏览器模式下触发下载）
+   * 下载返回的 Base64 图片（浏览器下载）
    * @param base64 完整的 base64 图片字符串 (包含 data:image/...)
    * @param filename 下载文件名，不含扩展名
    */
@@ -182,26 +178,10 @@ export const useImageRender = () => {
   };
 
   /**
-   * 打开系统目录选择对话框，更新 exportDir。
-   * 仅在桌面端（Electrobun）有效；浏览器端不做任何事。
+   * 将单张图片保存（触发浏览器下载）
    */
-  const pickExportDir = async (): Promise<void> => {
-    const dir = await rpcSelectDir(exportDir.value || undefined);
-    if (dir) exportDir.value = dir;
-  };
-
-  /**
-   * 将单张图片保存到 exportDir（桌面端）或触发浏览器下载。
-   */
-  const saveImage = async (base64: string, originalFilename: string): Promise<void> => {
-    const ext = extFromDataUrl(base64);
-    const filename = buildExportFilename(originalFilename, ext);
-
-    if (isDesktop() && exportDir.value) {
-      await rpcSaveFile(exportDir.value, filename, base64);
-    } else {
-      downloadImage(base64, originalFilename);
-    }
+  const saveImage = (base64: string, originalFilename: string): void => {
+    downloadImage(base64, originalFilename);
   };
 
   /**
@@ -275,13 +255,10 @@ export const useImageRender = () => {
     error,
     exportFormat,
     exportQuality,
-    exportDir,
     batchProgress,
     renderImage,
     batchExport,
     downloadImage,
     saveImage,
-    pickExportDir,
-    isDesktop,
   };
 };
