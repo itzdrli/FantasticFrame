@@ -2,81 +2,18 @@ name: Build Desktop App
 
 # 触发条件：
 # 1. 推送 v* tag（发布版本，例如 v1.0.0）
-# 2. 手动触发（workflow_dispatch），可选择目标平台
+# 2. 手动触发
 on:
   push:
     tags:
       - 'v*'
   workflow_dispatch:
-    inputs:
-      platform:
-        description: 'Target Platform'
-        required: false
-        default: 'windows'
-        type: choice
-        options:
-          - all
-          - windows
-          - linux
-          - macos
 
 jobs:
-  build-windows:
-    name: Build · Windows
-    if: >
-      github.event_name == 'push' ||
-      inputs.platform == 'all' ||
-      inputs.platform == 'windows'
-    # 必须与你的 Windows runner 注册时的 label 完全一致
-    runs-on: self-hosted-windows
-    steps:
-      - name: 检出代码
-        uses: https://data.forgejo.org/actions/checkout@v4
-
-      - name: 安装 Bun
-        shell: pwsh
-        run: |
-          if (-not (Get-Command bun -ErrorAction SilentlyContinue)) {
-            Write-Host "正在安装 Bun..."
-            & ([scriptblock]::Create((irm https://bun.sh/install.ps1)))
-            $env:PATH = "$env:USERPROFILE\.bun\bin;$env:PATH"
-          }
-          bun --version
-
-      - name: 安装 Hutch（Electrobun 构建工具链）
-        shell: pwsh
-        run: |
-          if (-not (Get-Command hutch -ErrorAction SilentlyContinue)) {
-            Write-Host "正在安装 Hutch..."
-            & ([scriptblock]::Create((irm https://hutch.blackboard.sh/hutch/install.ps1)))
-          }
-          hutch --version
-
-      - name: 安装依赖
-        run: bun install --frozen-lockfile
-
-      - name: 构建 stable 安装包
-        shell: pwsh
-        env:
-          ELECTROBUN_BUILD_ENV: stable
-        run: bun run desktop:build:stable
-
-      - name: 上传 Windows 构建产物
-        uses: https://data.forgejo.org/actions/upload-artifact@v4
-        with:
-          name: FantasticFrame-windows
-          path: artifacts/
-          if-no-files-found: error
-          retention-days: 30
-
-  # ─── Linux 构建 ─────────────────────────────────────────────────────────────
+  # ─── Linux 构建（在自建 Docker runner 的宿主 Linux 上运行）────────────────────
   build-linux:
     name: Build · Linux
-    if: >
-      github.event_name == 'push' ||
-      inputs.platform == 'all' ||
-      inputs.platform == 'linux'
-    # 必须与你的 Linux runner 注册时的 label 完全一致
+    # label 对应 forgejo-runner 注册时 --labels 的值
     runs-on: self-hosted-linux
     steps:
       - name: 检出代码
@@ -93,22 +30,24 @@ jobs:
             librsvg2-dev \
             libssl-dev
 
-      - name: 安装 Bun
+      - name: 安装 / 验证 Bun
         run: |
           if ! command -v bun &>/dev/null; then
             curl -fsSL https://bun.sh/install | bash
-            export PATH="$HOME/.bun/bin:$PATH"
           fi
+          # 确保 PATH 对当前 step 生效
+          export PATH="$HOME/.bun/bin:$PATH"
+          echo "$HOME/.bun/bin" >> $GITHUB_PATH
           bun --version
 
-      - name: 安装 Hutch
+      - name: 安装 / 验证 Hutch
         run: |
           if ! command -v hutch &>/dev/null; then
             curl -fsSL https://hutch.blackboard.sh/hutch/install.sh | sh
           fi
           hutch --version
 
-      - name: 安装依赖
+      - name: 安装项目依赖
         run: bun install --frozen-lockfile
 
       - name: 构建 stable 安装包
@@ -116,7 +55,7 @@ jobs:
           ELECTROBUN_BUILD_ENV: stable
         run: bun run desktop:build:stable
 
-      - name: 上传 Linux 构建产物
+      - name: 上传构建产物
         uses: https://data.forgejo.org/actions/upload-artifact@v4
         with:
           name: FantasticFrame-linux
@@ -124,82 +63,22 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-  # ─── macOS 构建 ─────────────────────────────────────────────────────────────
-  build-macos:
-    name: Build · macOS
-    if: >
-      github.event_name == 'push' ||
-      inputs.platform == 'all' ||
-      inputs.platform == 'macos'
-    # 必须与你的 macOS runner 注册时的 label 完全一致
-    runs-on: self-hosted-macos
-    steps:
-      - name: 检出代码
-        uses: https://data.forgejo.org/actions/checkout@v4
-
-      - name: 安装 Xcode 命令行工具（如未安装）
-        run: |
-          if ! xcode-select -p &>/dev/null; then
-            xcode-select --install
-          fi
-
-      - name: 安装 cmake（如未安装）
-        run: |
-          if ! command -v cmake &>/dev/null; then
-            brew install cmake
-          fi
-
-      - name: 安装 Bun
-        run: |
-          if ! command -v bun &>/dev/null; then
-            curl -fsSL https://bun.sh/install | bash
-            export PATH="$HOME/.bun/bin:$PATH"
-          fi
-          bun --version
-
-      - name: 安装 Hutch
-        run: |
-          if ! command -v hutch &>/dev/null; then
-            curl -fsSL https://hutch.blackboard.sh/hutch/install.sh | sh
-          fi
-          hutch --version
-
-      - name: 安装依赖
-        run: bun install --frozen-lockfile
-
-      - name: 构建 stable 安装包
-        env:
-          ELECTROBUN_BUILD_ENV: stable
-        run: bun run desktop:build:stable
-
-      - name: 上传 macOS 构建产物
-        uses: https://data.forgejo.org/actions/upload-artifact@v4
-        with:
-          name: FantasticFrame-macos
-          path: artifacts/
-          if-no-files-found: error
-          retention-days: 30
-
   # ─── 发布 Release ────────────────────────────────────────────────────────────
   release:
     name: Create Release
-    # 仅在 tag push 时，且三个构建都完成后执行
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
-    needs: [build-windows, build-linux, build-macos]
+    needs: [build-linux]
     runs-on: self-hosted-linux
     steps:
-      - name: 下载所有构建产物
+      - name: 下载构建产物
         uses: https://data.forgejo.org/actions/download-artifact@v4
         with:
           path: dist/
 
-      - name: 列出产物文件
-        run: find dist/ -type f | sort
-
       - name: 创建 Release 并上传产物
         uses: https://data.forgejo.org/forgejo/release-action@v0.1.3
         with:
-          token: ${{ secrets.RELEASE_TOKEN }}
+          token: ${{ secrets.FORGEJO_TOKEN }}
           release-name: ${{ github.ref_name }}
           tag-name: ${{ github.ref_name }}
           files: dist/**/*
