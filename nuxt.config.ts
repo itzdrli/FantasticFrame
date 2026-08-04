@@ -12,6 +12,24 @@ export default defineNuxtConfig({
   },
 
   modules: ["@pinia/nuxt"],
+
+  nitro: {
+    preset: "cloudflare-pages",
+    experimental: { wasm: true },
+    rollupConfig: {
+      plugins: [
+        {
+          name: "react-optional-stub",
+          resolveId(id) {
+            if (id === "react") return "\0react-optional-stub";
+          },
+          load(id) {
+            if (id === "\0react-optional-stub") return "export default {};";
+          },
+        },
+      ],
+    },
+  },
   app: {
     head: {
       link: [
