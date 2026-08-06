@@ -20,15 +20,7 @@ const update = <K extends keyof TemplateConfig>(key: K, value: TemplateConfig[K]
   }
 };
 
-// ── Border ─────────────────────────────────────────────────────────────────
-const borderWidth = computed({
-  get: () => overrides.value.borderWidth ?? resolvedConfig.value?.borderWidth ?? 0,
-  set: (v) => update("borderWidth", v),
-});
-const borderColor = computed({
-  get: () => overrides.value.borderColor ?? resolvedConfig.value?.borderColor ?? "#ffffff",
-  set: (v) => update("borderColor", v),
-});
+// ── Corner Radius ───────────────────────────────────────────────────────────
 const borderRadius = computed({
   get: () => overrides.value.borderRadius ?? resolvedConfig.value?.borderRadius ?? 0,
   set: (v) => update("borderRadius", v),
@@ -114,6 +106,69 @@ function clearLogoImage() {
   update("logoImageUrl", "");
 }
 
+// ── Paste SVG logo ──────────────────────────────────────────────────────────
+const showPasteSvg = ref(false);
+const svgInput = ref("");
+const svgError = ref("");
+
+// Encode raw SVG markup as a base64 data URL — matches what FileReader.readAsDataURL
+// produces for an uploaded .svg file, so the client WASM renderer and the takumi
+// native backend treat pasted and uploaded SVGs identically. Uses TextEncoder so
+// non-Latin1 characters (CJK, accented letters) survive intact.
+function encodeSvgDataUrl(svg: string): string {
+  const bytes = new TextEncoder().encode(svg);
+  let bin = "";
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return `data:image/svg+xml;base64,${btoa(bin)}`;
+}
+
+function applySvg() {
+  const svg = svgInput.value.trim();
+  if (!svg) {
+    svgError.value = "Paste SVG markup first.";
+    return;
+  }
+  if (!/<svg[\s>]/i.test(svg) || !/<\/svg>/i.test(svg)) {
+    svgError.value = "Invalid SVG — must contain <svg>…</svg>.";
+    return;
+  }
+  update("logoImageUrl", encodeSvgDataUrl(svg));
+  showPasteSvg.value = false;
+  svgInput.value = "";
+  svgError.value = "";
+}
+
+function cancelSvgPaste() {
+  showPasteSvg.value = false;
+  svgInput.value = "";
+  svgError.value = "";
+}
+
+// If the user pastes a clipboard file (e.g. an .svg copied in the file explorer)
+// into the textarea, intercept and treat it as an upload instead of letting the
+// textarea insert a useless filename string.
+function onSvgPaste(e: ClipboardEvent) {
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  for (const item of items) {
+    if (item.kind === "file" && item.type.startsWith("image/")) {
+      const file = item.getAsFile();
+      if (file) {
+        e.preventDefault();
+        const reader = new FileReader();
+        reader.onload = () => {
+          update("logoImageUrl", reader.result as string);
+          showPasteSvg.value = false;
+          svgInput.value = "";
+          svgError.value = "";
+        };
+        reader.readAsDataURL(file);
+        return;
+      }
+    }
+  }
+}
+
 // ── Canvas ────────────────────────────────────────────────────────────────
 const canvasMode = computed({
   get: () => overrides.value.canvasMode ?? resolvedConfig.value?.canvasMode ?? "original",
@@ -179,28 +234,11 @@ function setCanvasMode(mode: "original" | "social") {
       />
     </div>
 
-    <!-- Border -->
+    <!-- Corner Radius -->
     <div class="flex flex-col gap-3">
-      <span class="text-nord-5 font-medium border-b border-nord-2 pb-1">Border</span>
-      <div class="flex items-center justify-between gap-3">
-        <label class="flex-1">
-          <span class="text-xs text-nord-4 mb-1 block">Width {{ borderWidth }}px</span>
-          <input
-            type="range"
-            min="0"
-            max="40"
-            v-model.number="borderWidth"
-            class="w-full accent-nord-8"
-          />
-        </label>
-        <input
-          type="color"
-          v-model="borderColor"
-          class="w-8 h-8 rounded cursor-pointer border border-nord-3 bg-nord-1 p-0.5 shrink-0 mt-4"
-        />
-      </div>
+      <span class="text-nord-5 font-medium border-b border-nord-2 pb-1">Corner Radius</span>
       <div>
-        <span class="text-xs text-nord-4 mb-1 block">Corner Radius {{ borderRadius }}px</span>
+        <span class="text-xs text-nord-4 mb-1 block">Radius {{ borderRadius }}px</span>
         <input
           type="range"
           min="0"
@@ -347,25 +385,69 @@ function setCanvasMode(mode: "original" | "social") {
               Remove
             </button>
           </div>
-          <button
-            v-else
-            @click="logoImageInput?.click()"
-            class="w-full py-2 border border-dashed border-nord-3 rounded-lg text-xs text-nord-4 hover:border-nord-8 hover:text-nord-8 transition-colors flex items-center justify-center gap-2"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+          <template v-else>
+            <div class="grid grid-cols-2 gap-2">
+              <button
+                @click="logoImageInput?.click()"
+                class="py-2 border border-dashed border-nord-3 rounded-lg text-xs text-nord-4 hover:border-nord-8 hover:text-nord-8 transition-colors flex items-center justify-center gap-1.5"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+                Upload
+              </button>
+              <button
+                @click="showPasteSvg = !showPasteSvg"
+                class="py-2 border border-dashed border-nord-3 rounded-lg text-xs text-nord-4 hover:border-nord-8 hover:text-nord-8 transition-colors flex items-center justify-center gap-1.5"
+                :class="{ 'border-nord-8 text-nord-8': showPasteSvg }"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                  />
+                </svg>
+                Paste SVG
+              </button>
+            </div>
+
+            <div v-if="showPasteSvg" class="flex flex-col gap-2">
+              <textarea
+                v-model="svgInput"
+                @paste="onSvgPaste"
+                placeholder="<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>…</svg>"
+                rows="5"
+                spellcheck="false"
+                class="w-full bg-nord-2 border border-nord-3 rounded-lg px-2 py-1.5 text-xs font-mono text-nord-4 focus:border-nord-8 focus:outline-none transition-colors placeholder:text-nord-3 resize-y"
               />
-            </svg>
-            Upload Logo
-          </button>
+              <div class="flex gap-2">
+                <button
+                  @click="applySvg"
+                  class="flex-1 py-1.5 rounded-lg text-xs font-medium bg-nord-8 text-nord-0 hover:bg-nord-9 transition-colors"
+                >
+                  Apply
+                </button>
+                <button
+                  @click="cancelSvgPaste"
+                  class="flex-1 py-1.5 rounded-lg text-xs bg-nord-2 text-nord-4 hover:bg-nord-3 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+              <p v-if="svgError" class="text-[10px] text-nord-11">{{ svgError }}</p>
+            </div>
+          </template>
           <input
             ref="logoImageInput"
             type="file"
-            accept="image/*"
+            accept="image/*,.svg"
             class="hidden"
             @change="onLogoImageChange"
           />

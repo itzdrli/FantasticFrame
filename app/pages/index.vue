@@ -21,8 +21,22 @@ const {
 } = useImageRender();
 const { getResolvedConfig } = useTemplate();
 
-const showSettings = ref(true);
-const showExif = ref(true);
+// Drawers stay hidden until the first photo is uploaded
+const showSettings = ref(false);
+const showExif = ref(false);
+
+watch(
+  () => photoStore.hasPhotos,
+  (hasPhotos) => {
+    if (hasPhotos) {
+      showSettings.value = true;
+      showExif.value = true;
+    }
+  },
+);
+
+// ── Privacy modal ───────────────────────────────────────────────────────────
+const showPrivacyModal = ref(false);
 
 // ── Batch export state ──────────────────────────────────────────────────────
 const isBatchExporting = ref(false);
@@ -281,11 +295,20 @@ const batchExportDisabled = computed(
               Upload photos to begin creating your fantastic frames.
             </p>
             <PhotoUploader />
-            <p class="text-nord-5 text-s">
-              Photos are processed in your browser.
-              Batch export sends them to the server for rendering;
-              they are never stored.
-            </p>
+            <button
+              @click="showPrivacyModal = true"
+              class="mt-6 px-3 py-1.5 text-xs rounded shadow transition-colors flex items-center gap-1.5 bg-nord-2 text-nord-4 hover:bg-nord-3 hover:text-nord-6"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              Privacy Notice
+            </button>
           </div>
         </div>
 
@@ -358,9 +381,6 @@ const batchExportDisabled = computed(
             <hr class="border-nord-2" />
 
             <section>
-              <h3 class="text-sm font-semibold text-nord-6 uppercase tracking-wider mb-3">
-                Borders
-              </h3>
               <BorderSettings />
             </section>
 
@@ -428,5 +448,63 @@ const batchExportDisabled = computed(
         </aside>
       </Transition>
     </div>
+
+    <!-- Privacy Modal -->
+    <Transition name="modal">
+      <div
+        v-if="showPrivacyModal"
+        @click.self="showPrivacyModal = false"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      >
+        <div
+          class="modal-dialog max-w-lg w-full bg-nord-1 border border-nord-3 rounded-xl shadow-2xl p-6 flex flex-col gap-4"
+        >
+          <div class="flex items-start justify-between gap-4">
+            <h3 class="text-lg font-semibold text-nord-6">Privacy Notice</h3>
+            <button
+              @click="showPrivacyModal = false"
+              class="w-7 h-7 flex items-center justify-center rounded hover:bg-nord-3 text-nord-4 hover:text-nord-6 transition-colors shrink-0"
+              aria-label="Close"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+
+          <div class="text-sm text-nord-4 flex flex-col gap-3">
+            <p>
+              By default, your photos are processed entirely in your browser. Single export is
+              rendered locally via WASM and never leaves your device.
+            </p>
+            <p>
+              Batch export sends photos to our server for rendering. They are kept only in server
+              memory, never written to disk, never stored in a database. Tasks auto-expire after 10
+              minutes and memory is released immediately after download.
+            </p>
+            <p>
+              We do not collect accounts, cookies, ads, or any tracking data. No copies of your
+              photos are retained. Server location: Germany, EU (GDPR).
+            </p>
+          </div>
+
+          <div class="flex justify-end">
+            <a
+              href="https://legal.itzdrli.cc"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="px-4 py-2 bg-nord-8 text-nord-0 font-medium rounded shadow hover:bg-nord-9 transition-colors text-sm"
+            >
+              View Full Policy
+            </a>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>

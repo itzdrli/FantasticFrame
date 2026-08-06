@@ -96,19 +96,15 @@ export interface Template {
 
 /** Template configurable options */
 export interface TemplateConfig {
-  // —— Border ——
-  /** Border thickness (px) */
-  borderWidth: number;
-  /** Border color */
-  borderColor: string;
-  /** Border radius (px) */
-  borderRadius: number;
-
   // —— Background ——
   /** Background color */
   backgroundColor: string;
   /** Background gradient (CSS gradient string, empty means not used) */
   backgroundGradient?: string;
+
+  // —— Photo frame ——
+  /** Border radius (px) */
+  borderRadius: number;
 
   // —— Photo & border ratio ——
   /** Photo scale within the canvas (0-1) */
@@ -158,7 +154,7 @@ export interface TemplateConfig {
   /** Fixed ratio height (used when canvasMode='fixed') */
   canvasHeight?: number;
   /** Social platform preset (used when canvasMode='social') */
-  socialPreset?: "instagram" | "xiaohongshu" | "wechat" | "weibo";
+  socialPreset?: "instagram";
   /** Instagram ratio (used when socialPreset='instagram') */
   socialRatio?: "1:1" | "4:5" | "3:4" | "1.91:1" | "5:4" | "4:3" | "1:1.91";
 }

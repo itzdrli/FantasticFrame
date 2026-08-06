@@ -69,6 +69,12 @@ const fontOptions = [
   { label: "Noto Sans SC", value: "'Noto Sans SC', sans-serif" },
   { label: "Noto Serif SC", value: "'Noto Serif SC', serif" },
   { label: "Georgia", value: "Georgia, serif" },
+  // ── Royalty-free (OFL/SIL) additions ─────────────────────────────────────
+  { label: "Source Sans 3", value: "'Source Sans 3', sans-serif" },
+  { label: "JetBrains Mono", value: "'JetBrains Mono', monospace" },
+  { label: "Playfair Display", value: "'Playfair Display', serif" },
+  { label: "Space Grotesk", value: "'Space Grotesk', sans-serif" },
+  { label: "Cormorant Garamond", value: "'Cormorant Garamond', serif" },
 ];
 
 const layoutOptions: { label: string; value: "horizontal" | "list" | "grid" }[] = [

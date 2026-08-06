@@ -15,8 +15,8 @@ export const usePhotoStore = defineStore("photos", () => {
 
   /** Default export options */
   const exportOptions = ref<ExportOptions>({
-    format: "png",
-    quality: 95,
+    format: "jpeg",
+    quality: 90,
   });
 
   // ==================== Getters ====================

@@ -14,6 +14,8 @@ const templates = [
   { id: "minimal", name: "Minimal" },
   { id: "film-style", name: "Film Style" },
   { id: "card-style", name: "Card Style" },
+  { id: "nord-light", name: "Nord Light" },
+  { id: "nord-dark", name: "Nord Dark" },
 ];
 
 const selectTemplate = (templateId: string) => {
@@ -38,8 +40,6 @@ const selectTemplate = (templateId: string) => {
           class="w-full aspect-[4/3] rounded shadow-inner flex flex-col justify-between overflow-hidden relative"
           :style="{
             backgroundColor: getResolvedConfig(tpl.id).backgroundColor,
-            borderColor: getResolvedConfig(tpl.id).borderColor,
-            borderWidth: `${getResolvedConfig(tpl.id).borderWidth}px`,
             borderRadius: `${getResolvedConfig(tpl.id).borderRadius}px`,
           }"
         >

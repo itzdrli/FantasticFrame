@@ -114,15 +114,6 @@ const baseScaleFactor = computed(() => {
     const d = instagramDims(cfg.socialRatio);
     return Math.max(d.w, d.h) / 1080;
   }
-  if (cfg.canvasMode === "social" && cfg.socialPreset) {
-    const presets: Record<string, { w: number; h: number }> = {
-      xiaohongshu: { w: 1080, h: 1440 },
-      wechat: { w: 1080, h: 1920 },
-      weibo: { w: 1080, h: 1080 },
-    };
-    const d = presets[cfg.socialPreset] || { w: 1080, h: 1080 };
-    return Math.max(d.w, d.h) / 1080;
-  }
   if (cfg.canvasMode === "fixed" && cfg.canvasWidth && cfg.canvasHeight) {
     return Math.max(cfg.canvasWidth, cfg.canvasHeight) / 1080;
   }
@@ -136,13 +127,6 @@ const canvasDims = computed(() => {
 
   if (cfg.canvasMode === "social" && cfg.socialPreset === "instagram") {
     return instagramDims(cfg.socialRatio);
-  } else if (cfg.canvasMode === "social" && cfg.socialPreset) {
-    const presets: Record<string, { w: number; h: number }> = {
-      xiaohongshu: { w: 1080, h: 1440 },
-      wechat: { w: 1080, h: 1920 },
-      weibo: { w: 1080, h: 1080 },
-    };
-    return presets[cfg.socialPreset] || { w: 1080, h: 1080 };
   } else if (cfg.canvasMode === "fixed" && cfg.canvasWidth && cfg.canvasHeight) {
     return { w: cfg.canvasWidth, h: cfg.canvasHeight };
   }
@@ -287,9 +271,6 @@ const imageRenderStyle = computed(() => {
   return {
     width: `${Math.round(layout.finalW * ps)}px`,
     height: `${Math.round(layout.finalH * ps)}px`,
-    borderWidth: `${s(cfg.borderWidth)}px`,
-    borderColor: cfg.borderColor,
-    borderStyle: cfg.borderWidth > 0 ? "solid" : "none",
     borderRadius: `${s(cfg.borderRadius)}px`,
     objectFit: "contain" as const,
     display: "block" as const,
@@ -310,9 +291,6 @@ const photoFrameStyle = computed(() => {
     height: `${Math.round(layout.availH * ps)}px`,
     position: "relative" as const,
     overflow: "hidden" as const,
-    borderWidth: `${s(cfg.borderWidth)}px`,
-    borderColor: cfg.borderColor,
-    borderStyle: cfg.borderWidth > 0 ? "solid" : "none",
     borderRadius: `${s(cfg.borderRadius)}px`,
     boxSizing: "border-box" as const,
     touchAction: "none" as const,

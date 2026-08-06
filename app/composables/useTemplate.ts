@@ -1,8 +1,6 @@
 import type { TemplateConfig } from "~/types";
 
 export const DEFAULT_TEMPLATE_CONFIG: TemplateConfig = {
-  borderWidth: 0,
-  borderColor: "#FFFFFF",
   borderRadius: 0,
   backgroundColor: "#FFFFFF",
   photoScale: 1.0,
@@ -21,16 +19,21 @@ export const DEFAULT_TEMPLATE_CONFIG: TemplateConfig = {
   canvasMode: "original",
 };
 
+// Nord color palette (https://www.nordtheme.org/) — kept here for reference:
+//   polar night:  nord0 #2E3440 · nord1 #3B4252 · nord2 #434C5E · nord3 #4C566A
+//   snow storm:   nord4 #D8DEE9 · nord5 #E5E9F0 · nord6 #ECEFF4
+//   frost:        nord7 #8FBCBB · nord8 #88C0D0 · nord9 #81A1C1 · nord10 #5E81AC
+//   aurora:       nord11 #BF616A · nord12 #D08770 · nord13 #EBCB8B · nord14 #A3BE8C · nord15 #B48EAD
+
 export const PRESET_TEMPLATES: Record<string, Partial<TemplateConfig>> = {
   // ─── Classic ───────────────────────────────────────────────────────────────
-  // White background, even whitespace around the photo, model + settings centered at the bottom, clean layout
+  // Pure white museum mat — even breathing room, centered model + full specs row
   classic: {
     backgroundColor: "#FFFFFF",
     photoScale: 1.0,
-    paddingTop: 40,
-    paddingBottom: 40,
-    paddingHorizontal: 40,
-    borderWidth: 0,
+    paddingTop: 32,
+    paddingBottom: 32,
+    paddingHorizontal: 32,
     borderRadius: 0,
     showLogo: true,
     logoPosition: "center",
@@ -43,38 +46,36 @@ export const PRESET_TEMPLATES: Record<string, Partial<TemplateConfig>> = {
   },
 
   // ─── Dark ──────────────────────────────────────────────────────────────────
-  // Dark gray background, borderless full-bleed photo, model (left) and settings (right) at the bottom
+  // Cinematic near-black, borderless full-bleed, monospace spec readout, model left
   dark: {
-    backgroundColor: "#1C1C1E",
+    backgroundColor: "#18181B",
     photoScale: 1.0,
     paddingTop: 0,
     paddingBottom: 0,
     paddingHorizontal: 0,
-    borderWidth: 0,
     borderRadius: 0,
     showLogo: true,
     logoPosition: "left",
-    fontFamily: "Inter, sans-serif",
-    fontColor: "#E5E5EA",
-    fontSize: 15,
+    fontFamily: "'JetBrains Mono', monospace",
+    fontColor: "#E8E8EC",
+    fontSize: 14,
     modelFontSize: 22,
     infoLayout: "horizontal",
-    visibleFields: ["model", "fNumber", "exposureTime", "iso"],
+    visibleFields: ["model", "fNumber", "exposureTime", "iso", "focalLength"],
   },
 
   // ─── Minimal ───────────────────────────────────────────────────────────────
-  // Near-white background, full-bleed photo, only the capture date in a small serif font at the bottom, no logo
+  // Quiet gallery off-white, only model + capture date in muted neutral sans
   minimal: {
-    backgroundColor: "#F8F8F6",
+    backgroundColor: "#F5F5F3",
     photoScale: 1.0,
     paddingTop: 0,
     paddingBottom: 0,
     paddingHorizontal: 0,
-    borderWidth: 0,
     borderRadius: 0,
     showLogo: false,
-    fontFamily: "Inter, sans-serif",
-    fontColor: "#6B6B6B",
+    fontFamily: "'Source Sans 3', sans-serif",
+    fontColor: "#8A8A85",
     fontSize: 14,
     modelFontSize: 20,
     infoLayout: "horizontal",
@@ -82,43 +83,79 @@ export const PRESET_TEMPLATES: Record<string, Partial<TemplateConfig>> = {
   },
 
   // ─── Film style ────────────────────────────────────────────────────────────
-  // Pure black background, photo embedded in a thick black border, model left-aligned at the bottom with settings on the right, vintage warm-toned font
+  // Pure-black celluloid frame, warm cream serif (Playfair), make + model + key specs
   "film-style": {
-    backgroundColor: "#0D0D0D",
+    backgroundColor: "#0A0A0A",
     photoScale: 1.0,
-    paddingTop: 16,
-    paddingBottom: 16,
-    paddingHorizontal: 16,
-    borderWidth: 0,
+    paddingTop: 18,
+    paddingBottom: 18,
+    paddingHorizontal: 18,
     borderRadius: 0,
     showLogo: true,
     logoPosition: "left",
-    fontFamily: "'Georgia', serif",
-    fontColor: "#D4C5A0",
+    fontFamily: "'Playfair Display', serif",
+    fontColor: "#D9C7A3",
     fontSize: 15,
-    modelFontSize: 22,
+    modelFontSize: 24,
     infoLayout: "horizontal",
     visibleFields: ["make", "model", "fNumber", "exposureTime", "iso"],
   },
 
   // ─── Card style ────────────────────────────────────────────────────────────
-  // Light gray background, large rounded corners on the photo (Polaroid-like), brand + settings centered at the bottom
+  // Warm paper surface, large rounded photo (Polaroid-like), brand + specs centered
   "card-style": {
-    backgroundColor: "#F0F0F0",
+    backgroundColor: "#EFEDEC",
     photoScale: 1.0,
     paddingTop: 24,
-    paddingBottom: 24,
+    paddingBottom: 28,
     paddingHorizontal: 24,
-    borderWidth: 0,
-    borderRadius: 12,
+    borderRadius: 14,
     showLogo: true,
     logoPosition: "center",
-    fontFamily: "Inter, sans-serif",
-    fontColor: "#2C2C2E",
+    fontFamily: "'Source Sans 3', sans-serif",
+    fontColor: "#2A2A2E",
     fontSize: 14,
     modelFontSize: 22,
     infoLayout: "horizontal",
-    visibleFields: ["model", "fNumber", "exposureTime", "iso"],
+    visibleFields: ["model", "fNumber", "exposureTime", "iso", "focalLength"],
+  },
+
+  // ─── Nord Light ─────────────────────────────────────────────────────────────
+  // Snow-storm paper (nord6) with polar-night ink (nord0), geometric Scandinavia feel
+  "nord-light": {
+    backgroundColor: "#ECEFF4",
+    photoScale: 1.0,
+    paddingTop: 28,
+    paddingBottom: 28,
+    paddingHorizontal: 32,
+    borderRadius: 0,
+    showLogo: true,
+    logoPosition: "center",
+    fontFamily: "'Space Grotesk', sans-serif",
+    fontColor: "#2E3440",
+    fontSize: 14,
+    modelFontSize: 22,
+    infoLayout: "horizontal",
+    visibleFields: ["model", "fNumber", "exposureTime", "iso", "focalLength"],
+  },
+
+  // ─── Nord Dark ──────────────────────────────────────────────────────────────
+  // Polar-night surface (nord0) with snow-storm ink (nord4), monospace terminal-luxe
+  "nord-dark": {
+    backgroundColor: "#2E3440",
+    photoScale: 1.0,
+    paddingTop: 0,
+    paddingBottom: 0,
+    paddingHorizontal: 0,
+    borderRadius: 0,
+    showLogo: true,
+    logoPosition: "left",
+    fontFamily: "'JetBrains Mono', monospace",
+    fontColor: "#D8DEE9",
+    fontSize: 14,
+    modelFontSize: 22,
+    infoLayout: "horizontal",
+    visibleFields: ["model", "fNumber", "exposureTime", "iso", "focalLength"],
   },
 };
 

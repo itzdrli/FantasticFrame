@@ -18,8 +18,6 @@ interface ExifData {
 }
 
 interface TemplateConfig {
-  borderWidth: number;
-  borderColor: string;
   borderRadius: number;
   backgroundColor: string;
   backgroundGradient?: string;
@@ -42,7 +40,7 @@ interface TemplateConfig {
   canvasMode: "original" | "fixed" | "social";
   canvasWidth?: number;
   canvasHeight?: number;
-  socialPreset?: "instagram" | "xiaohongshu" | "wechat" | "weibo";
+  socialPreset?: "instagram";
 }
 
 interface ExportOptions {
@@ -114,8 +112,8 @@ function buildExportFilename(originalName: string, ext: string): string {
 export const useImageRender = () => {
   const isRendering = ref(false);
   const error = ref<string | null>(null);
-  const exportFormat = ref<ExportOptions["format"]>("png");
-  const exportQuality = ref<number>(95);
+  const exportFormat = ref<ExportOptions["format"]>("jpeg");
+  const exportQuality = ref<number>(90);
   const batchProgress = ref<BatchExportProgress | null>(null);
 
   /**

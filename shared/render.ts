@@ -21,8 +21,6 @@ export interface SharedExifData {
 }
 
 export interface SharedTemplateConfig {
-  borderWidth: number;
-  borderColor: string;
   borderRadius: number;
   backgroundColor: string;
   backgroundGradient?: string;
@@ -45,7 +43,7 @@ export interface SharedTemplateConfig {
   canvasMode: "original" | "fixed" | "social";
   canvasWidth?: number;
   canvasHeight?: number;
-  socialPreset?: "instagram" | "xiaohongshu" | "wechat" | "weibo";
+  socialPreset?: "instagram";
   socialRatio?: "1:1" | "4:5" | "3:4" | "1.91:1" | "5:4" | "4:3" | "1:1.91";
 }
 
@@ -175,18 +173,6 @@ export const buildRenderTree = (payload: SharedRenderPayload): RenderTreeResult 
         canvasWidth = 1080;
         canvasHeight = instagramHeights[templateConfig.socialRatio || "4:5"] || 1350;
         break;
-      case "xiaohongshu":
-        canvasWidth = 1080;
-        canvasHeight = 1440;
-        break;
-      case "wechat":
-        canvasWidth = 1080;
-        canvasHeight = 1920;
-        break;
-      case "weibo":
-        canvasWidth = 1080;
-        canvasHeight = 1080;
-        break;
     }
   } else if (templateConfig.canvasMode === "fixed") {
     canvasWidth = templateConfig.canvasWidth || photoWidth || 1080;
@@ -204,8 +190,6 @@ export const buildRenderTree = (payload: SharedRenderPayload): RenderTreeResult 
   const paddingTop = Math.round((templateConfig.paddingTop ?? 0) * scaleFactor);
   const paddingBottom = Math.round((templateConfig.paddingBottom ?? 0) * scaleFactor);
   const paddingH = Math.round((templateConfig.paddingHorizontal ?? 0) * scaleFactor);
-  const borderW = Math.round((templateConfig.borderWidth ?? 0) * scaleFactor);
-  const borderColor = templateConfig.borderColor || "#ffffff";
   const borderRadius = Math.round((templateConfig.borderRadius ?? 0) * scaleFactor);
 
   const fontFamily = templateConfig.fontFamily || "Inter, sans-serif";
@@ -321,16 +305,13 @@ export const buildRenderTree = (payload: SharedRenderPayload): RenderTreeResult 
         width: boxW,
         height: boxH,
         style: {
-          borderWidth: borderW,
-          borderColor,
-          borderStyle: borderW > 0 ? "solid" : undefined,
           borderRadius,
         },
       };
     }
     // Cover: a clipping container sized to the frame, with the photo absolutely
-    // positioned inside it (zoom + pan). Border/radius live on the container so
-    // the cropped image is clipped to the rounded frame.
+    // positioned inside it (zoom + pan). Radius lives on the container so the
+    // cropped image is clipped to the rounded frame.
     const {
       left,
       top,
@@ -352,9 +333,6 @@ export const buildRenderTree = (payload: SharedRenderPayload): RenderTreeResult 
         width: boxW,
         height: boxH,
         overflow: "hidden",
-        borderWidth: borderW,
-        borderColor,
-        borderStyle: borderW > 0 ? "solid" : undefined,
         borderRadius,
       },
       children: [

@@ -10,7 +10,7 @@ const fieldLabels: Record<string, string> = {
   make: "Make",
   model: "Model",
   lensModel: "Lens",
-  fNumber: "F-Number",
+  fNumber: "Aperture",
   exposureTime: "Shutter Speed",
   iso: "ISO",
   focalLength: "Focal Length",
