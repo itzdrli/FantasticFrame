@@ -1,4 +1,5 @@
 import tailwindcss from "@tailwindcss/vite";
+import checker from "vite-plugin-checker";
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
@@ -9,13 +10,29 @@ export default defineNuxtConfig({
 
   vite: {
     plugins: [tailwindcss()],
+    server: {
+      // Allow access via Tailscale MagicDNS: short hostname "s" and *.ts.net FQDNs
+      allowedHosts: ["s", ".ts.net"],
+    },
+    // Scoped to the client environment: Nuxt runs separate client/ssr Vite
+    // environments, and the checker would otherwise spawn twice in dev.
+    // (vite 8.2's EnvironmentOptions type omits `plugins`, but the runtime
+    // applies it to the client environment - hence the cast.)
+    $client: {
+      plugins: [
+        checker({
+          oxlint: {
+            lintCommand: "oxlint .",
+          },
+        }),
+      ],
+    } as any,
   },
 
   modules: ["@pinia/nuxt"],
 
   nitro: {
-    preset: "cloudflare-pages",
-    experimental: { wasm: true },
+    preset: "bun",
     rollupConfig: {
       plugins: [
         {

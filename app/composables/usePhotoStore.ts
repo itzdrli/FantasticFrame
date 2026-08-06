@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import type { ExportOptions, Photo, TemplateConfig } from "~/types";
+import type { ExportOptions, Photo, PhotoCrop, TemplateConfig } from "~/types";
 
 /**
  * Photo state management store
@@ -46,7 +46,7 @@ export const usePhotoStore = defineStore("photos", () => {
     const wasEmpty = photos.value.length === 0;
     photos.value.push(...newPhotos);
     if (wasEmpty && photos.value.length > 0) {
-      selectedId.value = photos.value[0].id;
+      selectedId.value = photos.value[0]!.id;
     }
   }
 
@@ -63,7 +63,7 @@ export const usePhotoStore = defineStore("photos", () => {
         selectedId.value = null;
       } else {
         const newIndex = Math.min(index, photos.value.length - 1);
-        selectedId.value = photos.value[newIndex].id;
+        selectedId.value = photos.value[newIndex]!.id;
       }
     }
   }
@@ -102,6 +102,14 @@ export const usePhotoStore = defineStore("photos", () => {
     }
   }
 
+  /** Sets a photo's crop/zoom state */
+  function setPhotoCrop(id: string, crop: PhotoCrop) {
+    const photo = photos.value.find((p) => p.id === id);
+    if (photo) {
+      photo.crop = crop;
+    }
+  }
+
   /** Applies the same template to all photos */
   function applyTemplateToAll(templateId: string) {
     photos.value.forEach((photo) => {
@@ -131,6 +139,7 @@ export const usePhotoStore = defineStore("photos", () => {
     setPhotoTemplate,
     /** Alias: components use updatePhotoTemplate */
     updatePhotoTemplate: setPhotoTemplate,
+    setPhotoCrop,
     applyTemplateToAll,
   };
 });

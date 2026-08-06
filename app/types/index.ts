@@ -38,6 +38,18 @@ export interface ExifData {
 
 // ==================== Photo ====================
 
+/** Per-photo crop/zoom state applied inside the frame */
+export interface PhotoCrop {
+  /** How the photo fits the frame: "contain" letterboxes, "cover" fills and crops */
+  fitMode: "contain" | "cover";
+  /** Zoom factor relative to the cover-fit size (1 = auto fill, >1 = zoom in) */
+  scale: number;
+  /** Horizontal pan offset, -1..1 (0 = centered) */
+  offsetX: number;
+  /** Vertical pan offset, -1..1 (0 = centered) */
+  offsetY: number;
+}
+
 /** Full state of a single photo */
 export interface Photo {
   /** Unique ID */
@@ -60,6 +72,8 @@ export interface Photo {
   templateId: string;
   /** Overrides for the current template config */
   templateOverrides?: Partial<TemplateConfig>;
+  /** Crop/zoom state (absent = legacy contain behavior) */
+  crop?: PhotoCrop;
   /** Time added */
   addedAt: Date;
 }

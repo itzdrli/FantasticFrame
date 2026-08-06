@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
       height,
       format,
       quality,
-    });
+    } as any);
 
     const buf = Buffer.from(imageBuffer);
     const mimeType =

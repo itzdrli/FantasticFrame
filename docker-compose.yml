@@ -1,0 +1,27 @@
+services:
+  fantasticframe:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # Requires `bun run build` on the host first — see Dockerfile for why
+      # the build happens outside Docker on this host
+    container_name: fantasticframe
+    restart: unless-stopped
+    environment:
+      - HOST=0.0.0.0
+      - PORT=3000
+      - NITRO_HOST=0.0.0.0
+      - NITRO_PORT=3000
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.fantasticframe.rule=Host(`ff.itzdrli.cc`)"
+      - "traefik.http.routers.fantasticframe.entrypoints=websecure"
+      - "traefik.http.routers.fantasticframe.tls=true"
+      - "traefik.http.routers.fantasticframe.tls.certresolver=cf"
+      - "traefik.http.services.fantasticframe.loadbalancer.server.port=3000"
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external: true

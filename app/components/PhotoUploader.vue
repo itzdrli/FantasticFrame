@@ -2,6 +2,7 @@
 import { ref } from "vue";
 import { usePhotoStore } from "~/composables/usePhotoStore";
 import { useExifReader } from "~/composables/useExifReader";
+import { uuid } from "~/utils/uuid";
 
 const photoStore = usePhotoStore();
 const { readExif } = useExifReader();
@@ -15,7 +16,7 @@ async function handleFiles(files: FileList | File[]) {
     const dataUrl = await fileToDataUrl(file);
     const { width, height } = await getImageDimensions(dataUrl);
     photoStore.addPhoto({
-      id: crypto.randomUUID(),
+      id: uuid(),
       fileName: file.name,
       fileSize: file.size,
       mimeType: file.type,
@@ -24,6 +25,7 @@ async function handleFiles(files: FileList | File[]) {
       height,
       exif,
       templateId: "classic",
+      crop: { fitMode: "cover", scale: 1, offsetX: 0, offsetY: 0 },
       addedAt: new Date(),
     });
   }

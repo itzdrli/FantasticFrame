@@ -47,6 +47,7 @@ async function handleExport() {
     templateConfig,
     photoWidth: photo.width,
     photoHeight: photo.height,
+    crop: photo.crop,
   });
   if (res?.imageBase64) {
     await saveImage(res.imageBase64, photo.fileName);
@@ -68,6 +69,7 @@ async function handleBatchExport() {
       templateConfig: getResolvedConfig(photo.templateId, photo.templateOverrides),
       photoWidth: photo.width,
       photoHeight: photo.height,
+      crop: photo.crop,
     },
     originalFilename: photo.fileName,
   }));
@@ -249,7 +251,9 @@ const batchExportDisabled = computed(
             d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
           />
         </svg>
-        <span v-if="batchResult.failed === 0"> All {{ batchResult.success }} exported successfully </span>
+        <span v-if="batchResult.failed === 0">
+          All {{ batchResult.success }} exported successfully
+        </span>
         <span v-else> {{ batchResult.success }} succeeded / {{ batchResult.failed }} failed </span>
       </div>
     </Transition>
@@ -277,6 +281,11 @@ const batchExportDisabled = computed(
               Upload photos to begin creating your fantastic frames.
             </p>
             <PhotoUploader />
+            <p class="text-nord-5 text-s">
+              Photos are processed in your browser.
+              Batch export sends them to the server for rendering;
+              they are never stored.
+            </p>
           </div>
         </div>
 
@@ -407,9 +416,12 @@ const batchExportDisabled = computed(
                   PNG is lossless, no quality setting needed
                 </p>
                 <p v-else-if="exportFormat === 'webp'" class="text-[10px] text-nord-4/70">
-                  Browser-side WebP is lossless; the quality slider only applies to the server render
+                  Browser-side WebP is lossless; the quality slider only applies to the server
+                  render
                 </p>
-                <p v-else class="text-[10px] text-nord-4/70">JPEG is lossy; higher quality means larger files</p>
+                <p v-else class="text-[10px] text-nord-4/70">
+                  JPEG is lossy; higher quality means larger files
+                </p>
               </div>
             </section>
           </div>

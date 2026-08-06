@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { usePhotoStore } from "~/composables/usePhotoStore";
 import { useTemplate } from "~/composables/useTemplate";
 import { useExifReader } from "~/composables/useExifReader";
+import { coverCropRect } from "~~/shared/render";
+import type { PhotoCrop } from "~/types";
 
 const photoStore = usePhotoStore();
 const { getResolvedConfig } = useTemplate();
@@ -195,8 +197,43 @@ const configScale = computed(() => {
 
 const s = (v: number) => Math.round(v * configScale.value);
 
-const imageRenderStyle = computed(() => {
-  if (!photo.value || !templateConfig.value) return {};
+const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
+
+// ── Crop / zoom state ────────────────────────────────────────────────────────
+
+const isCover = computed(() => photo.value?.crop?.fitMode === "cover");
+const cropScale = computed(() => photo.value?.crop?.scale ?? 1);
+const cropOffsetX = computed(() => photo.value?.crop?.offsetX ?? 0);
+const cropOffsetY = computed(() => photo.value?.crop?.offsetY ?? 0);
+
+function updateCrop(patch: Partial<PhotoCrop>) {
+  if (!photo.value) return;
+  photoStore.setPhotoCrop(photo.value.id, {
+    fitMode: "cover",
+    scale: 1,
+    offsetX: 0,
+    offsetY: 0,
+    ...photo.value.crop,
+    ...patch,
+  });
+}
+
+function setFitMode(mode: "contain" | "cover") {
+  updateCrop({ fitMode: mode });
+}
+
+function setZoom(zoom: number) {
+  updateCrop({ scale: clamp(zoom, 1, 5) });
+}
+
+function resetCrop() {
+  updateCrop({ scale: 1, offsetX: 0, offsetY: 0 });
+}
+
+// ── Photo layout (canvas px, shared by contain + cover) ─────────────────────
+
+const photoLayout = computed(() => {
+  if (!photo.value || !templateConfig.value) return null;
   const cfg = templateConfig.value;
   const p = photo.value;
   const { w: canvasW, h: canvasH } = canvasDims.value;
@@ -224,7 +261,8 @@ const imageRenderStyle = computed(() => {
   const availH = Math.max(1, canvasH - footerH - pt - pb);
   const pAspect = p.width / p.height;
 
-  let imgW, imgH;
+  let imgW: number;
+  let imgH: number;
   if (availW > 0 && availH > 0 && pAspect > availW / availH) {
     imgW = availW;
     imgH = Math.round(availW / pAspect);
@@ -235,11 +273,20 @@ const imageRenderStyle = computed(() => {
 
   const finalW = Math.round(imgW * (cfg.photoScale ?? 0.9));
   const finalH = Math.round(imgH * (cfg.photoScale ?? 0.9));
+
+  return { imgW, imgH, finalW, finalH, availW, availH };
+});
+
+const imageRenderStyle = computed(() => {
+  if (!photo.value || !templateConfig.value) return {};
+  const cfg = templateConfig.value;
+  const layout = photoLayout.value;
+  if (!layout) return {};
   const ps = previewScale.value;
 
   return {
-    width: `${Math.round(finalW * ps)}px`,
-    height: `${Math.round(finalH * ps)}px`,
+    width: `${Math.round(layout.finalW * ps)}px`,
+    height: `${Math.round(layout.finalH * ps)}px`,
     borderWidth: `${s(cfg.borderWidth)}px`,
     borderColor: cfg.borderColor,
     borderStyle: cfg.borderWidth > 0 ? "solid" : "none",
@@ -249,6 +296,119 @@ const imageRenderStyle = computed(() => {
     boxSizing: "border-box" as const,
   };
 });
+
+// Cover mode: clipping frame + absolutely positioned (zoomed/panned) image
+const photoFrameStyle = computed(() => {
+  if (!photo.value || !templateConfig.value) return {};
+  const cfg = templateConfig.value;
+  const layout = photoLayout.value;
+  if (!layout) return {};
+  const ps = previewScale.value;
+
+  return {
+    width: `${Math.round(layout.availW * ps)}px`,
+    height: `${Math.round(layout.availH * ps)}px`,
+    position: "relative" as const,
+    overflow: "hidden" as const,
+    borderWidth: `${s(cfg.borderWidth)}px`,
+    borderColor: cfg.borderColor,
+    borderStyle: cfg.borderWidth > 0 ? "solid" : "none",
+    borderRadius: `${s(cfg.borderRadius)}px`,
+    boxSizing: "border-box" as const,
+    touchAction: "none" as const,
+  };
+});
+
+const croppedImageStyle = computed(() => {
+  const layout = photoLayout.value;
+  if (!layout || !photo.value) return {};
+  const ps = previewScale.value;
+  const boxW = Math.round(layout.availW * ps);
+  const boxH = Math.round(layout.availH * ps);
+  const { left, top, width, height } = coverCropRect(
+    boxW,
+    boxH,
+    photo.value.width / photo.value.height,
+    cropScale.value,
+    cropOffsetX.value,
+    cropOffsetY.value,
+  );
+  return {
+    position: "absolute" as const,
+    left: `${left}px`,
+    top: `${top}px`,
+    width: `${Math.round(width)}px`,
+    height: `${Math.round(height)}px`,
+    display: "block" as const,
+    maxWidth: "none" as const,
+    userSelect: "none" as const,
+    pointerEvents: "none" as const,
+  };
+});
+
+// ── Pan / zoom interaction ───────────────────────────────────────────────────
+
+const dragging = ref(false);
+const dragStart = ref({ x: 0, y: 0, ox: 0, oy: 0 });
+
+/** Overflow halves (px) on each axis at the current zoom; 0 = axis is flush */
+const panRanges = () => {
+  const layout = photoLayout.value;
+  const p = photo.value;
+  if (!layout || !p) return { spanX: 0, spanY: 0 };
+  const ps = previewScale.value;
+  const boxW = Math.round(layout.availW * ps);
+  const boxH = Math.round(layout.availH * ps);
+  const rect = coverCropRect(boxW, boxH, p.width / p.height, cropScale.value, 0, 0);
+  return { spanX: (rect.width - boxW) / 2, spanY: (rect.height - boxH) / 2 };
+};
+
+const canPan = computed(() => {
+  const { spanX, spanY } = panRanges();
+  return spanX > 0.5 || spanY > 0.5;
+});
+
+function onPanStart(e: PointerEvent) {
+  if (!isCover.value) return;
+  const { spanX, spanY } = panRanges();
+  if (spanX <= 0.5 && spanY <= 0.5) return;
+  dragging.value = true;
+  dragStart.value = {
+    x: e.clientX,
+    y: e.clientY,
+    ox: cropOffsetX.value,
+    oy: cropOffsetY.value,
+  };
+  (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+}
+
+function onPanMove(e: PointerEvent) {
+  if (!dragging.value || !photo.value) return;
+  const { spanX, spanY } = panRanges();
+  const patch: Partial<PhotoCrop> = {};
+  if (spanX > 0.5) {
+    patch.offsetX = clamp(dragStart.value.ox + (e.clientX - dragStart.value.x) / spanX, -1, 1);
+  } else {
+    patch.offsetX = 0;
+  }
+  if (spanY > 0.5) {
+    patch.offsetY = clamp(dragStart.value.oy + (e.clientY - dragStart.value.y) / spanY, -1, 1);
+  } else {
+    patch.offsetY = 0;
+  }
+  updateCrop(patch);
+}
+
+function onPanEnd() {
+  dragging.value = false;
+}
+
+function onWheel(e: WheelEvent) {
+  if (!isCover.value) return;
+  e.preventDefault();
+  const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+  setZoom(cropScale.value * factor);
+}
 
 const displayExifEntries = computed(() => {
   if (!templateConfig.value || !parsedExif.value) return [];
@@ -416,7 +576,20 @@ const exifTextStyle = computed(() => exifItemStyle.value);
               paddingRight: `${s(templateConfig.paddingHorizontal)}px`,
             }"
           >
-            <img :src="photo.dataUrl" :style="imageRenderStyle" />
+            <div
+              v-if="isCover"
+              :style="photoFrameStyle"
+              class="select-none"
+              :class="dragging ? 'cursor-grabbing' : canPan ? 'cursor-grab' : 'cursor-default'"
+              @pointerdown="onPanStart"
+              @pointermove="onPanMove"
+              @pointerup="onPanEnd"
+              @pointercancel="onPanEnd"
+              @wheel="onWheel"
+            >
+              <img :src="photo.dataUrl" :style="croppedImageStyle" draggable="false" alt="" />
+            </div>
+            <img v-else :src="photo.dataUrl" :style="imageRenderStyle" />
           </div>
 
           <!-- Footer -->
@@ -474,6 +647,61 @@ const exifTextStyle = computed(() => exifItemStyle.value);
             </template>
           </div>
         </div>
+      </div>
+
+      <!-- Crop toolbar -->
+      <div class="flex items-center gap-1.5 text-xs text-nord-6">
+        <button
+          class="px-2.5 py-1 rounded border transition-colors"
+          :class="
+            isCover
+              ? 'bg-nord-8 text-nord-0 font-medium border-nord-8'
+              : 'bg-nord-1 border-nord-3 hover:bg-nord-2'
+          "
+          title="Fill the frame (crops the photo)"
+          @click="setFitMode('cover')"
+        >
+          Fill
+        </button>
+        <button
+          class="px-2.5 py-1 rounded border transition-colors"
+          :class="
+            !isCover
+              ? 'bg-nord-8 text-nord-0 font-medium border-nord-8'
+              : 'bg-nord-1 border-nord-3 hover:bg-nord-2'
+          "
+          title="Fit the whole photo (may leave whitespace)"
+          @click="setFitMode('contain')"
+        >
+          Fit
+        </button>
+        <template v-if="isCover">
+          <span class="w-px h-4 bg-nord-3 mx-1" />
+          <button
+            class="w-6 h-6 flex items-center justify-center rounded border border-nord-3 bg-nord-1 hover:bg-nord-2 transition-colors"
+            title="Zoom out"
+            @click="setZoom(cropScale - 0.25)"
+          >
+            -
+          </button>
+          <span class="min-w-[3rem] text-center tabular-nums"
+            >{{ Math.round(cropScale * 100) }}%</span
+          >
+          <button
+            class="w-6 h-6 flex items-center justify-center rounded border border-nord-3 bg-nord-1 hover:bg-nord-2 transition-colors"
+            title="Zoom in"
+            @click="setZoom(cropScale + 0.25)"
+          >
+            +
+          </button>
+          <button
+            class="px-2.5 py-1 rounded border border-nord-3 bg-nord-1 hover:bg-nord-2 transition-colors"
+            title="Reset zoom and position"
+            @click="resetCrop"
+          >
+            Reset
+          </button>
+        </template>
       </div>
     </div>
   </div>

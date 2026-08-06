@@ -60,6 +60,8 @@ export interface RenderPayload {
   photoWidth?: number;
   /** Original photo height in pixels */
   photoHeight?: number;
+  /** Per-photo crop/zoom applied inside the frame */
+  crop?: { fitMode?: "contain" | "cover"; scale?: number; offsetX?: number; offsetY?: number };
 }
 
 export interface RenderResponse {
@@ -101,7 +103,7 @@ const getTakumi = () => {
 function extFromDataUrl(dataUrl: string): string {
   const m = dataUrl.match(/^data:image\/(png|jpeg|jpg|webp);base64,/);
   if (!m) return "jpg";
-  return m[1] === "jpeg" ? "jpg" : m[1];
+  return m[1] === "jpeg" ? "jpg" : m[1]!;
 }
 
 /** Builds an export file name: strips the original extension and adds the new one */
@@ -154,7 +156,12 @@ export const useImageRender = () => {
   const renderClientSide = async (payload: RenderPayload): Promise<RenderResponse | null> => {
     const takumi = await getTakumi();
     const { nodeTree, width, height, format, quality } = buildRenderTree(payload);
-    const buf = await takumi.render(nodeTree, { width, height, format, quality });
+    const buf = await takumi.render(nodeTree, {
+      width,
+      height,
+      format: format as "png" | "jpeg" | "webp",
+      quality,
+    } as any);
     const mimeType =
       format === "png" ? "image/png" : format === "webp" ? "image/webp" : "image/jpeg";
     return {
@@ -209,7 +216,10 @@ export const useImageRender = () => {
   };
 
   /**
-   * Batch-renders and exports photos.
+   * Batch-renders and exports photos as a single zip.
+   *
+   * Rendering runs server-side (native takumi) so the main thread stays free;
+   * progress is polled from the server and reported per completed photo.
    *
    * @param items Render params and original file name for each photo
    * @param onProgress Progress callback (optional)
@@ -222,45 +232,56 @@ export const useImageRender = () => {
     error.value = null;
     batchProgress.value = null;
 
-    let success = 0;
-    let failed = 0;
-
     try {
-      for (let i = 0; i < items.length; i++) {
-        const { payload, originalFilename } = items[i];
+      const { jobId } = await $fetch<{ jobId: string }>("/api/render/batch", {
+        method: "POST",
+        body: { items },
+      });
 
+      let status: { status: string; total: number; done: number; failed: number };
+      do {
+        await new Promise((r) => setTimeout(r, 300));
+        status = await $fetch(`/api/render/batch/status?jobId=${jobId}`);
         const prog: BatchExportProgress = {
-          current: i,
-          total: items.length,
-          filename: originalFilename,
+          current: status.done,
+          total: status.total,
+          filename: "",
           status: "rendering",
         };
         batchProgress.value = prog;
         onProgress?.(prog);
+      } while (status.status === "rendering");
 
-        try {
-          const res = await _renderOne(payload);
-          if (!res?.imageBase64) {
-            throw new Error("Render result is empty");
-          }
-
-          batchProgress.value = { ...prog, status: "saving" };
-          onProgress?.({ ...prog, status: "saving" });
-
-          await saveImage(res.imageBase64, originalFilename);
-          success++;
-        } catch (err: any) {
-          failed++;
-          const errProg: BatchExportProgress = {
-            ...prog,
-            status: "error",
-            errorMessage: err?.message || "Unknown error",
-          };
-          batchProgress.value = errProg;
-          onProgress?.(errProg);
-          console.error(`[FantasticFrame] batch export failed for ${originalFilename}:`, err);
-        }
+      if (status.status !== "done") {
+        throw new Error("Batch render failed on server");
       }
+
+      batchProgress.value = {
+        current: status.total,
+        total: status.total,
+        filename: "",
+        status: "saving",
+      };
+      const res = await $fetch.raw<ArrayBuffer>(`/api/render/batch/download?jobId=${jobId}`, {
+        responseType: "arrayBuffer",
+      });
+      const disposition = res.headers.get("content-disposition") ?? "";
+      const filename =
+        disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1] ??
+        disposition.match(/filename="?([^"]+)"?/i)?.[1] ??
+        "export.zip";
+      downloadBlob(
+        new Blob([res._data ?? new Uint8Array()], { type: "application/zip" }),
+        filename,
+      );
+
+      const success = Number(res.headers.get("x-ff-export-success")) || status.done;
+      const failed = Number(res.headers.get("x-ff-export-failed")) || status.failed;
+      return { success, failed };
+    } catch (err: any) {
+      error.value = err?.message || "Batch export failed";
+      console.error("Batch export error:", err);
+      return { success: 0, failed: items.length };
     } finally {
       isRendering.value = false;
       batchProgress.value = {
@@ -270,8 +291,20 @@ export const useImageRender = () => {
         status: "done",
       };
     }
+  };
 
-    return { success, failed };
+  /**
+   * Triggers a browser download for a Blob (zip exports)
+   */
+  const downloadBlob = (blob: Blob, filename: string): void => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   return {

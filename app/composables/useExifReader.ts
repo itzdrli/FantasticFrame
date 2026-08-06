@@ -150,8 +150,15 @@ export function useExifReader() {
       const latitude = toNumber(raw.latitude);
       const longitude = toNumber(raw.longitude);
 
+      let make = raw.Make.toString();
+
+      // Brand Specific
+      if (make === `NIKON CORPORATION`) {
+        make = "Nikon";
+      }
+
       const exifData: ExifData = {
-        make: toString(raw.Make),
+        make: make,
         model: toString(raw.Model),
         fNumber,
         exposureTime,

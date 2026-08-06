@@ -249,7 +249,7 @@ function setCanvasMode(mode: "original" | "social") {
               : 'bg-nord-2 text-nord-4 hover:bg-nord-3'
           "
         >
-          original
+          Original
         </button>
         <button
           @click="setCanvasMode('social')"
@@ -327,7 +327,9 @@ function setCanvasMode(mode: "original" | "social") {
           </button>
         </div>
       </div>
-      <p v-if="!showLogo" class="text-[10px] text-nord-4/70">Logo not shown, position will be applied to parameters</p>
+      <p v-if="!showLogo" class="text-[10px] text-nord-4/70">
+        Logo not shown, position will be applied to parameters
+      </p>
 
       <template v-if="showLogo">
         <!-- Logo image upload -->
@@ -395,12 +397,14 @@ function setCanvasMode(mode: "original" | "social") {
 
         <!-- Logo text (fallback) -->
         <div>
-          <span class="text-xs text-nord-4 mb-1 block">Logo Text (Leave blank to use camera brand)</span>
+          <span class="text-xs text-nord-4 mb-1 block"
+            >Logo Text (Leave blank to use camera brand)</span
+          >
           <input
             type="text"
             v-model="logoText"
-            placeholder="e.g. NIKON CORPORATION"
-            class="w-full bg-nord-2 border border-nord-3 rounded-lg px-3 py-1.5 text-nord-6 text-xs focus:border-nord-8 focus:outline-none transition-colors placeholder:text-nord-3"
+            placeholder="e.g. Fantastic Frame"
+            class="w-full bg-nord-2 border border-nord-3 rounded-lg px-3 py-1.5 text-nord-4/70 text-xs focus:border-nord-8 focus:outline-none transition-colors placeholder:text-nord-3"
           />
         </div>
       </template>

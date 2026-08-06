@@ -73,7 +73,7 @@ export const PRESET_TEMPLATES: Record<string, Partial<TemplateConfig>> = {
     borderWidth: 0,
     borderRadius: 0,
     showLogo: false,
-    fontFamily: "'Georgia', serif",
+    fontFamily: "Inter, sans-serif",
     fontColor: "#6B6B6B",
     fontSize: 14,
     modelFontSize: 20,

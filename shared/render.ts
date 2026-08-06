@@ -51,6 +51,13 @@ export interface SharedTemplateConfig {
 
 export type SharedExportFormat = "png" | "jpeg" | "webp";
 
+export interface SharedPhotoCrop {
+  fitMode?: "contain" | "cover";
+  scale?: number;
+  offsetX?: number;
+  offsetY?: number;
+}
+
 export interface SharedRenderPayload {
   photoBase64: string;
   exifData?: SharedExifData;
@@ -58,6 +65,8 @@ export interface SharedRenderPayload {
   exportOptions?: { format?: SharedExportFormat; quality?: number };
   photoWidth?: number;
   photoHeight?: number;
+  /** Per-photo crop/zoom applied inside the frame */
+  crop?: SharedPhotoCrop;
 }
 
 export interface RenderTreeResult {
@@ -105,6 +114,44 @@ export const formatExif = (data: any, field: string): string => {
     default:
       return data[field] || "";
   }
+};
+
+export interface CropRect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Computes the cover-cropped image geometry for a box of boxW x boxH.
+ *
+ * `aspect` is the photo's width/height ratio. At scale = 1 the image is the
+ * cover fit (fills the box, overflowing the longer side); `scale` zooms from
+ * there. `offsetX/offsetY` in [-1, 1] pan across the overflow (0 = centered,
+ * -1 = show the left/top edge, 1 = show the right/bottom edge).
+ */
+export const coverCropRect = (
+  boxW: number,
+  boxH: number,
+  aspect: number,
+  scale: number,
+  offsetX: number,
+  offsetY: number,
+): CropRect => {
+  const s = Math.max(1, scale || 1);
+  const ox = Math.max(-1, Math.min(1, offsetX || 0));
+  const oy = Math.max(-1, Math.min(1, offsetY || 0));
+  const boxAspect = boxW / boxH;
+  // Cover-fit base size (scale = 1)
+  const w = (aspect >= boxAspect ? boxH * aspect : boxW) * s;
+  const h = (aspect >= boxAspect ? boxH : boxW / aspect) * s;
+  return {
+    left: -((w - boxW) * (0.5 + ox * 0.5)),
+    top: -((h - boxH) * (0.5 + oy * 0.5)),
+    width: w,
+    height: h,
+  };
 };
 
 export const buildRenderTree = (payload: SharedRenderPayload): RenderTreeResult => {
@@ -258,7 +305,73 @@ export const buildRenderTree = (payload: SharedRenderPayload): RenderTreeResult 
   const finalW = Math.round(imgW * photoScale);
   const finalH = Math.round(imgH * photoScale);
 
+  const crop = payload.crop;
+  const useCover = crop?.fitMode === "cover";
+  // In cover mode the photo fills the whole available area (no photoScale inset)
+  const boxW = useCover ? Math.round(availW) : finalW;
+  const boxH = useCover ? Math.round(availH) : finalH;
+
   const children: any[] = [];
+
+  const photoNode = (() => {
+    if (!useCover) {
+      return {
+        type: "image",
+        src: photoBase64,
+        width: boxW,
+        height: boxH,
+        style: {
+          borderWidth: borderW,
+          borderColor,
+          borderStyle: borderW > 0 ? "solid" : undefined,
+          borderRadius,
+        },
+      };
+    }
+    // Cover: a clipping container sized to the frame, with the photo absolutely
+    // positioned inside it (zoom + pan). Border/radius live on the container so
+    // the cropped image is clipped to the rounded frame.
+    const {
+      left,
+      top,
+      width: cw,
+      height: ch,
+    } = coverCropRect(
+      boxW,
+      boxH,
+      pAspect,
+      crop?.scale ?? 1,
+      crop?.offsetX ?? 0,
+      crop?.offsetY ?? 0,
+    );
+    return {
+      type: "container",
+      tagName: "div",
+      style: {
+        position: "relative",
+        width: boxW,
+        height: boxH,
+        overflow: "hidden",
+        borderWidth: borderW,
+        borderColor,
+        borderStyle: borderW > 0 ? "solid" : undefined,
+        borderRadius,
+      },
+      children: [
+        {
+          type: "image",
+          src: photoBase64,
+          width: Math.round(cw),
+          height: Math.round(ch),
+          style: {
+            position: "absolute",
+            left: Math.round(left),
+            top: Math.round(top),
+          },
+        },
+      ],
+    };
+  })();
 
   children.push({
     type: "container",
@@ -273,20 +386,7 @@ export const buildRenderTree = (payload: SharedRenderPayload): RenderTreeResult 
       paddingLeft: paddingH,
       paddingRight: paddingH,
     },
-    children: [
-      {
-        type: "image",
-        src: photoBase64,
-        width: finalW,
-        height: finalH,
-        style: {
-          borderWidth: borderW,
-          borderColor,
-          borderStyle: borderW > 0 ? "solid" : undefined,
-          borderRadius,
-        },
-      },
-    ],
+    children: [photoNode],
   });
 
   if (hasLogo || hasExif) {
