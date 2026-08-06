@@ -48,6 +48,27 @@ function estimateFooterContentH(
   );
   const footerInnerW = Math.max(1, canvasW - footerPaddingX * 2);
 
+  // Image-logo dimensions — must mirror shared/render.ts exactly so the live
+  // preview matches the rasterized output. See render.ts for the rationale
+  // (logoScale % + logoAspect, width-capped to footerInnerW).
+  let logoImageW: number;
+  let logoImageH: number;
+  if (cfg.logoImageUrl && cfg.logoAspect && cfg.logoAspect > 0) {
+    const scalePct = cfg.logoScale ?? 100;
+    const baselineH = modelFontSizeBase * 1.4;
+    let h = Math.round(baselineH * scaleFactor * (scalePct / 100));
+    let w = Math.round(h * cfg.logoAspect);
+    if (w > footerInnerW) {
+      w = footerInnerW;
+      h = Math.round(w / cfg.logoAspect);
+    }
+    logoImageW = w;
+    logoImageH = h;
+  } else {
+    logoImageW = Math.round((cfg.logoWidth ?? modelFontSizeBase * 5) * scaleFactor);
+    logoImageH = Math.round((cfg.logoHeight ?? modelFontSizeBase * 1.4) * scaleFactor);
+  }
+
   let exifLines = hasExif ? 1 : 0;
   if (cfg.infoLayout === "list") {
     exifLines = exifValues.length;
@@ -55,9 +76,7 @@ function estimateFooterContentH(
     exifLines = Math.ceil(exifValues.length / 2);
   } else if (hasExif) {
     const rowGap = Math.round(10 * scaleFactor);
-    const logoW = cfg.logoImageUrl
-      ? Math.round((cfg.logoWidth ?? modelFontSizeBase * 5) * scaleFactor)
-      : Math.ceil(logoTxt.length * modelFontSize * 0.7);
+    const logoW = cfg.logoImageUrl ? logoImageW : Math.ceil(logoTxt.length * modelFontSize * 0.7);
     const availExifW =
       hasLogo && cfg.logoPosition !== "center"
         ? Math.max(1, footerInnerW - logoW - Math.round(16 * scaleFactor))
@@ -80,10 +99,7 @@ function estimateFooterContentH(
     ? exifLines * exifLineH +
       Math.max(0, exifLines - 1) * (cfg.infoLayout === "grid" ? gridGapV : rowGap)
     : 0;
-  const logoImageH = cfg.logoImageUrl
-    ? Math.round((cfg.logoHeight ?? modelFontSizeBase * 1.4) * scaleFactor)
-    : 0;
-  const logoBlockH = hasLogo ? Math.max(logoLineH, logoImageH) : 0;
+  const logoBlockH = hasLogo ? Math.max(logoLineH, cfg.logoImageUrl ? logoImageH : 0) : 0;
 
   if (hasLogo && hasExif && cfg.logoPosition === "center") {
     return logoBlockH + Math.round(12 * scaleFactor) + exifBlockH;
@@ -91,18 +107,31 @@ function estimateFooterContentH(
   return Math.max(logoBlockH, exifBlockH);
 }
 
-// Canvas dimensions for each Instagram ratio (width fixed at 1080)
+// Canvas dimensions for the 1080-wide social canvas. Known ratios map to
+// pixel-exact heights; any other "W:H" pair is computed from 1080×(H/W)
+// so custom ratios entered in the UI are rendered the same way the server
+// renderer treats them (see shared/render.ts).
 const instagramDims = (ratio?: string) => {
-  const heights: Record<string, number> = {
+  const known: Record<string, number> = {
     "1:1": 1080,
     "4:5": 1350,
     "5:4": 864,
     "3:4": 1440,
     "4:3": 810,
+    "16:9": 608,
+    "9:16": 1920,
+    "21:9": 463,
+    "9:21": 2520,
     "1.91:1": 565,
     "1:1.91": 2063,
   };
-  return { w: 1080, h: heights[ratio || "4:5"] || 1350 };
+  const r = ratio || "4:5";
+  if (known[r]) return { w: 1080, h: known[r] };
+  const parts = r.split(":").map(Number);
+  if (parts.length === 2 && parts[0] > 0 && parts[1] > 0) {
+    return { w: 1080, h: Math.round((1080 * parts[1]) / parts[0]) };
+  }
+  return { w: 1080, h: 1350 };
 };
 
 // 1080-base scale factor: computed from the longer canvas edge so portrait and landscape stay proportional
@@ -460,15 +489,43 @@ const exifContainerStyle = computed(() => {
   };
 });
 
+// Logo <img> display size — mirrors shared/render.ts so the live preview
+// matches the rasterized output (single Scale % + aspect ratio, width capped
+// to the footer inner width).
 const logoImgWidth = computed(() => {
   const cfg = templateConfig.value;
   if (!cfg) return 0;
+  const fw = Math.max(s(20), s(cfg.paddingHorizontal ?? 0));
+  const footerInnerW = Math.max(1, previewDims.value.w - fw * 2);
+  if (cfg.logoImageUrl && cfg.logoAspect && cfg.logoAspect > 0) {
+    const scalePct = cfg.logoScale ?? 100;
+    const baselineH = (cfg.modelFontSize ?? 20) * 1.4;
+    let h = s(baselineH) * (scalePct / 100);
+    let w = Math.round(h * cfg.logoAspect);
+    if (w > footerInnerW) {
+      w = footerInnerW;
+      h = w / cfg.logoAspect;
+    }
+    return Math.round(w);
+  }
   return s(cfg.logoWidth ?? (cfg.modelFontSize ?? 20) * 5);
 });
 
 const logoImgHeight = computed(() => {
   const cfg = templateConfig.value;
   if (!cfg) return 0;
+  const fw = Math.max(s(20), s(cfg.paddingHorizontal ?? 0));
+  const footerInnerW = Math.max(1, previewDims.value.w - fw * 2);
+  if (cfg.logoImageUrl && cfg.logoAspect && cfg.logoAspect > 0) {
+    const scalePct = cfg.logoScale ?? 100;
+    const baselineH = (cfg.modelFontSize ?? 20) * 1.4;
+    let h = s(baselineH) * (scalePct / 100);
+    const w = Math.round(h * cfg.logoAspect);
+    if (w > footerInnerW) {
+      h = footerInnerW / cfg.logoAspect;
+    }
+    return Math.round(h);
+  }
   return s(cfg.logoHeight ?? (cfg.modelFontSize ?? 20) * 1.4);
 });
 

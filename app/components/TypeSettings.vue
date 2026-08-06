@@ -14,6 +14,12 @@ const resolvedConfig = computed(() =>
   selectedPhoto.value ? getResolvedConfig(templateId.value, overrides.value) : null,
 );
 
+// Image logos ignore `modelFontSize` — the Scale % slider in BorderSettings
+// drives the size instead. Hide the "Logo Text Size" row to avoid confusion.
+const hasImageLogo = computed(
+  () => !!(overrides.value.logoImageUrl ?? resolvedConfig.value?.logoImageUrl),
+);
+
 const update = <K extends keyof TemplateConfig>(key: K, value: TemplateConfig[K]) => {
   if (selectedPhoto.value) {
     photoStore.updatePhotoOverrides(selectedPhoto.value.id, { [key]: value });
@@ -123,8 +129,8 @@ const layoutOptions: { label: string; value: "horizontal" | "list" | "grid" }[] 
         />
       </div>
 
-      <!-- Logo font size -->
-      <div>
+      <!-- Logo font size (text logos only — image logos are sized by Scale % in BorderSettings) -->
+      <div v-if="!hasImageLogo">
         <span class="text-xs text-nord-4 mb-1 block">Logo Size {{ modelFontSize }}px</span>
         <input
           type="range"

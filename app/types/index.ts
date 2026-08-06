@@ -125,9 +125,13 @@ export interface TemplateConfig {
   logoText?: string;
   /** Custom logo image Data URL (takes precedence over text logo) */
   logoImageUrl?: string;
-  /** Logo image width (1080-based px, defaults to model font size × 5) */
+  /** Logo image scale in percent (100 = baseline; only used when logoImageUrl is set) */
+  logoScale?: number;
+  /** Logo image aspect ratio (width / height); used together with logoScale to size the image */
+  logoAspect?: number;
+  /** Logo image width (1080-based px, deprecated — kept for backward compatibility) */
   logoWidth?: number;
-  /** Logo image height (1080-based px, defaults to model font size × 1.4) */
+  /** Logo image height (1080-based px, deprecated — kept for backward compatibility) */
   logoHeight?: number;
 
   // —— Parameter layout ——
@@ -155,8 +159,9 @@ export interface TemplateConfig {
   canvasHeight?: number;
   /** Social platform preset (used when canvasMode='social') */
   socialPreset?: "instagram";
-  /** Instagram ratio (used when socialPreset='instagram') */
-  socialRatio?: "1:1" | "4:5" | "3:4" | "1.91:1" | "5:4" | "4:3" | "1:1.91";
+  /** Output aspect ratio (W:H) for the 1080-wide social canvas. Accepts arbitrary
+   *  integer ratios like "1:1", "16:9", or "7:5" beyond the presets. */
+  socialRatio?: string;
 }
 
 /** EXIF field key, used to configure visibility */

@@ -29,6 +29,8 @@ interface TemplateConfig {
   logoPosition: "left" | "center" | "right";
   logoText?: string;
   logoImageUrl?: string;
+  logoScale?: number;
+  logoAspect?: number;
   logoWidth?: number;
   logoHeight?: number;
   infoLayout: "grid" | "list" | "horizontal";

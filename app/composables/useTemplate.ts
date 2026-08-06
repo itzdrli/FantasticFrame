@@ -98,7 +98,7 @@ export const PRESET_TEMPLATES: Record<string, Partial<TemplateConfig>> = {
     fontSize: 15,
     modelFontSize: 24,
     infoLayout: "horizontal",
-    visibleFields: ["make", "model", "fNumber", "exposureTime", "iso"],
+    visibleFields: ["model", "fNumber", "exposureTime", "iso"],
   },
 
   // ─── Card style ────────────────────────────────────────────────────────────

@@ -32,30 +32,20 @@ const backgroundColor = computed({
   set: (v) => update("backgroundColor", v),
 });
 
-// ── Padding (unified) ──────────────────────────────────────────────────────
-// We expose a single "uniform padding" slider that keeps top/bottom/horizontal in sync
-// Users can still fine-tune via individual sliders below
-const padding = computed({
-  get: () => {
-    const t = overrides.value.paddingTop ?? resolvedConfig.value?.paddingTop ?? 40;
-    const b = overrides.value.paddingBottom ?? resolvedConfig.value?.paddingBottom ?? 40;
-    const h = overrides.value.paddingHorizontal ?? resolvedConfig.value?.paddingHorizontal ?? 40;
-    return Math.round((t + b + h) / 3);
-  },
-  set: (v) => {
-    if (selectedPhoto.value) {
-      photoStore.updatePhotoOverrides(selectedPhoto.value.id, {
-        paddingTop: v,
-        paddingBottom: v,
-        paddingHorizontal: v,
-      });
-    }
-  },
+// ── Padding (independent) ───────────────────────────────────────────────────
+// Three fully-decoupled sliders — no hidden "All around" sync writer, so
+// dragging one never perturbs the others.
+const paddingTop = computed({
+  get: () => overrides.value.paddingTop ?? resolvedConfig.value?.paddingTop ?? 40,
+  set: (v) => update("paddingTop", v),
 });
-
 const paddingBottom = computed({
   get: () => overrides.value.paddingBottom ?? resolvedConfig.value?.paddingBottom ?? 40,
   set: (v) => update("paddingBottom", v),
+});
+const paddingHorizontal = computed({
+  get: () => overrides.value.paddingHorizontal ?? resolvedConfig.value?.paddingHorizontal ?? 40,
+  set: (v) => update("paddingHorizontal", v),
 });
 
 // ── Logo ───────────────────────────────────────────────────────────────────
@@ -74,42 +64,97 @@ const logoText = computed({
 const logoImageUrl = computed(
   () => overrides.value.logoImageUrl ?? resolvedConfig.value?.logoImageUrl ?? "",
 );
-const defaultModelFontSize = computed(
-  () => overrides.value.modelFontSize ?? resolvedConfig.value?.modelFontSize ?? 20,
-);
-const logoWidth = computed({
-  get: () =>
-    overrides.value.logoWidth ?? resolvedConfig.value?.logoWidth ?? defaultModelFontSize.value * 5,
-  set: (v) => update("logoWidth", v),
-});
-const logoHeight = computed({
-  get: () =>
-    overrides.value.logoHeight ??
-    resolvedConfig.value?.logoHeight ??
-    Math.round(defaultModelFontSize.value * 1.4),
-  set: (v) => update("logoHeight", v),
+const logoScale = computed({
+  get: () => overrides.value.logoScale ?? resolvedConfig.value?.logoScale ?? 100,
+  set: (v) => update("logoScale", v),
 });
 
 const logoImageInput = ref<HTMLInputElement | null>(null);
 
-function onLogoImageChange(e: Event) {
-  const file = (e.target as HTMLInputElement).files?.[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    update("logoImageUrl", reader.result as string);
-  };
-  reader.readAsDataURL(file);
-}
-
-function clearLogoImage() {
-  update("logoImageUrl", "");
+// Extract the intrinsic aspect ratio (width / height) from an SVG markup
+// string. Checks viewBox first (most reliable for logos that use it, even
+// when width/height are missing or set to "100%"), then falls back to the
+// width/height attributes. Returns 0 if nothing usable is found.
+function extractSvgAspect(svg: string): number {
+  try {
+    const doc = new DOMParser().parseFromString(svg, "image/svg+xml");
+    if (doc.querySelector("parsererror")) return 0;
+    const root = doc.documentElement;
+    const vb = root.getAttribute("viewBox");
+    if (vb) {
+      const parts = vb.split(/[\s,]+/).map(Number);
+      if (parts.length === 4 && parts[2] > 0 && parts[3] > 0) {
+        return parts[2] / parts[3];
+      }
+    }
+    const wAttr = parseFloat(root.getAttribute("width") || "");
+    const hAttr = parseFloat(root.getAttribute("height") || "");
+    if (!Number.isNaN(wAttr) && !Number.isNaN(hAttr) && hAttr > 0) return wAttr / hAttr;
+  } catch {
+    /* ignore */
+  }
+  return 0;
 }
 
 // ── Paste SVG logo ──────────────────────────────────────────────────────────
 const showPasteSvg = ref(false);
 const svgInput = ref("");
 const svgError = ref("");
+
+function onLogoImageChange(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0];
+  if (!file) return;
+  const isSvg = file.type === "image/svg+xml" || file.name.toLowerCase().endsWith(".svg");
+  if (isSvg) {
+    const reader = new FileReader();
+    reader.onload = () => loadSvg(reader.result as string);
+    reader.readAsText(file);
+  } else {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      // Probe the raster image's intrinsic dimensions, then store the aspect
+      // ratio alongside the data URL so the renderer can size the logo
+      // proportional to a single Scale % override.
+      const img = new Image();
+      img.onload = () => {
+        const aspect =
+          img.naturalWidth && img.naturalHeight ? img.naturalWidth / img.naturalHeight : 0;
+        if (selectedPhoto.value) {
+          photoStore.updatePhotoOverrides(selectedPhoto.value.id, {
+            logoImageUrl: dataUrl,
+            logoAspect: aspect || undefined,
+            logoScale: 100,
+          });
+        }
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+function clearLogoImage() {
+  if (!selectedPhoto.value) return;
+  photoStore.updatePhotoOverrides(selectedPhoto.value.id, {
+    logoImageUrl: "",
+    logoAspect: undefined,
+    logoScale: undefined,
+  });
+  svgSource.value = "";
+  svgColor.value = "";
+}
+
+// ── SVG logo recoloring ─────────────────────────────────────────────────────
+// svgSource keeps the raw markup so we can re-apply color overrides without
+// round-tripping through base64 decode every time. svgColor is the user-chosen
+// override; "" means "use original colors".
+const svgSource = ref("");
+const svgColor = ref("");
+
+const isSvgLogo = computed(
+  () => !!logoImageUrl.value && logoImageUrl.value.startsWith("data:image/svg+xml"),
+);
 
 // Encode raw SVG markup as a base64 data URL — matches what FileReader.readAsDataURL
 // produces for an uploaded .svg file, so the client WASM renderer and the takumi
@@ -122,6 +167,98 @@ function encodeSvgDataUrl(svg: string): string {
   return `data:image/svg+xml;base64,${btoa(bin)}`;
 }
 
+// Inverse of encodeSvgDataUrl: turn an `data:image/svg+xml;...` URL back into raw
+// markup, so a saved photo's logo can be re-colored after a photo switch.
+function decodeSvgDataUrl(url: string): string {
+  try {
+    if (url.startsWith("data:image/svg+xml;base64,")) {
+      const b64 = url.slice("data:image/svg+xml;base64,".length);
+      const bin = atob(b64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return new TextDecoder().decode(bytes);
+    }
+    const idx = url.indexOf(",");
+    if (idx === -1) return "";
+    return decodeURIComponent(url.slice(idx + 1));
+  } catch {
+    return "";
+  }
+}
+
+// Walk every element in the SVG and replace non-"none" / non-"transparent"
+// fills & strokes with `color`. Uses DOMParser so attribute-based SVGs
+// (the common case for logo exports) are handled correctly; CSS-in-<style>
+// SVGs would need a style override which we deliberately don't do — most
+// users paste attribute-styled logos, and a global !important style would
+// also clobber `fill="none"` outline-only paths.
+//
+// NB: for `stroke` we only override when an explicit attribute is present.
+// SVG's default stroke is "none", so an element without `stroke="..."`
+// has no outline — adding one would draw a thin border where there was
+// none (visible artifact when recoloring a dark logo against a dark
+// background). `fill`, on the other hand, defaults to black, so a missing
+// fill attribute does need to be overridden to recolor the shape.
+function applySvgColor(svg: string, color: string): string {
+  if (!color) return svg;
+  try {
+    const doc = new DOMParser().parseFromString(svg, "image/svg+xml");
+    if (doc.querySelector("parsererror")) return svg;
+    doc.querySelectorAll("*").forEach((el) => {
+      const fill = el.getAttribute("fill");
+      if (fill !== "none" && fill !== "transparent") el.setAttribute("fill", color);
+      const stroke = el.getAttribute("stroke");
+      if (stroke !== null && stroke !== "" && stroke !== "none" && stroke !== "transparent") {
+        el.setAttribute("stroke", color);
+      }
+    });
+    return new XMLSerializer().serializeToString(doc);
+  } catch {
+    return svg;
+  }
+}
+
+// Load a fresh SVG (from paste or upload) — caches the source, derives its
+// intrinsic aspect ratio, resets color/scale, and writes the initial data URL.
+function loadSvg(source: string) {
+  svgSource.value = source;
+  svgColor.value = "";
+  const aspect = extractSvgAspect(source);
+  if (selectedPhoto.value) {
+    photoStore.updatePhotoOverrides(selectedPhoto.value.id, {
+      logoAspect: aspect || undefined,
+      logoScale: 100,
+    });
+  }
+  refreshLogo();
+}
+
+function refreshLogo() {
+  if (!svgSource.value) return;
+  internalUpdate = true;
+  update("logoImageUrl", encodeSvgDataUrl(applySvgColor(svgSource.value, svgColor.value)));
+}
+
+// Sync svgSource when the logo changes from outside this component (photo
+// switch, undo/redo, etc.). `internalUpdate` guards our own refreshLogo
+// writes so the watcher doesn't clobber svgColor mid-pick and recurse.
+let internalUpdate = false;
+watch(logoImageUrl, (url) => {
+  if (internalUpdate) {
+    internalUpdate = false;
+    return;
+  }
+  if (url && url.startsWith("data:image/svg+xml")) {
+    svgSource.value = decodeSvgDataUrl(url);
+  } else {
+    svgSource.value = "";
+  }
+  svgColor.value = "";
+});
+
+// Re-encode the logo whenever the user picks a new color
+watch(svgColor, () => refreshLogo());
+
 function applySvg() {
   const svg = svgInput.value.trim();
   if (!svg) {
@@ -132,7 +269,7 @@ function applySvg() {
     svgError.value = "Invalid SVG — must contain <svg>…</svg>.";
     return;
   }
-  update("logoImageUrl", encodeSvgDataUrl(svg));
+  loadSvg(svg);
   showPasteSvg.value = false;
   svgInput.value = "";
   svgError.value = "";
@@ -155,14 +292,38 @@ function onSvgPaste(e: ClipboardEvent) {
       const file = item.getAsFile();
       if (file) {
         e.preventDefault();
+        const isSvg = file.type === "image/svg+xml" || file.name.toLowerCase().endsWith(".svg");
         const reader = new FileReader();
-        reader.onload = () => {
-          update("logoImageUrl", reader.result as string);
-          showPasteSvg.value = false;
-          svgInput.value = "";
-          svgError.value = "";
-        };
-        reader.readAsDataURL(file);
+        if (isSvg) {
+          reader.onload = () => {
+            loadSvg(reader.result as string);
+            showPasteSvg.value = false;
+            svgInput.value = "";
+            svgError.value = "";
+          };
+          reader.readAsText(file);
+        } else {
+          reader.onload = () => {
+            const dataUrl = reader.result as string;
+            const img = new Image();
+            img.onload = () => {
+              const aspect =
+                img.naturalWidth && img.naturalHeight ? img.naturalWidth / img.naturalHeight : 0;
+              if (selectedPhoto.value) {
+                photoStore.updatePhotoOverrides(selectedPhoto.value.id, {
+                  logoImageUrl: dataUrl,
+                  logoAspect: aspect || undefined,
+                  logoScale: 100,
+                });
+              }
+              showPasteSvg.value = false;
+              svgInput.value = "";
+              svgError.value = "";
+            };
+            img.src = dataUrl;
+          };
+          reader.readAsDataURL(file);
+        }
         return;
       }
     }
@@ -179,32 +340,60 @@ const socialRatio = computed({
   set: (v) => update("socialRatio", v),
 });
 
-const socialRatios: {
-  label: string;
-  value: "1:1" | "4:5" | "3:4" | "1.91:1" | "5:4" | "4:3" | "1:1.91";
-}[] = [
+// Preset ratios (landscape form only — use "Invert Ratio" for the portrait
+// counterpart, e.g. 3:4 → 4:3). Keeps the button grid short while still
+// covering every common camera/screen shape via a single invert tap.
+const socialRatios: { label: string; value: string }[] = [
   { label: "1:1", value: "1:1" },
-  { label: "4:5", value: "4:5" },
-  { label: "1.91:1", value: "1.91:1" },
+  { label: "4:3", value: "4:3" },
   { label: "3:4", value: "3:4" },
+  { label: "16:9", value: "16:9" },
+  { label: "21:9", value: "21:9" },
+  { label: "1.91:1", value: "1.91:1" },
 ];
 
+// Custom-ratio inputs. They mirror `socialRatio` when the current ratio is one
+// of the presets' integer form; otherwise the user types new numbers and hits
+// Apply. Keeping the W and H as separate number inputs (instead of a single
+// "W:H" text field) avoids mid-edit states like "16:" that would be invalid.
+const customW = ref<number | null>(null);
+const customH = ref<number | null>(null);
+
+const applyCustomRatio = () => {
+  if (customW.value && customH.value && customW.value > 0 && customH.value > 0) {
+    socialRatio.value = `${customW.value}:${customH.value}`;
+  }
+};
+
 const socialDimsText = computed(() => {
-  const heights: Record<string, number> = {
+  const known: Record<string, number> = {
     "1:1": 1080,
     "4:5": 1350,
     "5:4": 864,
     "3:4": 1440,
     "4:3": 810,
+    "16:9": 608,
+    "9:16": 1920,
+    "21:9": 463,
+    "9:21": 2520,
     "1.91:1": 565,
     "1:1.91": 2063,
   };
-  return `Ins ${socialRatio.value} → 1080×${heights[socialRatio.value] || 1350}`;
+  const r = socialRatio.value;
+  let h = known[r];
+  if (!h) {
+    const parts = r.split(":").map(Number);
+    h =
+      parts.length === 2 && parts[0] > 0 && parts[1] > 0
+        ? Math.round((1080 * parts[1]) / parts[0])
+        : 1350;
+  }
+  return `${r} → 1080×${h}`;
 });
 
 function invertSocialRatio() {
   const [a, b] = socialRatio.value.split(":");
-  socialRatio.value = `${b}:${a}` as typeof socialRatio.value;
+  socialRatio.value = `${b}:${a}`;
 }
 
 function setCanvasMode(mode: "original" | "social") {
@@ -253,22 +442,32 @@ function setCanvasMode(mode: "original" | "social") {
     <div class="flex flex-col gap-3">
       <span class="text-nord-5 font-medium border-b border-nord-2 pb-1">Padding</span>
       <div>
-        <span class="text-xs text-nord-4 mb-1 block">All around {{ padding }}px</span>
+        <span class="text-xs text-nord-4 mb-1 block">Top {{ paddingTop }}px</span>
         <input
           type="range"
           min="0"
           max="200"
-          v-model.number="padding"
+          v-model.number="paddingTop"
           class="w-full accent-nord-8"
         />
       </div>
       <div>
-        <span class="text-xs text-nord-4 mb-1 block">Bottom Additional {{ paddingBottom }}px</span>
+        <span class="text-xs text-nord-4 mb-1 block">Bottom {{ paddingBottom }}px</span>
         <input
           type="range"
           min="0"
           max="300"
           v-model.number="paddingBottom"
+          class="w-full accent-nord-8"
+        />
+      </div>
+      <div>
+        <span class="text-xs text-nord-4 mb-1 block">Horizontal {{ paddingHorizontal }}px</span>
+        <input
+          type="range"
+          min="0"
+          max="200"
+          v-model.number="paddingHorizontal"
           class="w-full accent-nord-8"
         />
       </div>
@@ -298,10 +497,10 @@ function setCanvasMode(mode: "original" | "social") {
               : 'bg-nord-2 text-nord-4 hover:bg-nord-3'
           "
         >
-          Ins
+          1080w
         </button>
       </div>
-      <div v-if="canvasMode === 'social'" class="grid grid-cols-4 gap-1">
+      <div v-if="canvasMode === 'social'" class="grid grid-cols-3 gap-1">
         <button
           v-for="r in socialRatios"
           :key="r.value"
@@ -314,6 +513,33 @@ function setCanvasMode(mode: "original" | "social") {
           "
         >
           {{ r.label }}
+        </button>
+      </div>
+
+      <!-- Custom ratio: two number inputs + Apply. Always shown beneath the
+           presets in social mode so the user can dial in any W:H (e.g. 7:5)
+           without it being a preset button. -->
+      <div v-if="canvasMode === 'social'" class="flex items-center gap-2">
+        <input
+          v-model.number="customW"
+          type="number"
+          min="1"
+          placeholder="W"
+          class="w-full bg-nord-2 border border-nord-3 rounded-lg px-2 py-1.5 text-nord-6 text-xs focus:border-nord-8 focus:outline-none transition-colors placeholder:text-nord-6"
+        />
+        <span class="text-xs text-nord-4">:</span>
+        <input
+          v-model.number="customH"
+          type="number"
+          min="1"
+          placeholder="H"
+          class="w-full bg-nord-2 border border-nord-3 rounded-lg px-2 py-1.5 text-nord-6 text-xs focus:border-nord-8 focus:outline-none transition-colors placeholder:text-nord-6"
+        />
+        <button
+          @click="applyCustomRatio"
+          class="px-3 py-1.5 text-xs rounded-lg bg-nord-8 text-nord-0 font-medium hover:bg-nord-9 transition-colors shrink-0"
+        >
+          Apply
         </button>
       </div>
       <button
@@ -425,7 +651,7 @@ function setCanvasMode(mode: "original" | "social") {
                 placeholder="<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>…</svg>"
                 rows="5"
                 spellcheck="false"
-                class="w-full bg-nord-2 border border-nord-3 rounded-lg px-2 py-1.5 text-xs font-mono text-nord-4 focus:border-nord-8 focus:outline-none transition-colors placeholder:text-nord-3 resize-y"
+                class="w-full bg-nord-2 border border-nord-3 rounded-lg px-2 py-1.5 text-xs font-mono text-nord-6 focus:border-nord-8 focus:outline-none transition-colors placeholder:text-nord-6 resize-y"
               />
               <div class="flex gap-2">
                 <button
@@ -455,24 +681,35 @@ function setCanvasMode(mode: "original" | "social") {
           <!-- Logo image size -->
           <template v-if="logoImageUrl">
             <div>
-              <span class="text-xs text-nord-4 mb-1 block">Image Width {{ logoWidth }}px</span>
+              <span class="text-xs text-nord-4 mb-1 block">Scale {{ logoScale }}%</span>
               <input
                 type="range"
                 min="20"
-                max="400"
-                v-model.number="logoWidth"
+                max="300"
+                v-model.number="logoScale"
                 class="w-full accent-nord-8"
               />
             </div>
-            <div>
-              <span class="text-xs text-nord-4 mb-1 block">Image Height {{ logoHeight }}px</span>
-              <input
-                type="range"
-                min="10"
-                max="200"
-                v-model.number="logoHeight"
-                class="w-full accent-nord-8"
-              />
+
+            <!-- SVG color override (only shown for SVG logos) -->
+            <div v-if="isSvgLogo" class="flex items-center justify-between mt-1">
+              <span class="text-xs text-nord-4">SVG Color</span>
+              <div class="flex items-center gap-2">
+                <button
+                  v-if="svgColor"
+                  @click="svgColor = ''"
+                  class="text-[10px] text-nord-11 hover:text-red-400 transition-colors px-1.5 py-1 rounded hover:bg-nord-3"
+                  title="Reset to original colors"
+                >
+                  Reset
+                </button>
+                <input
+                  type="color"
+                  :value="svgColor || '#000000'"
+                  @input="svgColor = ($event.target as HTMLInputElement).value"
+                  class="w-8 h-8 rounded cursor-pointer border border-nord-3 bg-nord-1 p-0.5"
+                />
+              </div>
             </div>
           </template>
         </div>
@@ -486,7 +723,7 @@ function setCanvasMode(mode: "original" | "social") {
             type="text"
             v-model="logoText"
             placeholder="e.g. Fantastic Frame"
-            class="w-full bg-nord-2 border border-nord-3 rounded-lg px-3 py-1.5 text-nord-4/70 text-xs focus:border-nord-8 focus:outline-none transition-colors placeholder:text-nord-3"
+            class="w-full bg-nord-2 border border-nord-3 rounded-lg px-3 py-1.5 text-nord-6 text-xs focus:border-nord-8 focus:outline-none transition-colors placeholder:text-nord-6"
           />
         </div>
       </template>

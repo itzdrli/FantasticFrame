@@ -32,6 +32,8 @@ export interface SharedTemplateConfig {
   logoPosition: "left" | "center" | "right";
   logoText?: string;
   logoImageUrl?: string;
+  logoScale?: number;
+  logoAspect?: number;
   logoWidth?: number;
   logoHeight?: number;
   infoLayout: "grid" | "list" | "horizontal";
@@ -44,7 +46,8 @@ export interface SharedTemplateConfig {
   canvasWidth?: number;
   canvasHeight?: number;
   socialPreset?: "instagram";
-  socialRatio?: "1:1" | "4:5" | "3:4" | "1.91:1" | "5:4" | "4:3" | "1:1.91";
+  /** Output aspect ratio (W:H), arbitrary integer pair (e.g. "1:1", "16:9"). */
+  socialRatio?: string;
 }
 
 export type SharedExportFormat = "png" | "jpeg" | "webp";
@@ -159,19 +162,35 @@ export const buildRenderTree = (payload: SharedRenderPayload): RenderTreeResult 
   let canvasHeight = photoHeight || 1080;
 
   if (templateConfig.canvasMode === "social" && templateConfig.socialPreset) {
-    const instagramHeights: Record<string, number> = {
+    // Known ratios → pixel-exact heights; any other "W:H" pair is computed
+    // from the 1080-wide canvas (h = 1080 × H / W). Keeps the renderer
+    // forward-compatible with arbitrary custom ratios entered in the UI.
+    const knownHeights: Record<string, number> = {
       "1:1": 1080,
       "4:5": 1350,
       "5:4": 864,
       "3:4": 1440,
       "4:3": 810,
+      "16:9": 608,
+      "9:16": 1920,
+      "21:9": 463,
+      "9:21": 2520,
       "1.91:1": 565,
       "1:1.91": 2063,
+    };
+    const computeHeight = (ratio?: string): number => {
+      if (!ratio) return 1350;
+      if (knownHeights[ratio]) return knownHeights[ratio];
+      const parts = ratio.split(":").map(Number);
+      if (parts.length === 2 && parts[0] > 0 && parts[1] > 0) {
+        return Math.round((1080 * parts[1]) / parts[0]);
+      }
+      return 1350;
     };
     switch (templateConfig.socialPreset) {
       case "instagram":
         canvasWidth = 1080;
-        canvasHeight = instagramHeights[templateConfig.socialRatio || "4:5"] || 1350;
+        canvasHeight = computeHeight(templateConfig.socialRatio);
         break;
     }
   } else if (templateConfig.canvasMode === "fixed") {
@@ -202,10 +221,6 @@ export const buildRenderTree = (payload: SharedRenderPayload): RenderTreeResult 
   const logoPosition = templateConfig.logoPosition || "center";
   const logoTxt = templateConfig.logoText || (exifData?.make || "").toUpperCase();
   const logoImageUrl: string = templateConfig.logoImageUrl || "";
-  const logoImageW = Math.round((templateConfig.logoWidth ?? modelFontSizeBase * 5) * scaleFactor);
-  const logoImageH = Math.round(
-    (templateConfig.logoHeight ?? modelFontSizeBase * 1.4) * scaleFactor,
-  );
   const infoLayout = templateConfig.infoLayout || "horizontal";
 
   const visibleFields: string[] = templateConfig.visibleFields || [];
@@ -220,6 +235,34 @@ export const buildRenderTree = (payload: SharedRenderPayload): RenderTreeResult 
   const exifLineH = Math.ceil(fontSize * 1.4);
   const footerPaddingX = Math.max(Math.round(20 * scaleFactor), paddingH);
   const footerInnerW = Math.max(1, canvasWidth - footerPaddingX * 2);
+
+  // Image-logo dimensions.
+  // Preferred model: a single `logoScale` (%) applied to a baseline height of
+  // `modelFontSizeBase * 1.4`, with the width derived from the image's
+  // intrinsic `logoAspect` (w/h). Width is capped to the footer inner width so
+  // the logo can never overflow (which would otherwise shift its position and
+  // make the Layout > Position button appear to do nothing). The capped width
+  // back-computes the displayed height, so the footer reserves exactly the
+  // height the image actually occupies — no top/bottom whitespace.
+  // Legacy fallback: if `logoAspect` is missing (old stored photo), fall back
+  // to the explicit `logoWidth`/`logoHeight` pair.
+  let logoImageW: number;
+  let logoImageH: number;
+  if (logoImageUrl && templateConfig.logoAspect && templateConfig.logoAspect > 0) {
+    const scalePct = templateConfig.logoScale ?? 100;
+    const baselineH = modelFontSizeBase * 1.4;
+    let h = Math.round(baselineH * scaleFactor * (scalePct / 100));
+    let w = Math.round(h * templateConfig.logoAspect);
+    if (w > footerInnerW) {
+      w = footerInnerW;
+      h = Math.round(w / templateConfig.logoAspect);
+    }
+    logoImageW = w;
+    logoImageH = h;
+  } else {
+    logoImageW = Math.round((templateConfig.logoWidth ?? modelFontSizeBase * 5) * scaleFactor);
+    logoImageH = Math.round((templateConfig.logoHeight ?? modelFontSizeBase * 1.4) * scaleFactor);
+  }
 
   // Estimate how many lines the EXIF block occupies so the footer never overflows
   let exifLines = hasExif ? 1 : 0;
