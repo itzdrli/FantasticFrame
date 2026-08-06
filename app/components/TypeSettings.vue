@@ -110,11 +110,7 @@ const layoutOptions: { label: string; value: "horizontal" | "list" | "grid" }[] 
       <!-- Color -->
       <div class="flex items-center justify-between">
         <span class="text-xs text-nord-4">Font Color</span>
-        <input
-          type="color"
-          v-model="fontColor"
-          class="w-8 h-8 rounded cursor-pointer border border-nord-3 bg-nord-1 p-0.5"
-        />
+        <ColorPicker v-model="fontColor" />
       </div>
 
       <!-- Parameter font size -->

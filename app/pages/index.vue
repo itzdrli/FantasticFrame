@@ -520,6 +520,16 @@ const batchExportDisabled = computed(
               View Full Policy
             </a>
           </div>
+          <div class="flex justify-end">
+            <a
+              href="https://legal.itzdrli.cc"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="px-4 py-2 bg-nord-8 text-nord-0 font-medium rounded shadow hover:bg-nord-9 transition-colors text-sm"
+            >
+              View Full Policy
+            </a>
+          </div>
         </div>
       </div>
     </Transition>

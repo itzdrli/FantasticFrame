@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "vue-color/style.css";
 
 @theme {
   --color-nord-0: #2e3440;

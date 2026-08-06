@@ -416,11 +416,7 @@ function setCanvasMode(mode: "original" | "social") {
     <!-- Background -->
     <div class="flex items-center justify-between">
       <span class="text-nord-5 font-medium">Background</span>
-      <input
-        type="color"
-        v-model="backgroundColor"
-        class="w-8 h-8 rounded cursor-pointer border border-nord-3 bg-nord-1 p-0.5"
-      />
+      <ColorPicker v-model="backgroundColor" />
     </div>
 
     <!-- Corner Radius -->
@@ -703,11 +699,9 @@ function setCanvasMode(mode: "original" | "social") {
                 >
                   Reset
                 </button>
-                <input
-                  type="color"
-                  :value="svgColor || '#000000'"
-                  @input="svgColor = ($event.target as HTMLInputElement).value"
-                  class="w-8 h-8 rounded cursor-pointer border border-nord-3 bg-nord-1 p-0.5"
+                <ColorPicker
+                  :model-value="svgColor || '#000000'"
+                  @update:model-value="svgColor = $event"
                 />
               </div>
             </div>
