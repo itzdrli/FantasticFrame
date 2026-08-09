@@ -120,28 +120,9 @@ export const PRESET_TEMPLATES: Record<string, Partial<TemplateConfig>> = {
     visibleFields: ["model", "fNumber", "exposureTime", "iso", "focalLength"],
   },
 
-  // ─── Nord Light ─────────────────────────────────────────────────────────────
-  // Snow-storm paper (nord6) with polar-night ink (nord0), geometric Scandinavia feel
-  "nord-light": {
-    backgroundColor: "#ECEFF4",
-    photoScale: 1.0,
-    paddingTop: 28,
-    paddingBottom: 28,
-    paddingHorizontal: 32,
-    borderRadius: 0,
-    showLogo: true,
-    logoPosition: "center",
-    fontFamily: "'Space Grotesk', sans-serif",
-    fontColor: "#2E3440",
-    fontSize: 14,
-    modelFontSize: 22,
-    infoLayout: "horizontal",
-    visibleFields: ["model", "fNumber", "exposureTime", "iso", "focalLength"],
-  },
-
   // ─── Nord Dark ──────────────────────────────────────────────────────────────
   // Polar-night surface (nord0) with snow-storm ink (nord4), monospace terminal-luxe
-  "nord-dark": {
+  nord: {
     backgroundColor: "#2E3440",
     photoScale: 1.0,
     paddingTop: 0,

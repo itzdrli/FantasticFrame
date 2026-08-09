@@ -3,14 +3,17 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "nuxt build && bun scripts/postbuild.mjs",
+    "build": "nuxt typecheck && nuxt build && bun scripts/postbuild.mjs",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "lint": "oxlint .",
     "fmt": "oxfmt",
-    "fmt:check": "oxfmt --check"
+    "fmt:check": "oxfmt --check",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "nuxt typecheck"
   },
   "dependencies": {
     "@pinia/nuxt": "^1.0.1",
@@ -30,6 +33,7 @@
     "tailwindcss": "^4.3.3",
     "typescript": "~5.9.0",
     "vite-plugin-checker": "^0.14.5",
+    "vitest": "^4.1.10",
     "vue-tsc": "^3.3.9"
   }
 }

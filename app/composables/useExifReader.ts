@@ -1,4 +1,5 @@
 import exifr from "exifr";
+import { formatExif } from "~~/shared/render";
 import type { ExifData } from "~/types";
 
 /**
@@ -34,73 +35,105 @@ function formatExposureTime(seconds: number): string {
 }
 
 /**
- * Formats aperture value
- * e.g. 2.8 → "f/2.8", 1.2 → "f/1.2"
+ * Converts a raw exifr parse result into the app's ExifData shape.
+ *
+ * Kept separate from the composable so it can be unit-tested directly, and so
+ * a missing tag (e.g. cameras that don't record `Make`) can never abort the
+ * whole parse — previously `raw.Make.toString()` threw and the catch block
+ * discarded every other field along with it.
  */
-export function formatFNumber(fNumber: number): string {
-  if (typeof fNumber !== "number" || !Number.isFinite(fNumber)) return "";
-  return `f/${fNumber % 1 === 0 ? fNumber.toFixed(0) : fNumber.toFixed(1)}`;
+export function extractExif(raw: Record<string, unknown> | undefined): ExifData {
+  if (!raw) return { raw: {} };
+
+  // Safely extract numeric fields in case exifr returns non-number types
+  const fNumber = toNumber(raw.FNumber) ?? toNumber(raw.ApertureValue);
+  const exposureTime = toNumber(raw.ExposureTime);
+  const iso = toNumber(raw.ISO) ?? toNumber(raw.ISOSpeedRatings);
+  const focalLength = toNumber(raw.FocalLength);
+  const focalLengthIn35mm =
+    toNumber(raw.FocalLengthIn35mmFormat) ?? toNumber(raw.FocalLengthIn35mmFilm);
+  const exposureBias = toNumber(raw.ExposureBiasValue);
+  const latitude = toNumber(raw.latitude);
+  const longitude = toNumber(raw.longitude);
+
+  // Make is optional: many files (screenshots, scans, stripped exports) have
+  // full EXIF but no Make tag. `String()` keeps non-string values safe.
+  let make = raw.Make ? String(raw.Make) : undefined;
+  if (make) {
+    const brandNames: Record<string, string> = {
+      "NIKON CORPORATION": "Nikon",
+      SONY: "Sony",
+    };
+    make = brandNames[make] ?? make;
+  }
+
+  return {
+    make,
+    model: toString(raw.Model),
+    fNumber,
+    exposureTime,
+    exposureTimeFormatted: exposureTime ? formatExposureTime(exposureTime) : undefined,
+    iso,
+    focalLength,
+    focalLengthIn35mm,
+    dateTimeOriginal: toDate(raw.DateTimeOriginal),
+    lensModel: toString(raw.LensModel) ?? toString(raw.Lens),
+    latitude,
+    longitude,
+    exposureBias,
+    raw,
+  };
 }
 
 /**
- * Formats focal length
- * e.g. 50 → "50mm"
+ * Safely converts an EXIF date value to a Date. exifr usually revives the tag
+ * into a Date already; when it doesn't (or the input is a raw string), fall
+ * back to parsing the EXIF "YYYY:MM:DD HH:MM:SS" layout that `new Date()`
+ * cannot handle.
  */
-export function formatFocalLength(mm: number): string {
-  return `${Math.round(mm)}mm`;
+function toDate(val: unknown): Date | undefined {
+  if (val == null) return undefined;
+  const d = val instanceof Date ? val : new Date(val as string | number);
+  if (!Number.isNaN(d.getTime())) return d;
+  if (typeof val === "string") {
+    const [datePart, timePart] = val.trim().split(" ");
+    const [y, m, day] = (datePart || "").split(":").map(Number);
+    const [hh, mm, ss] = (timePart || "").split(":").map(Number);
+    if (y && m && day) {
+      const parsed = new Date(y, m - 1, day, hh || 0, mm || 0, ss || 0);
+      if (!Number.isNaN(parsed.getTime())) return parsed;
+    }
+  }
+  return undefined;
 }
 
 /**
- * Formats ISO
- * e.g. 100 → "ISO 100"
- */
-export function formatISO(iso: number): string {
-  return `ISO ${iso}`;
-}
-
-/**
- * Formats exposure compensation
- * e.g. 0.3 → "+0.3 EV", -1 → "-1.0 EV", 0 → "±0 EV"
- */
-export function formatExposureBias(bias: number): string {
-  if (typeof bias !== "number" || !Number.isFinite(bias)) return "";
-  if (bias === 0) return "±0 EV";
-  const sign = bias > 0 ? "+" : "";
-  return `${sign}${bias.toFixed(1)} EV`;
-}
-
-/**
- * Formats EXIF fields into a display string map
+ * Formats EXIF fields into a display string map.
+ *
+ * Delegates every field to the renderer's `formatExif` (shared/render.ts) so
+ * the live preview, the EXIF panel and the exported image can never drift
+ * apart — the footer-height estimation in PreviewPanel depends on these exact
+ * strings matching what buildRenderTree rasterizes.
  */
 export function formatExifForDisplay(exif: ExifData): Record<string, string> {
   const display: Record<string, string> = {};
-
-  if (exif.make) display.make = exif.make;
-  if (exif.model) display.model = exif.model;
-  if (exif.lensModel) display.lensModel = exif.lensModel;
-  if (exif.fNumber != null) display.fNumber = formatFNumber(exif.fNumber);
-  if (exif.exposureTimeFormatted) {
-    display.exposureTime = exif.exposureTimeFormatted;
-  } else if (exif.exposureTime != null) {
-    display.exposureTime = formatExposureTime(exif.exposureTime);
+  const fields = [
+    "make",
+    "model",
+    "lensModel",
+    "fNumber",
+    "exposureTime",
+    "iso",
+    "focalLength",
+    "focalLengthIn35mm",
+    "exposureBias",
+    "dateTimeOriginal",
+    "gps",
+  ] as const;
+  for (const field of fields) {
+    const value = formatExif(exif, field);
+    if (value) display[field] = value;
   }
-  if (exif.iso != null) display.iso = formatISO(exif.iso);
-  if (exif.focalLength != null) display.focalLength = formatFocalLength(exif.focalLength);
-  if (exif.focalLengthIn35mm != null) {
-    display.focalLengthIn35mm = formatFocalLength(exif.focalLengthIn35mm);
-  }
-  if (exif.exposureBias != null) display.exposureBias = formatExposureBias(exif.exposureBias);
-  if (exif.dateTimeOriginal) {
-    display.dateTimeOriginal = exif.dateTimeOriginal.toLocaleDateString("zh-CN", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
-  }
-  if (exif.latitude != null && exif.longitude != null) {
-    display.gps = `${exif.latitude.toFixed(6)}, ${exif.longitude.toFixed(6)}`;
-  }
-
   return display;
 }
 
@@ -135,46 +168,7 @@ export function useExifReader() {
         icc: false,
       });
 
-      if (!raw) {
-        return { raw: {} };
-      }
-
-      // Safely extract numeric fields in case exifr returns non-number types
-      const fNumber = toNumber(raw.FNumber) ?? toNumber(raw.ApertureValue);
-      const exposureTime = toNumber(raw.ExposureTime);
-      const iso = toNumber(raw.ISO) ?? toNumber(raw.ISOSpeedRatings);
-      const focalLength = toNumber(raw.FocalLength);
-      const focalLengthIn35mm =
-        toNumber(raw.FocalLengthIn35mmFormat) ?? toNumber(raw.FocalLengthIn35mmFilm);
-      const exposureBias = toNumber(raw.ExposureBiasValue);
-      const latitude = toNumber(raw.latitude);
-      const longitude = toNumber(raw.longitude);
-
-      let make = raw.Make.toString();
-
-      // Brand Specific
-      if (make === `NIKON CORPORATION`) {
-        make = "Nikon";
-      }
-
-      const exifData: ExifData = {
-        make: make,
-        model: toString(raw.Model),
-        fNumber,
-        exposureTime,
-        exposureTimeFormatted: exposureTime ? formatExposureTime(exposureTime) : undefined,
-        iso,
-        focalLength,
-        focalLengthIn35mm,
-        dateTimeOriginal: raw.DateTimeOriginal ? new Date(raw.DateTimeOriginal) : undefined,
-        lensModel: toString(raw.LensModel) ?? toString(raw.Lens),
-        latitude,
-        longitude,
-        exposureBias,
-        raw,
-      };
-
-      return exifData;
+      return extractExif(raw);
     } catch (e) {
       const message = e instanceof Error ? e.message : "Failed to read EXIF";
       error.value = message;

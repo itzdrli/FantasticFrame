@@ -45,7 +45,7 @@ async function handleFiles(files: FileList | File[]) {
   importProgress.value = { current: 0, total: imageFiles.length };
 
   for (let i = 0; i < imageFiles.length; i++) {
-    const file = imageFiles[i];
+    const file = imageFiles[i]!; // safe: i < length
     importProgress.value.current = i;
     try {
       const [exif, dataUrl] = await Promise.all([readExif(file), fileToDataUrl(file)]);

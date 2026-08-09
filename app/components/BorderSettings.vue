@@ -83,8 +83,9 @@ function extractSvgAspect(svg: string): number {
     const vb = root.getAttribute("viewBox");
     if (vb) {
       const parts = vb.split(/[\s,]+/).map(Number);
-      if (parts.length === 4 && parts[2] > 0 && parts[3] > 0) {
-        return parts[2] / parts[3];
+      if (parts.length === 4) {
+        const [, , w, h] = parts;
+        if (w !== undefined && h !== undefined && w > 0 && h > 0) return w / h;
       }
     }
     const wAttr = parseFloat(root.getAttribute("width") || "");
@@ -383,9 +384,11 @@ const socialDimsText = computed(() => {
   let h = known[r];
   if (!h) {
     const parts = r.split(":").map(Number);
+    const w = parts[0];
+    const hh = parts[1];
     h =
-      parts.length === 2 && parts[0] > 0 && parts[1] > 0
-        ? Math.round((1080 * parts[1]) / parts[0])
+      parts.length === 2 && w !== undefined && hh !== undefined && w > 0 && hh > 0
+        ? Math.round((1080 * hh) / w)
         : 1350;
   }
   return `${r} → 1080×${h}`;
@@ -599,7 +602,7 @@ function setCanvasMode(mode: "original" | "social") {
             v-if="logoImageUrl"
             class="relative flex items-center gap-2 p-2 bg-nord-2 rounded-lg"
           >
-            <img :src="logoImageUrl" class="h-8 object-contain max-w-[120px] rounded" />
+            <img :src="logoImageUrl" class="h-8 object-contain max-w-30 rounded" />
             <button
               @click="clearLogoImage"
               class="ml-auto text-xs text-nord-11 hover:text-red-400 transition-colors px-2 py-1 rounded hover:bg-nord-3"

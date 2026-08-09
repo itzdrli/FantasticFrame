@@ -14,8 +14,7 @@ const templates = [
   { id: "minimal", name: "Minimal" },
   { id: "film-style", name: "Film Style" },
   { id: "card-style", name: "Card Style" },
-  { id: "nord-light", name: "Nord Light" },
-  { id: "nord-dark", name: "Nord Dark" },
+  { id: "nord", name: "Nord" },
 ];
 
 const selectTemplate = (templateId: string) => {

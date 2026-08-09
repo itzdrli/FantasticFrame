@@ -4,7 +4,7 @@ import { usePhotoStore } from "~/composables/usePhotoStore";
 import { useTemplate } from "~/composables/useTemplate";
 import { useExifReader } from "~/composables/useExifReader";
 import { coverCropRect } from "~~/shared/render";
-import type { PhotoCrop } from "~/types";
+import type { PhotoCrop, TemplateConfig } from "~/types";
 
 const photoStore = usePhotoStore();
 const { getResolvedConfig } = useTemplate();
@@ -128,8 +128,10 @@ const instagramDims = (ratio?: string) => {
   const r = ratio || "4:5";
   if (known[r]) return { w: 1080, h: known[r] };
   const parts = r.split(":").map(Number);
-  if (parts.length === 2 && parts[0] > 0 && parts[1] > 0) {
-    return { w: 1080, h: Math.round((1080 * parts[1]) / parts[0]) };
+  const w = parts[0];
+  const h = parts[1];
+  if (parts.length === 2 && w !== undefined && h !== undefined && w > 0 && h > 0) {
+    return { w: 1080, h: Math.round((1080 * h) / w) };
   }
   return { w: 1080, h: 1350 };
 };
@@ -166,15 +168,12 @@ const canvasDims = computed(() => {
   const paddingH = (cfg.paddingHorizontal ?? 0) * scaleFactor;
   const paddingTop = (cfg.paddingTop ?? 0) * scaleFactor;
   const paddingBottom = (cfg.paddingBottom ?? 0) * scaleFactor;
-  const exifEntries = cfg.visibleFields.filter((f: string) => parsedExif.value[f]);
-  const footerContentH = estimateFooterContentH(
-    cfg,
-    scaleFactor,
-    w,
-    exifEntries.map((f: string) => parsedExif.value[f]),
-  );
+  const exifValues = cfg.visibleFields
+    .map((f) => parsedExif.value[f])
+    .filter((v): v is string => !!v);
+  const footerContentH = estimateFooterContentH(cfg, scaleFactor, w, exifValues);
   const footerH =
-    exifEntries.length > 0 ||
+    exifValues.length > 0 ||
     (cfg.showLogo !== false &&
       (!!cfg.logoImageUrl || cfg.logoText || (p.exif.make || "").toUpperCase()))
       ? 40 * scaleFactor + footerContentH
@@ -256,15 +255,12 @@ const photoLayout = computed(() => {
   const pb = (cfg.paddingBottom ?? 0) * scaleFactor;
   const ph = (cfg.paddingHorizontal ?? 0) * scaleFactor;
 
-  const exifEntries = cfg.visibleFields.filter((f: string) => parsedExif.value[f]);
-  const footerContentH = estimateFooterContentH(
-    cfg,
-    scaleFactor,
-    canvasW,
-    exifEntries.map((f: string) => parsedExif.value[f]),
-  );
+  const exifValues = cfg.visibleFields
+    .map((f) => parsedExif.value[f])
+    .filter((v): v is string => !!v);
+  const footerContentH = estimateFooterContentH(cfg, scaleFactor, canvasW, exifValues);
   const footerH =
-    exifEntries.length > 0 ||
+    exifValues.length > 0 ||
     (cfg.showLogo !== false &&
       (!!cfg.logoImageUrl || cfg.logoText || (p.exif.make || "").toUpperCase()))
       ? 40 * scaleFactor + footerContentH

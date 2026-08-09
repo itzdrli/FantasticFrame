@@ -103,18 +103,31 @@ export const formatExif = (data: any, field: string): string => {
         ? `${data.exposureBias > 0 ? "+" : ""}${data.exposureBias} EV`
         : "";
     case "dateTimeOriginal":
-      return data.dateTimeOriginal
-        ? new Date(data.dateTimeOriginal).toLocaleString("zh-CN", { hour12: false })
-        : "";
+      return data.dateTimeOriginal ? formatCaptureDate(data.dateTimeOriginal) : "";
     case "make":
       return data.make || "";
     case "model":
       return data.model || "";
     case "lensModel":
       return data.lensModel || "";
+    case "gps":
+      return data.latitude != null && data.longitude != null
+        ? `${Number(data.latitude).toFixed(6)}, ${Number(data.longitude).toFixed(6)}`
+        : "";
     default:
       return data[field] || "";
   }
+};
+
+/**
+ * Canonical capture-date formatting for the footer — date only, deterministic
+ * (no locale/ICU dependence), shared with the live preview so what you see
+ * before export is exactly what gets rasterized.
+ */
+export const formatCaptureDate = (value: Date | string): string => {
+  const d = typeof value === "string" ? new Date(value) : value;
+  if (Number.isNaN(d.getTime())) return "";
+  return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
 };
 
 export interface CropRect {
@@ -182,8 +195,10 @@ export const buildRenderTree = (payload: SharedRenderPayload): RenderTreeResult 
       if (!ratio) return 1350;
       if (knownHeights[ratio]) return knownHeights[ratio];
       const parts = ratio.split(":").map(Number);
-      if (parts.length === 2 && parts[0] > 0 && parts[1] > 0) {
-        return Math.round((1080 * parts[1]) / parts[0]);
+      const w = parts[0];
+      const h = parts[1];
+      if (parts.length === 2 && w !== undefined && h !== undefined && w > 0 && h > 0) {
+        return Math.round((1080 * h) / w);
       }
       return 1350;
     };
