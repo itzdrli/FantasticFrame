@@ -4,10 +4,12 @@ import {
   formatCaptureDate,
   coverCropRect,
   buildRenderTree,
-  type SharedRenderPayload,
+  computeCanvasDims,
+  layoutScaleFactor,
 } from "../shared/render";
+import type { RenderPayload } from "../shared/types";
 
-const baseCfg: SharedRenderPayload["templateConfig"] = {
+const baseCfg: RenderPayload["templateConfig"] = {
   borderRadius: 0,
   backgroundColor: "#FFFFFF",
   photoScale: 1.0,
@@ -157,6 +159,50 @@ describe("buildRenderTree", () => {
       photoHeight: 3000,
     });
     expect([width, height]).toEqual([1080, 1350]);
+  });
+
+  it("original mode (portrait): scale is photo-anchored so preview == export (regression)", () => {
+    const cfg = {
+      ...baseCfg,
+      showLogo: true,
+      logoText: "TESTCAM",
+      visibleFields: ["model", "fNumber", "exposureTime", "iso", "focalLength"],
+    };
+    const exifValues = ["X-1", "f/2.8", "1/250", "ISO 400", "50mm"];
+    const { width, height } = buildRenderTree({
+      photoBase64: "data:image/jpeg;base64,x",
+      exifData: {
+        model: "X-1",
+        fNumber: 2.8,
+        exposureTime: 0.004,
+        iso: 400,
+        focalLength: 50,
+        make: "TestCam",
+      },
+      templateConfig: cfg,
+      photoWidth: 3000,
+      photoHeight: 4000,
+    });
+    // Canvas dims must come out of the SAME function the preview uses
+    const dims = computeCanvasDims({
+      cfg,
+      photoWidth: 3000,
+      photoHeight: 4000,
+      exifValues,
+      makeFallback: "TestCam",
+    });
+    expect([width, height]).toEqual([dims.w, dims.h]);
+    // ...and the scale must be anchored to the photo's longer edge (4000/1080),
+    // NOT recomputed from the footer-inflated canvas height (4317/1080).
+    expect(
+      layoutScaleFactor({
+        cfg,
+        canvasWidth: dims.w,
+        canvasHeight: dims.h,
+        photoWidth: 3000,
+        photoHeight: 4000,
+      }),
+    ).toBeCloseTo(4000 / 1080);
   });
 
   it("original mode: auto-height = photo area + scaled paddings", () => {

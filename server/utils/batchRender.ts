@@ -1,6 +1,7 @@
 import { render } from "takumi-js";
 import { Zip, ZipDeflate } from "fflate";
-import { buildRenderTree, type SharedRenderPayload } from "../../shared/render";
+import { buildRenderTree } from "../../shared/render";
+import type { RenderPayload } from "../../shared/types";
 
 /**
  * Batch render job store.
@@ -11,7 +12,7 @@ import { buildRenderTree, type SharedRenderPayload } from "../../shared/render";
  */
 
 export interface BatchItem {
-  payload: SharedRenderPayload;
+  payload: RenderPayload;
   originalFilename: string;
 }
 

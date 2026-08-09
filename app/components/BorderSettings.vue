@@ -2,6 +2,7 @@
 import { computed, ref } from "vue";
 import { usePhotoStore } from "~/composables/usePhotoStore";
 import { useTemplate } from "~/composables/useTemplate";
+import { socialCanvasDims } from "~~/shared/render";
 import type { TemplateConfig } from "~/types";
 
 const photoStore = usePhotoStore();
@@ -367,31 +368,8 @@ const applyCustomRatio = () => {
 };
 
 const socialDimsText = computed(() => {
-  const known: Record<string, number> = {
-    "1:1": 1080,
-    "4:5": 1350,
-    "5:4": 864,
-    "3:4": 1440,
-    "4:3": 810,
-    "16:9": 608,
-    "9:16": 1920,
-    "21:9": 463,
-    "9:21": 2520,
-    "1.91:1": 565,
-    "1:1.91": 2063,
-  };
-  const r = socialRatio.value;
-  let h = known[r];
-  if (!h) {
-    const parts = r.split(":").map(Number);
-    const w = parts[0];
-    const hh = parts[1];
-    h =
-      parts.length === 2 && w !== undefined && hh !== undefined && w > 0 && hh > 0
-        ? Math.round((1080 * hh) / w)
-        : 1350;
-  }
-  return `${r} → 1080×${h}`;
+  const { h } = socialCanvasDims(socialRatio.value);
+  return `${socialRatio.value} → 1080×${h}`;
 });
 
 function invertSocialRatio() {

@@ -17,6 +17,10 @@ const templates = [
   { id: "nord", name: "Nord" },
 ];
 
+const resolvedTemplates = computed(() =>
+  templates.map((tpl) => ({ ...tpl, config: getResolvedConfig(tpl.id) })),
+);
+
 const selectTemplate = (templateId: string) => {
   if (selectedPhoto.value) {
     photoStore.updatePhotoTemplate(selectedPhoto.value.id, templateId);
@@ -29,7 +33,7 @@ const selectTemplate = (templateId: string) => {
     <h3 class="text-nord-6 text-sm font-medium">Select Template</h3>
     <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
       <button
-        v-for="tpl in templates"
+        v-for="tpl in resolvedTemplates"
         :key="tpl.id"
         @click="selectTemplate(tpl.id)"
         class="flex flex-col items-center gap-2 rounded-lg p-2 transition-all duration-200 bg-nord-1 border border-nord-2 hover:border-nord-3 focus:outline-none"
@@ -38,16 +42,16 @@ const selectTemplate = (templateId: string) => {
         <div
           class="w-full aspect-[4/3] rounded shadow-inner flex flex-col justify-between overflow-hidden relative"
           :style="{
-            backgroundColor: getResolvedConfig(tpl.id).backgroundColor,
-            borderRadius: `${getResolvedConfig(tpl.id).borderRadius}px`,
+            backgroundColor: tpl.config.backgroundColor,
+            borderRadius: `${tpl.config.borderRadius}px`,
           }"
         >
           <div class="flex-1 m-1 bg-nord-3 rounded-sm opacity-50"></div>
           <div
             class="flex justify-around items-center h-4 pb-1 text-[8px] font-bold"
             :style="{
-              color: getResolvedConfig(tpl.id).fontColor,
-              fontFamily: getResolvedConfig(tpl.id).fontFamily,
+              color: tpl.config.fontColor,
+              fontFamily: tpl.config.fontFamily,
             }"
           >
             <span>A</span>

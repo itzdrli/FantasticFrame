@@ -1,82 +1,13 @@
 /**
  * Render node tree builder — shared between frontend and backend
- * (used by server/api/render.post.ts and the browser WASM renderer)
- * Note: keep the structure in sync with the types in app/types/index.ts
+ * (used by server/api/render.post.ts and the browser WASM renderer).
+ *
+ * Layout math lives here as pure functions so the live preview
+ * (PreviewPanel) and the rasterizer share one source of truth.
  */
 
-export interface SharedExifData {
-  make?: string;
-  model?: string;
-  fNumber?: number;
-  exposureTime?: number;
-  exposureTimeFormatted?: string;
-  iso?: number;
-  focalLength?: number;
-  focalLengthIn35mm?: number;
-  dateTimeOriginal?: Date | string;
-  lensModel?: string;
-  latitude?: number;
-  longitude?: number;
-  exposureBias?: number;
-}
-
-export interface SharedTemplateConfig {
-  borderRadius: number;
-  backgroundColor: string;
-  backgroundGradient?: string;
-  photoScale: number;
-  paddingTop: number;
-  paddingBottom: number;
-  paddingHorizontal: number;
-  showLogo: boolean;
-  logoPosition: "left" | "center" | "right";
-  logoText?: string;
-  logoImageUrl?: string;
-  logoScale?: number;
-  logoAspect?: number;
-  logoWidth?: number;
-  logoHeight?: number;
-  infoLayout: "grid" | "list" | "horizontal";
-  visibleFields: string[];
-  fontFamily: string;
-  fontSize: number;
-  fontColor: string;
-  modelFontSize: number;
-  canvasMode: "original" | "fixed" | "social";
-  canvasWidth?: number;
-  canvasHeight?: number;
-  socialPreset?: "instagram";
-  /** Output aspect ratio (W:H), arbitrary integer pair (e.g. "1:1", "16:9"). */
-  socialRatio?: string;
-}
-
-export type SharedExportFormat = "png" | "jpeg" | "webp";
-
-export interface SharedPhotoCrop {
-  fitMode?: "contain" | "cover";
-  scale?: number;
-  offsetX?: number;
-  offsetY?: number;
-}
-
-export interface SharedRenderPayload {
-  photoBase64: string;
-  exifData?: SharedExifData;
-  templateConfig: SharedTemplateConfig;
-  exportOptions?: { format?: SharedExportFormat; quality?: number };
-  photoWidth?: number;
-  photoHeight?: number;
-  /** Per-photo crop/zoom applied inside the frame */
-  crop?: SharedPhotoCrop;
-}
-
-export interface RenderTreeResult {
-  nodeTree: Record<string, any>;
-  width: number;
-  height: number;
-  format: SharedExportFormat;
-  quality: number;
-}
+import type { CropRect, RenderPayload, RenderTreeResult, TemplateConfig } from "./types";
+import { SOCIAL_RATIO_HEIGHTS } from "./types";
 
 export const formatExif = (data: any, field: string): string => {
   if (!data) return "";
@@ -130,13 +61,6 @@ export const formatCaptureDate = (value: Date | string): string => {
   return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
 };
 
-export interface CropRect {
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-}
-
 /**
  * Computes the cover-cropped image geometry for a box of boxW x boxH.
  *
@@ -168,132 +92,114 @@ export const coverCropRect = (
   };
 };
 
-export const buildRenderTree = (payload: SharedRenderPayload): RenderTreeResult => {
-  const { photoBase64, exifData, templateConfig, exportOptions, photoWidth, photoHeight } = payload;
+// ── Pure layout helpers (single source of truth for preview + export) ───────
 
-  let canvasWidth = photoWidth || 1080;
-  let canvasHeight = photoHeight || 1080;
-
-  if (templateConfig.canvasMode === "social" && templateConfig.socialPreset) {
-    // Known ratios → pixel-exact heights; any other "W:H" pair is computed
-    // from the 1080-wide canvas (h = 1080 × H / W). Keeps the renderer
-    // forward-compatible with arbitrary custom ratios entered in the UI.
-    const knownHeights: Record<string, number> = {
-      "1:1": 1080,
-      "4:5": 1350,
-      "5:4": 864,
-      "3:4": 1440,
-      "4:3": 810,
-      "16:9": 608,
-      "9:16": 1920,
-      "21:9": 463,
-      "9:21": 2520,
-      "1.91:1": 565,
-      "1:1.91": 2063,
-    };
-    const computeHeight = (ratio?: string): number => {
-      if (!ratio) return 1350;
-      if (knownHeights[ratio]) return knownHeights[ratio];
-      const parts = ratio.split(":").map(Number);
-      const w = parts[0];
-      const h = parts[1];
-      if (parts.length === 2 && w !== undefined && h !== undefined && w > 0 && h > 0) {
-        return Math.round((1080 * h) / w);
-      }
-      return 1350;
-    };
-    switch (templateConfig.socialPreset) {
-      case "instagram":
-        canvasWidth = 1080;
-        canvasHeight = computeHeight(templateConfig.socialRatio);
-        break;
-    }
-  } else if (templateConfig.canvasMode === "fixed") {
-    canvasWidth = templateConfig.canvasWidth || photoWidth || 1080;
-    canvasHeight = templateConfig.canvasHeight || photoHeight || 1080;
+/** 1080-wide social canvas dims for a "W:H" ratio (known table or computed). */
+export function socialCanvasDims(ratio?: string): { w: number; h: number } {
+  const r = ratio || "4:5";
+  if (SOCIAL_RATIO_HEIGHTS[r]) return { w: 1080, h: SOCIAL_RATIO_HEIGHTS[r]! };
+  const parts = r.split(":").map(Number);
+  const w = parts[0];
+  const h = parts[1];
+  if (parts.length === 2 && w !== undefined && h !== undefined && w > 0 && h > 0) {
+    return { w: 1080, h: Math.round((1080 * h) / w) };
   }
+  return { w: 1080, h: 1350 };
+}
 
-  // Scale all layout and typography parameters relative to a 1080px base canvas.
-  // Use the longer edge so portrait images get the same proportions as landscape ones.
-  const scaleFactor = Math.max(canvasWidth, canvasHeight) / 1080;
+export interface LogoImageSize {
+  width: number;
+  height: number;
+}
 
-  const bgColor = templateConfig.backgroundColor || "#ffffff";
-  const photoScale = templateConfig.photoScale ?? 0.9;
+/**
+ * Image-logo dimensions at the given scale factor / footer width.
+ * Preferred model: logoScale % of baseline (modelFontSizeBase × 1.4), width
+ * from logoAspect, capped to footerInnerW. Legacy fallback: logoWidth/Height.
+ */
+export function computeLogoImageSize(
+  cfg: TemplateConfig,
+  scaleFactor: number,
+  footerInnerW: number,
+): LogoImageSize {
+  const modelFontSizeBase = cfg.modelFontSize ?? 24;
+  if (cfg.logoImageUrl && cfg.logoAspect && cfg.logoAspect > 0) {
+    const scalePct = cfg.logoScale ?? 100;
+    const baselineH = modelFontSizeBase * 1.4;
+    let h = Math.round(baselineH * scaleFactor * (scalePct / 100));
+    let w = Math.round(h * cfg.logoAspect);
+    if (w > footerInnerW) {
+      w = footerInnerW;
+      h = Math.round(w / cfg.logoAspect);
+    }
+    return { width: w, height: h };
+  }
+  return {
+    width: Math.round((cfg.logoWidth ?? modelFontSizeBase * 5) * scaleFactor),
+    height: Math.round((cfg.logoHeight ?? modelFontSizeBase * 1.4) * scaleFactor),
+  };
+}
 
-  // Scale all layout and typography parameters relative to a 1080px base canvas
-  const paddingTop = Math.round((templateConfig.paddingTop ?? 0) * scaleFactor);
-  const paddingBottom = Math.round((templateConfig.paddingBottom ?? 0) * scaleFactor);
-  const paddingH = Math.round((templateConfig.paddingHorizontal ?? 0) * scaleFactor);
-  const borderRadius = Math.round((templateConfig.borderRadius ?? 0) * scaleFactor);
+export interface FooterLayoutInput {
+  cfg: TemplateConfig;
+  scaleFactor: number;
+  canvasW: number;
+  /** Already-formatted EXIF display strings (empty entries filtered out) */
+  exifValues: string[];
+  /** Camera make used as the text-logo fallback when logoText is empty */
+  makeFallback?: string;
+}
 
-  const fontFamily = templateConfig.fontFamily || "Inter, sans-serif";
-  const fontSizeBase = templateConfig.fontSize ?? 14;
-  const fontSize = Math.round(fontSizeBase * scaleFactor);
-  const fontColor = templateConfig.fontColor || "#000000";
-  const modelFontSizeBase = templateConfig.modelFontSize ?? 24;
+export interface FooterLayout {
+  footerContentH: number;
+  footerH: number;
+  hasLogo: boolean;
+  hasExif: boolean;
+  logoTxt: string;
+  logoImageW: number;
+  logoImageH: number;
+  footerPaddingX: number;
+  footerInnerW: number;
+}
+
+/** Footer content + total height — shared by buildRenderTree and the preview. */
+export function estimateFooterLayout(input: FooterLayoutInput): FooterLayout {
+  const { cfg, scaleFactor, canvasW, exifValues } = input;
+  const modelFontSizeBase = cfg.modelFontSize ?? 24;
   const modelFontSize = Math.round(modelFontSizeBase * scaleFactor);
-  const showLogo = templateConfig.showLogo !== false;
-  const logoPosition = templateConfig.logoPosition || "center";
-  const logoTxt = templateConfig.logoText || (exifData?.make || "").toUpperCase();
-  const logoImageUrl: string = templateConfig.logoImageUrl || "";
-  const infoLayout = templateConfig.infoLayout || "horizontal";
-
-  const visibleFields: string[] = templateConfig.visibleFields || [];
-  const exifTexts = visibleFields
-    .map((field: string) => formatExif(exifData, field))
-    .filter((t: string) => t);
-
-  const hasLogo = showLogo && (!!logoImageUrl || !!logoTxt);
-  const hasExif = exifTexts.length > 0;
+  const fontSize = Math.round((cfg.fontSize ?? 14) * scaleFactor);
+  const logoTxt = cfg.logoText || (input.makeFallback || "").toUpperCase();
+  const hasLogo = cfg.showLogo !== false && (!!cfg.logoImageUrl || !!logoTxt);
+  const hasExif = exifValues.length > 0;
 
   const logoLineH = Math.ceil(modelFontSize * 1.4);
   const exifLineH = Math.ceil(fontSize * 1.4);
-  const footerPaddingX = Math.max(Math.round(20 * scaleFactor), paddingH);
-  const footerInnerW = Math.max(1, canvasWidth - footerPaddingX * 2);
+  const footerPaddingX = Math.max(
+    Math.round(20 * scaleFactor),
+    Math.round((cfg.paddingHorizontal ?? 0) * scaleFactor),
+  );
+  const footerInnerW = Math.max(1, canvasW - footerPaddingX * 2);
 
-  // Image-logo dimensions.
-  // Preferred model: a single `logoScale` (%) applied to a baseline height of
-  // `modelFontSizeBase * 1.4`, with the width derived from the image's
-  // intrinsic `logoAspect` (w/h). Width is capped to the footer inner width so
-  // the logo can never overflow (which would otherwise shift its position and
-  // make the Layout > Position button appear to do nothing). The capped width
-  // back-computes the displayed height, so the footer reserves exactly the
-  // height the image actually occupies — no top/bottom whitespace.
-  // Legacy fallback: if `logoAspect` is missing (old stored photo), fall back
-  // to the explicit `logoWidth`/`logoHeight` pair.
-  let logoImageW: number;
-  let logoImageH: number;
-  if (logoImageUrl && templateConfig.logoAspect && templateConfig.logoAspect > 0) {
-    const scalePct = templateConfig.logoScale ?? 100;
-    const baselineH = modelFontSizeBase * 1.4;
-    let h = Math.round(baselineH * scaleFactor * (scalePct / 100));
-    let w = Math.round(h * templateConfig.logoAspect);
-    if (w > footerInnerW) {
-      w = footerInnerW;
-      h = Math.round(w / templateConfig.logoAspect);
-    }
-    logoImageW = w;
-    logoImageH = h;
-  } else {
-    logoImageW = Math.round((templateConfig.logoWidth ?? modelFontSizeBase * 5) * scaleFactor);
-    logoImageH = Math.round((templateConfig.logoHeight ?? modelFontSizeBase * 1.4) * scaleFactor);
-  }
+  const { width: logoImageW, height: logoImageH } = computeLogoImageSize(
+    cfg,
+    scaleFactor,
+    footerInnerW,
+  );
 
-  // Estimate how many lines the EXIF block occupies so the footer never overflows
   let exifLines = hasExif ? 1 : 0;
-  if (infoLayout === "list") {
-    exifLines = exifTexts.length;
-  } else if (infoLayout === "grid") {
-    exifLines = Math.ceil(exifTexts.length / 2);
+  if (cfg.infoLayout === "list") {
+    exifLines = exifValues.length;
+  } else if (cfg.infoLayout === "grid") {
+    exifLines = Math.ceil(exifValues.length / 2);
   } else if (hasExif) {
     const rowGap = Math.round(10 * scaleFactor);
-    const logoW = logoImageUrl ? logoImageW : Math.ceil(logoTxt.length * modelFontSize * 0.7);
+    const logoW = cfg.logoImageUrl ? logoImageW : Math.ceil(logoTxt.length * modelFontSize * 0.7);
     const availExifW =
-      hasLogo && logoPosition !== "center"
+      hasLogo && cfg.logoPosition !== "center"
         ? Math.max(1, footerInnerW - logoW - Math.round(16 * scaleFactor))
         : footerInnerW;
     let curW = 0;
-    for (const t of exifTexts) {
+    for (const t of exifValues) {
       const w = t.length * fontSize * 0.62;
       if (curW > 0 && curW + rowGap + w > availExifW) {
         exifLines++;
@@ -305,28 +211,173 @@ export const buildRenderTree = (payload: SharedRenderPayload): RenderTreeResult 
   }
 
   const gridGapV = Math.round(4 * scaleFactor);
-  const rowGap = Math.round((infoLayout === "list" ? 4 : 10) * scaleFactor);
+  const rowGap = Math.round((cfg.infoLayout === "list" ? 4 : 10) * scaleFactor);
   const exifBlockH = hasExif
     ? exifLines * exifLineH +
-      Math.max(0, exifLines - 1) * (infoLayout === "grid" ? gridGapV : rowGap)
+      Math.max(0, exifLines - 1) * (cfg.infoLayout === "grid" ? gridGapV : rowGap)
     : 0;
-  const logoBlockH = hasLogo ? Math.max(logoLineH, logoImageUrl ? logoImageH : 0) : 0;
+  const logoBlockH = hasLogo ? Math.max(logoLineH, cfg.logoImageUrl ? logoImageH : 0) : 0;
 
   let footerContentH = 0;
-  if (hasLogo && hasExif && logoPosition === "center") {
+  if (hasLogo && hasExif && cfg.logoPosition === "center") {
     footerContentH = logoBlockH + Math.round(12 * scaleFactor) + exifBlockH;
   } else {
     footerContentH = Math.max(logoBlockH, exifBlockH);
   }
   const footerH = hasLogo || hasExif ? Math.round(40 * scaleFactor) + footerContentH : 0;
 
-  // Adjust canvasHeight for 'original' mode to prevent letterboxing
-  if (templateConfig.canvasMode !== "social" && templateConfig.canvasMode !== "fixed") {
-    const pAspect = photoWidth && photoHeight && photoHeight > 0 ? photoWidth / photoHeight : 1;
-    const availW = canvasWidth - paddingH * 2;
-    const imgH = availW / pAspect;
-    canvasHeight = Math.round(imgH + paddingTop + paddingBottom + footerH);
+  return {
+    footerContentH,
+    footerH,
+    hasLogo,
+    hasExif,
+    logoTxt,
+    logoImageW,
+    logoImageH,
+    footerPaddingX,
+    footerInnerW,
+  };
+}
+
+export interface CanvasDimsInput {
+  cfg: TemplateConfig;
+  photoWidth: number;
+  photoHeight: number;
+  /** Formatted EXIF strings (for original-mode height, which depends on footerH) */
+  exifValues?: string[];
+  makeFallback?: string;
+}
+
+/** Canvas width/height for any canvasMode. */
+export function computeCanvasDims(input: CanvasDimsInput): { w: number; h: number } {
+  const { cfg, photoWidth, photoHeight } = input;
+
+  if (cfg.canvasMode === "social" && cfg.socialPreset === "instagram") {
+    return socialCanvasDims(cfg.socialRatio);
   }
+  if (cfg.canvasMode === "fixed") {
+    return {
+      w: cfg.canvasWidth || photoWidth || 1080,
+      h: cfg.canvasHeight || photoHeight || 1080,
+    };
+  }
+
+  // original mode: auto-height from photo aspect + paddings + footer.
+  // Scale is photo-anchored (see layoutScaleFactor) so the height math here
+  // and the node-tree layout in buildRenderTree can never drift apart.
+  const w = photoWidth || 1080;
+  const scaleFactor = layoutScaleFactor({
+    cfg,
+    canvasWidth: w,
+    canvasHeight: photoHeight || w,
+    photoWidth: w,
+    photoHeight,
+  });
+  const paddingH = Math.round((cfg.paddingHorizontal ?? 0) * scaleFactor);
+  const paddingTop = Math.round((cfg.paddingTop ?? 0) * scaleFactor);
+  const paddingBottom = Math.round((cfg.paddingBottom ?? 0) * scaleFactor);
+  const { footerH } = estimateFooterLayout({
+    cfg,
+    scaleFactor,
+    canvasW: w,
+    exifValues: input.exifValues ?? [],
+    makeFallback: input.makeFallback,
+  });
+  const availW = w - paddingH * 2;
+  const pAspect = photoWidth && photoHeight && photoHeight > 0 ? photoWidth / photoHeight : 1;
+  const imgH = availW / pAspect;
+  return { w, h: Math.round(imgH + paddingTop + paddingBottom + footerH) };
+}
+
+/** Scale factor relative to a 1080px base (longer canvas edge). */
+export function canvasScaleFactor(w: number, h: number): number {
+  return Math.max(w, h) / 1080;
+}
+
+export interface LayoutScaleInput {
+  cfg: TemplateConfig;
+  canvasWidth: number;
+  canvasHeight: number;
+  photoWidth?: number;
+  photoHeight?: number;
+}
+
+/**
+ * The single layout scale for a canvas. Social/fixed canvases are explicit,
+ * so the scale follows the canvas. Original-mode canvases auto-size from the
+ * photo (height depends on the footer, which depends on the scale), so the
+ * scale is anchored to the photo's longer edge — deterministic and identical
+ * between the live preview and buildRenderTree. (Regression: the scale was
+ * recomputed from the canvas dims after the footer inflated the height, so
+ * portrait exports rendered ~8% larger than the preview.)
+ */
+export function layoutScaleFactor(input: LayoutScaleInput): number {
+  const { cfg, canvasWidth, canvasHeight } = input;
+  if (cfg.canvasMode !== "original") {
+    return Math.max(canvasWidth, canvasHeight) / 1080;
+  }
+  const w = input.photoWidth || canvasWidth || 1080;
+  return Math.max(w, input.photoHeight || w) / 1080;
+}
+
+// ── Node tree builder ───────────────────────────────────────────────────────
+
+export const buildRenderTree = (payload: RenderPayload): RenderTreeResult => {
+  const { photoBase64, exifData, templateConfig, exportOptions, photoWidth, photoHeight } = payload;
+
+  const visibleFields: string[] = templateConfig.visibleFields || [];
+  const exifTexts = visibleFields
+    .map((field: string) => formatExif(exifData, field))
+    .filter((t: string) => t);
+  // Resolve canvas dims. For original mode the height depends on footerH, so
+  // computeCanvasDims runs the footer estimation internally.
+  let { w: canvasWidth, h: canvasHeight } = computeCanvasDims({
+    cfg: templateConfig,
+    photoWidth: photoWidth || 1080,
+    photoHeight: photoHeight || 1080,
+    exifValues: exifTexts,
+    makeFallback: exifData?.make,
+  });
+
+  // For social/fixed the dims above are final; for original they already
+  // include the footer. Re-run the footer layout at the resolved scale so the
+  // rest of the builder has logo sizes / paddings ready.
+  const scaleFactor = layoutScaleFactor({
+    cfg: templateConfig,
+    canvasWidth,
+    canvasHeight,
+    photoWidth,
+    photoHeight,
+  });
+  const footer = estimateFooterLayout({
+    cfg: templateConfig,
+    scaleFactor,
+    canvasW: canvasWidth,
+    exifValues: exifTexts,
+    makeFallback: exifData?.make,
+  });
+  const { footerH, hasLogo, hasExif, logoTxt, logoImageW, logoImageH, footerPaddingX } = footer;
+
+  const bgColor = templateConfig.backgroundColor || "#ffffff";
+  const photoScale = templateConfig.photoScale ?? 0.9;
+
+  const paddingTop = Math.round((templateConfig.paddingTop ?? 0) * scaleFactor);
+  const paddingBottom = Math.round((templateConfig.paddingBottom ?? 0) * scaleFactor);
+  const paddingH = Math.round((templateConfig.paddingHorizontal ?? 0) * scaleFactor);
+  const borderRadius = Math.round((templateConfig.borderRadius ?? 0) * scaleFactor);
+
+  const fontFamily = templateConfig.fontFamily || "Inter, sans-serif";
+  const fontSizeBase = templateConfig.fontSize ?? 14;
+  const fontSize = Math.round(fontSizeBase * scaleFactor);
+  const fontColor = templateConfig.fontColor || "#000000";
+  const modelFontSizeBase = templateConfig.modelFontSize ?? 24;
+  const modelFontSize = Math.round(modelFontSizeBase * scaleFactor);
+  const logoPosition = templateConfig.logoPosition || "center";
+  const logoImageUrl: string = templateConfig.logoImageUrl || "";
+  const infoLayout = templateConfig.infoLayout || "horizontal";
+
+  const gridGapV = Math.round(4 * scaleFactor);
+  const rowGap = Math.round((infoLayout === "list" ? 4 : 10) * scaleFactor);
 
   const availW = canvasWidth - paddingH * 2;
   const availH = Math.max(1, canvasHeight - footerH - paddingTop - paddingBottom);

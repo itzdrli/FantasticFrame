@@ -2,7 +2,7 @@
 import { ref } from "vue";
 import { usePhotoStore } from "~/composables/usePhotoStore";
 import { useExifReader } from "~/composables/useExifReader";
-import { uuid } from "~/utils/uuid";
+import { importImageFiles } from "~/utils/photoImport";
 
 const photoStore = usePhotoStore();
 const { readExif } = useExifReader();
@@ -20,23 +20,6 @@ const removePhoto = (id: string, event: Event) => {
   photoStore.removePhoto(id);
 };
 
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-function getImageDimensions(dataUrl: string): Promise<{ width: number; height: number }> {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
-    img.src = dataUrl;
-  });
-}
-
 async function handleFiles(files: FileList | File[]) {
   const imageFiles = Array.from(files).filter((f) => f.type.startsWith("image/"));
   if (imageFiles.length === 0) return;
@@ -44,30 +27,14 @@ async function handleFiles(files: FileList | File[]) {
   isImporting.value = true;
   importProgress.value = { current: 0, total: imageFiles.length };
 
-  for (let i = 0; i < imageFiles.length; i++) {
-    const file = imageFiles[i]!; // safe: i < length
-    importProgress.value.current = i;
-    try {
-      const [exif, dataUrl] = await Promise.all([readExif(file), fileToDataUrl(file)]);
-      const { width, height } = await getImageDimensions(dataUrl);
-      photoStore.addPhoto({
-        id: uuid(),
-        fileName: file.name,
-        fileSize: file.size,
-        mimeType: file.type,
-        dataUrl,
-        width,
-        height,
-        exif,
-        templateId: "classic",
-        crop: { fitMode: "cover", scale: 1, offsetX: 0, offsetY: 0 },
-        addedAt: new Date(),
-      });
-    } catch (err) {
-      console.error("[FantasticFrame] import failed:", file.name, err);
-    }
-    importProgress.value.current = i + 1;
-  }
+  await importImageFiles(
+    imageFiles,
+    readExif,
+    (photo) => photoStore.addPhoto(photo),
+    (done) => {
+      importProgress.value.current = done;
+    },
+  );
 
   isImporting.value = false;
 }

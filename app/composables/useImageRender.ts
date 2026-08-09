@@ -1,83 +1,15 @@
 import { ref } from "#imports";
 import { buildRenderTree } from "~~/shared/render";
+import type { ExportOptions, RenderPayload } from "~~/shared/types";
+import type { RenderResponse } from "~/types";
 
-interface ExifData {
-  make?: string;
-  model?: string;
-  fNumber?: number;
-  exposureTime?: number;
-  exposureTimeFormatted?: string;
-  iso?: number;
-  focalLength?: number;
-  focalLengthIn35mm?: number;
-  dateTimeOriginal?: Date;
-  lensModel?: string;
-  latitude?: number;
-  longitude?: number;
-  exposureBias?: number;
-}
-
-interface TemplateConfig {
-  borderRadius: number;
-  backgroundColor: string;
-  backgroundGradient?: string;
-  photoScale: number;
-  paddingTop: number;
-  paddingBottom: number;
-  paddingHorizontal: number;
-  showLogo: boolean;
-  logoPosition: "left" | "center" | "right";
-  logoText?: string;
-  logoImageUrl?: string;
-  logoScale?: number;
-  logoAspect?: number;
-  logoWidth?: number;
-  logoHeight?: number;
-  infoLayout: "grid" | "list" | "horizontal";
-  visibleFields: string[];
-  fontFamily: string;
-  fontSize: number;
-  fontColor: string;
-  modelFontSize: number;
-  canvasMode: "original" | "fixed" | "social";
-  canvasWidth?: number;
-  canvasHeight?: number;
-  socialPreset?: "instagram";
-}
-
-interface ExportOptions {
-  format: "png" | "jpeg" | "webp";
-  quality: number;
-}
-
-export interface RenderPayload {
-  photoBase64: string;
-  exifData?: ExifData;
-  templateId?: string;
-  templateConfig: TemplateConfig;
-  exportOptions?: ExportOptions;
-  /** Original photo width in pixels */
-  photoWidth?: number;
-  /** Original photo height in pixels */
-  photoHeight?: number;
-  /** Per-photo crop/zoom applied inside the frame */
-  crop?: { fitMode?: "contain" | "cover"; scale?: number; offsetX?: number; offsetY?: number };
-}
-
-export interface RenderResponse {
-  imageBase64: string;
-  mimeType: string;
-  width: number;
-  height: number;
-}
+export type { RenderPayload, RenderResponse };
 
 export interface BatchExportProgress {
   /** Index of the photo currently being processed (0-based) */
   current: number;
   /** Total number of photos */
   total: number;
-  /** File name of the current operation */
-  filename: string;
   /** Status */
   status: "rendering" | "saving" | "done" | "error";
   /** Error message (only set when status=error) */
@@ -127,8 +59,15 @@ export const useImageRender = () => {
       : { ...payload, exportOptions: { format: exportFormat.value, quality: exportQuality.value } };
 
     if (import.meta.client) {
-      const clientResult = await renderClientSide(finalPayload);
-      if (clientResult) return clientResult;
+      // WASM can fail in many ways (module load, render reject, OOM). Any
+      // throw must fall through to the server renderer — returning null
+      // alone is not enough (regression: a WASM throw killed the export).
+      try {
+        const clientResult = await renderClientSide(finalPayload);
+        if (clientResult) return clientResult;
+      } catch (err) {
+        console.warn("[useImageRender] client WASM render failed, falling back to server:", err);
+      }
     }
     return await renderServerSide(finalPayload);
   };
@@ -245,7 +184,6 @@ export const useImageRender = () => {
         const prog: BatchExportProgress = {
           current: status.done,
           total: status.total,
-          filename: "",
           status: "rendering",
         };
         batchProgress.value = prog;
@@ -259,7 +197,6 @@ export const useImageRender = () => {
       batchProgress.value = {
         current: status.total,
         total: status.total,
-        filename: "",
         status: "saving",
       };
       const res = await $fetch.raw<ArrayBuffer>(`/api/render/batch/download?jobId=${jobId}`, {
@@ -287,7 +224,6 @@ export const useImageRender = () => {
       batchProgress.value = {
         current: items.length,
         total: items.length,
-        filename: "",
         status: "done",
       };
     }

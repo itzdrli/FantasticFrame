@@ -53,12 +53,17 @@ Always run `bun run lint`, `bun run fmt:check`, `bun run test` and
   - `useImageRender.ts` — client WASM render, server-side fallback, single save,
     `batchExport()` (server job + zip download)
   - `useExifReader.ts` — exifr-based EXIF extraction
-- `app/types/index.ts` — canonical types: `Photo`, `ExifData`, `TemplateConfig`,
-  `PhotoCrop`, `RenderRequest/Response`
+- `app/types/index.ts` — app-only types (`Photo`, `Template`,
+  `RenderRequest/Response`) plus re-exports of the shared types
+- `shared/types.ts` — canonical shared types (`TemplateConfig`, `ExifData`,
+  `PhotoCrop`, `RenderPayload`, …). `app/types/index.ts` re-exports them so app
+  code keeps importing from `~/types`.
 - `shared/render.ts` — **the heart of the project**. `buildRenderTree()` builds
   the takumi render node tree from a config; shared verbatim between browser
-  (WASM) and server (native). Keep in sync with `app/types/index.ts`. Contains
-  `formatExif()` and `coverCropRect()` (cover crop/zoom geometry).
+  (WASM) and server (native). Types come from `shared/types.ts`. Contains
+  `formatExif()`, `coverCropRect()` (cover crop/zoom geometry), and the
+  footer/canvas layout math (`estimateFooterLayout`, `computeCanvasDims`,
+  `layoutScaleFactor`) that the live preview also uses.
 - `server/api/render.post.ts` — single-image server render endpoint
 - `server/api/render/batch.post.ts`, `batch/status.get.ts`, `batch/download.get.ts`
   — batch job lifecycle (create → poll status → download zip)
@@ -78,8 +83,9 @@ Always run `bun run lint`, `bun run fmt:check`, `bun run test` and
 - Crop/zoom: `PhotoCrop { fitMode, scale, offsetX, offsetY }`; "cover" clips via
   a rounded container; "contain" is the legacy behavior. Geometry lives in
   `coverCropRect()` in `shared/render.ts`.
-- Types are duplicated in places (`shared/render.ts`, `useImageRender.ts`
-  re-declare interfaces) — keep them in sync with `app/types/index.ts`.
+- Canonical types live in `shared/types.ts` (shared verbatim by browser WASM,
+  server, and app); `app/types/index.ts` re-exports them. Add new shared types
+  there — never declare a duplicate interface in a component/composable.
 - No comments unless they add value; the codebase uses them heavily for
   rationale, follow that style.
 - Fonts come from Google Fonts (see `nuxt.config.ts`) — new font families used

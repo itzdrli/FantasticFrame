@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import type { ExportOptions, Photo, PhotoCrop, TemplateConfig } from "~/types";
+import type { Photo, PhotoCrop, TemplateConfig } from "~/types";
 
 /**
  * Photo state management store
@@ -12,12 +12,6 @@ export const usePhotoStore = defineStore("photos", () => {
 
   /** ID of the currently selected photo */
   const selectedId = ref<string | null>(null);
-
-  /** Default export options */
-  const exportOptions = ref<ExportOptions>({
-    format: "jpeg",
-    quality: 90,
-  });
 
   // ==================== Getters ====================
 
@@ -122,7 +116,6 @@ export const usePhotoStore = defineStore("photos", () => {
     // state
     photos,
     selectedId,
-    exportOptions,
     // getters
     selectedPhoto,
     count,

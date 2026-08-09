@@ -180,22 +180,6 @@ export function useExifReader() {
     }
   }
 
-  /**
-   * Reads EXIF for multiple files at once
-   */
-  async function readExifBatch(files: File[]): Promise<ExifData[]> {
-    return Promise.all(files.map(readExif));
-  }
-
-  /**
-   * Parses EXIF from an ArrayBuffer (for data already loaded into memory)
-   */
-  async function readExifFromBuffer(buffer: ArrayBuffer): Promise<ExifData> {
-    const blob = new Blob([buffer]);
-    const file = new File([blob], "buffer-image", { type: "image/jpeg" });
-    return readExif(file);
-  }
-
   return {
     /** Whether parsing is in progress */
     isLoading: readonly(isLoading),
@@ -203,10 +187,6 @@ export function useExifReader() {
     error: readonly(error),
     /** Parse a single file */
     readExif,
-    /** Parse multiple files */
-    readExifBatch,
-    /** Parse from an ArrayBuffer */
-    readExifFromBuffer,
     /** Format EXIF data into display strings */
     formatExifForDisplay,
   };
