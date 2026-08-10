@@ -43,6 +43,21 @@ const isBatchExporting = ref(false);
 const batchResult = ref<{ success: number; failed: number } | null>(null);
 const showBatchResultToast = ref(false);
 let batchToastTimer: ReturnType<typeof setTimeout> | null = null;
+let errorToastTimer: ReturnType<typeof setTimeout> | null = null;
+
+// Export failures (single or batch) were previously silent — error was set in
+// the composable but never rendered. Auto-dismiss after a few seconds.
+watch(error, (msg) => {
+  if (errorToastTimer) clearTimeout(errorToastTimer);
+  if (msg) {
+    errorToastTimer = setTimeout(() => (error.value = null), 6000);
+  }
+});
+
+onUnmounted(() => {
+  if (batchToastTimer) clearTimeout(batchToastTimer);
+  if (errorToastTimer) clearTimeout(errorToastTimer);
+});
 
 const exportFormats: { label: string; value: "png" | "jpeg" | "webp" }[] = [
   { label: "PNG", value: "png" },
@@ -246,6 +261,39 @@ const batchExportDisabled = computed(
           class="h-full bg-nord-8 transition-all duration-300"
           :style="{ width: `${batchPercent}%` }"
         />
+      </div>
+    </Transition>
+
+    <!-- Export error toast (single + batch share the composable error ref) -->
+    <Transition name="toast">
+      <div
+        v-if="error"
+        class="fixed top-32 right-6 z-50 px-4 py-3 rounded-xl shadow-2xl text-sm font-medium flex items-center gap-3 border bg-nord-11/10 border-nord-11/30 text-nord-11"
+        role="alert"
+      >
+        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+          />
+        </svg>
+        <span class="max-w-xs">{{ error }}</span>
+        <button
+          @click="error = null"
+          class="ml-1 w-6 h-6 shrink-0 flex items-center justify-center rounded hover:bg-nord-11/20 transition-colors"
+          aria-label="Dismiss"
+        >
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
       </div>
     </Transition>
 

@@ -10,6 +10,7 @@ const { readExif } = useExifReader();
 const fileInput = ref<HTMLInputElement | null>(null);
 const isImporting = ref(false);
 const importProgress = ref({ current: 0, total: 0 });
+const skippedFiles = ref<{ name: string; reason: string }[]>([]);
 
 const selectPhoto = (id: string) => {
   photoStore.selectPhoto(id);
@@ -27,7 +28,7 @@ async function handleFiles(files: FileList | File[]) {
   isImporting.value = true;
   importProgress.value = { current: 0, total: imageFiles.length };
 
-  await importImageFiles(
+  const result = await importImageFiles(
     imageFiles,
     readExif,
     (photo) => photoStore.addPhoto(photo),
@@ -35,6 +36,7 @@ async function handleFiles(files: FileList | File[]) {
       importProgress.value.current = done;
     },
   );
+  skippedFiles.value = result.skipped;
 
   isImporting.value = false;
 }
@@ -102,6 +104,13 @@ const importPercent = computed(() => {
         </div>
       </template>
     </button>
+    <span
+      v-if="skippedFiles.length"
+      class="shrink-0 text-[10px] text-nord-11 bg-nord-11/10 border border-nord-11/30 rounded px-2 py-1"
+      :title="skippedFiles.map((f) => f.name).join('\n')"
+    >
+      {{ skippedFiles.length }} skipped
+    </span>
 
     <!-- Photo list -->
     <div
@@ -145,7 +154,7 @@ const importPercent = computed(() => {
       ref="fileInput"
       class="hidden"
       multiple
-      accept="image/*"
+      accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif"
       @change="onFileChange"
     />
   </div>

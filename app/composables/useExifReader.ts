@@ -187,7 +187,5 @@ export function useExifReader() {
     error: readonly(error),
     /** Parse a single file */
     readExif,
-    /** Format EXIF data into display strings */
-    formatExifForDisplay,
   };
 }

@@ -70,6 +70,11 @@ const logoScale = computed({
   set: (v) => update("logoScale", v),
 });
 
+/** Parameter (EXIF) text color — target for the "Use Font Color" SVG-logo button */
+const fontColor = computed(
+  () => overrides.value.fontColor ?? resolvedConfig.value?.fontColor ?? "#000000",
+);
+
 const logoImageInput = ref<HTMLInputElement | null>(null);
 
 // Extract the intrinsic aspect ratio (width / height) from an SVG markup
@@ -679,6 +684,18 @@ function setCanvasMode(mode: "original" | "social") {
                   title="Reset to original colors"
                 >
                   Reset
+                </button>
+                <button
+                  @click="svgColor = fontColor"
+                  class="text-[10px] transition-colors px-1.5 py-1 rounded hover:bg-nord-3 flex items-center gap-1"
+                  :class="svgColor === fontColor ? 'text-nord-8' : 'text-nord-4 hover:text-nord-6'"
+                  title="Set the logo color to the parameter text color"
+                >
+                  <span
+                    class="w-2.5 h-2.5 rounded-full border border-nord-3/40 shrink-0"
+                    :style="{ backgroundColor: fontColor }"
+                  />
+                  Use Font Color
                 </button>
                 <ColorPicker
                   :model-value="svgColor || '#000000'"

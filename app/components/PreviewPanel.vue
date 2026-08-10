@@ -2,7 +2,7 @@
 import { computed, ref } from "vue";
 import { usePhotoStore } from "~/composables/usePhotoStore";
 import { useTemplate } from "~/composables/useTemplate";
-import { useExifReader } from "~/composables/useExifReader";
+import { formatExifForDisplay } from "~/composables/useExifReader";
 import {
   coverCropRect,
   computeCanvasDims,
@@ -13,7 +13,6 @@ import type { PhotoCrop } from "~/types";
 
 const photoStore = usePhotoStore();
 const { getResolvedConfig } = useTemplate();
-const { formatExifForDisplay } = useExifReader();
 
 const MAX_PREVIEW_W = 1100;
 const MAX_PREVIEW_H = 760;

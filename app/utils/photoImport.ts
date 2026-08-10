@@ -4,7 +4,31 @@ import type { ExifData, Photo } from "~/types";
 /**
  * Shared photo-import helpers — the single place that turns a File into a
  * Photo. Previously duplicated in PhotoUploader and PhotoList.
+ *
+ * Only formats the whole pipeline can handle end-to-end are accepted:
+ * the browser must decode them for the preview AND takumi must decode them
+ * for the export (client WASM + server native share the same Rust core,
+ * which supports JPEG/PNG/WebP/GIF — no HEIC/HEIF/AVIF/BMP/TIFF).
+ * "Supports HEIC" was previously claimed in the UI, but a HEIC file hangs
+ * the browser preview (no <img> decoder) and would fail the export.
  */
+export const SUPPORTED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+] as const;
+
+const SUPPORTED_IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "webp", "gif"];
+
+/** MIME-type check with an extension fallback for browsers that report "" */
+export function isSupportedImage(file: File): boolean {
+  if (SUPPORTED_IMAGE_TYPES.includes(file.type as (typeof SUPPORTED_IMAGE_TYPES)[number])) {
+    return true;
+  }
+  const ext = file.name.toLowerCase().split(".").pop() || "";
+  return SUPPORTED_IMAGE_EXTENSIONS.includes(ext);
+}
 
 /** Reads a File as a base64 data URL. */
 export function fileToDataUrl(file: File): Promise<string> {
@@ -16,11 +40,31 @@ export function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
-/** Loads an image to read its intrinsic dimensions. */
-export function getImageDimensions(dataUrl: string): Promise<{ width: number; height: number }> {
-  return new Promise((resolve) => {
+/**
+ * Loads an image to read its intrinsic dimensions.
+ *
+ * Rejects on decode failure or after a timeout: an undecodable file (HEIC in
+ * Chrome/Firefox, TIFF, corrupt data) never fires `onload`, and without this
+ * the import would hang forever.
+ */
+export function getImageDimensions(
+  dataUrl: string,
+  timeoutMs = 10_000,
+): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
     const img = new Image();
-    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    const timer = setTimeout(() => {
+      img.src = "";
+      reject(new Error("Image decode timed out"));
+    }, timeoutMs);
+    img.onload = () => {
+      clearTimeout(timer);
+      resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    };
+    img.onerror = () => {
+      clearTimeout(timer);
+      reject(new Error("Image decode failed"));
+    };
     img.src = dataUrl;
   });
 }
@@ -68,13 +112,21 @@ export async function mapLimit<T, R>(
   return results;
 }
 
+export interface ImportResult {
+  imported: number;
+  /** Files that looked like images but aren't supported end-to-end */
+  skipped: { name: string; reason: string }[];
+}
+
 /**
  * Imports image files with bounded concurrency. EXIF parsing is CPU-heavy,
  * so processing files one-by-one makes large batches feel frozen; a small
  * concurrency limit keeps the tab responsive. Each completed photo is handed
  * to `onPhoto` immediately so the UI can render progressively.
  *
- * @returns the number of image files processed
+ * Only `isSupportedImage` files are processed; anything else (HEIC/HEIF,
+ * AVIF, BMP, TIFF, SVG photos, …) is reported as skipped so the UI can tell
+ * the user instead of silently accepting a file that can't be rendered.
  */
 export async function importImageFiles(
   files: FileList | File[],
@@ -82,8 +134,23 @@ export async function importImageFiles(
   onPhoto: (photo: Photo) => void,
   onProgress?: (done: number, total: number) => void,
   concurrency = 3,
-): Promise<number> {
-  const imageFiles = Array.from(files).filter((f) => f.type.startsWith("image/"));
+): Promise<ImportResult> {
+  const skipped: ImportResult["skipped"] = [];
+  const imageFiles = Array.from(files).filter((f) => {
+    if (
+      f.type.startsWith("image/") ||
+      /\.(jpe?g|png|webp|gif|heic|heif|avif|bmp|tiff?|svg)$/i.test(f.name)
+    ) {
+      if (isSupportedImage(f)) return true;
+      skipped.push({
+        name: f.name,
+        reason: `Unsupported format (${f.type || "unknown"}); use JPEG, PNG, WebP or GIF`,
+      });
+      return false;
+    }
+    return false; // non-image files are ignored silently
+  });
+
   let done = 0;
   await mapLimit(imageFiles, concurrency, async (file) => {
     try {
@@ -94,5 +161,5 @@ export async function importImageFiles(
     done++;
     onProgress?.(done, imageFiles.length);
   });
-  return imageFiles.length;
+  return { imported: done, skipped };
 }

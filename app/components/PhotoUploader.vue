@@ -7,10 +7,36 @@ import { importImageFiles } from "~/utils/photoImport";
 const photoStore = usePhotoStore();
 const { readExif } = useExifReader();
 const isDragging = ref(false);
+const isImporting = ref(false);
+const importProgress = ref({ current: 0, total: 0 });
 const fileInput = ref<HTMLInputElement | null>(null);
 
+const skippedFiles = ref<{ name: string; reason: string }[]>([]);
+
 async function handleFiles(files: FileList | File[]) {
-  await importImageFiles(files, readExif, (photo) => photoStore.addPhoto(photo));
+  if (isImporting.value) return;
+  const imageFiles = Array.from(files).filter((f) => f.type.startsWith("image/"));
+  if (imageFiles.length === 0) return;
+
+  isImporting.value = true;
+  importProgress.value = { current: 0, total: imageFiles.length };
+  try {
+    const result = await importImageFiles(
+      files,
+      readExif,
+      (photo) => photoStore.addPhoto(photo),
+      (done) => {
+        importProgress.value.current = done;
+      },
+    );
+    skippedFiles.value = result.skipped;
+    // clear the notice once a new selection is dropped
+    if (result.skipped.length > 0) {
+      setTimeout(() => (skippedFiles.value = []), 6000);
+    }
+  } finally {
+    isImporting.value = false;
+  }
 }
 
 const onDragOver = (e: DragEvent) => {
@@ -53,33 +79,57 @@ const onFileChange = (e: Event) => {
     @drop="onDrop"
     @click="fileInput?.click()"
   >
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      class="w-12 h-12 text-nord-8 mb-4 opacity-80"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      stroke-width="1.5"
+    <template v-if="isImporting">
+      <svg class="w-12 h-12 text-nord-8 mb-4 animate-spin" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+        <path
+          class="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+        />
+      </svg>
+      <p class="text-nord-6 font-medium mb-2">
+        Importing {{ importProgress.current }}/{{ importProgress.total }}…
+      </p>
+      <p class="text-nord-4 text-xs">Please wait</p>
+    </template>
+    <template v-else>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        class="w-12 h-12 text-nord-8 mb-4 opacity-80"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        stroke-width="1.5"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"
+        />
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z"
+        />
+      </svg>
+      <p class="text-nord-6 font-medium mb-2">Drag photos here, or click to select</p>
+      <p class="text-nord-4 text-xs">Supports JPEG, PNG, WebP, GIF</p>
+    </template>
+    <p
+      v-if="skippedFiles.length"
+      class="mt-2 text-[11px] text-nord-11 bg-nord-11/10 border border-nord-11/30 rounded-lg px-3 py-1.5 max-w-full"
     >
-      <path
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"
-      />
-      <path
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z"
-      />
-    </svg>
-    <p class="text-nord-6 font-medium mb-2">Drag photos here, or click to select</p>
-    <p class="text-nord-4 text-xs">Supports JPEG, PNG, WebP, HEIC and more</p>
+      {{ skippedFiles.length }} file{{ skippedFiles.length > 1 ? "s" : "" }} skipped ({{
+        skippedFiles[0]?.reason
+      }})
+    </p>
     <input
       type="file"
       ref="fileInput"
       class="hidden"
       multiple
-      accept="image/*"
+      accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif"
       @change="onFileChange"
     />
   </div>

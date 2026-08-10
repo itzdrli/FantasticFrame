@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { usePhotoStore } from "~/composables/usePhotoStore";
-import { useExifReader } from "~/composables/useExifReader";
+import { formatExifForDisplay } from "~/composables/useExifReader";
 
 const photoStore = usePhotoStore();
-const { formatExifForDisplay } = useExifReader();
 
 const fieldLabels: Record<string, string> = {
   make: "Make",
