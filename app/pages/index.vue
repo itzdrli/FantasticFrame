@@ -268,7 +268,7 @@ const batchExportDisabled = computed(
     <Transition name="toast">
       <div
         v-if="error"
-        class="fixed top-32 right-6 z-50 px-4 py-3 rounded-xl shadow-2xl text-sm font-medium flex items-center gap-3 border bg-nord-11/10 border-nord-11/30 text-nord-11"
+        class="fixed top-32 right-6 z-50 px-4 py-3 rounded-xl shadow-2xl text-sm font-medium flex items-center gap-3 border bg-nord-2 border-nord-11/60 text-nord-11"
         role="alert"
       >
         <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -304,8 +304,8 @@ const batchExportDisabled = computed(
         class="fixed top-20 right-6 z-50 px-4 py-3 rounded-xl shadow-2xl text-sm font-medium flex items-center gap-3 border"
         :class="
           batchResult.failed === 0
-            ? 'bg-nord-14/10 border-nord-14/30 text-nord-14'
-            : 'bg-nord-11/10 border-nord-11/30 text-nord-11'
+            ? 'bg-nord-2 border-nord-14/60 text-nord-14'
+            : 'bg-nord-2 border-nord-11/60 text-nord-11'
         "
       >
         <svg

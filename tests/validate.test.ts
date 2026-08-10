@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { validateTemplateConfig } from "../shared/validate";
-import { estimateBase64Bytes } from "../server/utils/limits";
+import { estimateBase64Bytes } from "../shared/limits";
 
 const fullConfig = {
   borderRadius: 14,

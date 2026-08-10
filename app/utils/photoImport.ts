@@ -79,6 +79,9 @@ export async function createPhotoFromFile(
 ): Promise<Photo> {
   const [exif, dataUrl] = await Promise.all([readExif(file), fileToDataUrl(file)]);
   const { width, height } = await getImageDimensions(dataUrl);
+  // Drop the raw exifr result before storing: it's never rendered (ExifPanel
+  // uses formatExifForDisplay) and can be several KB per photo.
+  const { raw: _raw, ...storedExif } = exif;
   return {
     id: uuid(),
     fileName: file.name,
@@ -87,7 +90,7 @@ export async function createPhotoFromFile(
     dataUrl,
     width,
     height,
-    exif,
+    exif: storedExif,
     templateId: "classic",
     crop: { fitMode: "cover", scale: 1, offsetX: 0, offsetY: 0 },
     addedAt: new Date(),

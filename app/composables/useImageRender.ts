@@ -1,5 +1,11 @@
 import { ref } from "#imports";
 import { buildRenderTree } from "~~/shared/render";
+import {
+  MAX_BATCH_ITEMS,
+  MAX_PHOTO_BYTES,
+  MAX_TOTAL_PHOTO_BYTES,
+  estimateBase64Bytes,
+} from "~~/shared/limits";
 import type { ExportOptions, RenderPayload } from "~~/shared/types";
 import type { RenderResponse } from "~/types";
 
@@ -172,9 +178,51 @@ export const useImageRender = () => {
     batchProgress.value = null;
 
     try {
+      // The UI's format/quality selection must reach the server: batch items
+      // built by callers may omit exportOptions, and buildRenderTree then
+      // defaults to PNG@95 (regression: picking JPEG 90% and batch-exporting
+      // produced PNGs). Mirror _renderOne's fallback for every item.
+      const finalItems = items.map((item) =>
+        item.payload.exportOptions
+          ? item
+          : {
+              ...item,
+              payload: {
+                ...item.payload,
+                exportOptions: {
+                  format: exportFormat.value,
+                  quality: exportQuality.value,
+                },
+              },
+            },
+      );
+      // Pre-flight against the SAME limits the server enforces (shared/limits.ts),
+      // so a batch the server would reject (e.g. many large PNGs) fails fast
+      // with a clear message instead of uploading hundreds of MB first.
+      let totalBytes = 0;
+      for (const item of finalItems) {
+        const b64 = item.payload.photoBase64;
+        if (typeof b64 !== "string") continue; // server will 400
+        const bytes = estimateBase64Bytes(b64);
+        if (bytes > MAX_PHOTO_BYTES) {
+          throw new Error(
+            `Photo too large: ${item.originalFilename} (max ${Math.round(MAX_PHOTO_BYTES / 1e6)}MB per photo)`,
+          );
+        }
+        totalBytes += bytes;
+      }
+      if (finalItems.length > MAX_BATCH_ITEMS) {
+        throw new Error(`Too many photos in one batch (max ${MAX_BATCH_ITEMS})`);
+      }
+      if (totalBytes > MAX_TOTAL_PHOTO_BYTES) {
+        throw new Error(
+          `Batch too large: total photos exceed ${Math.round(MAX_TOTAL_PHOTO_BYTES / 1e6)}MB — reduce the number or size of photos`,
+        );
+      }
+
       const { jobId } = await $fetch<{ jobId: string }>("/api/render/batch", {
         method: "POST",
-        body: { items },
+        body: { items: finalItems },
       });
 
       let status: { status: string; total: number; done: number; failed: number };

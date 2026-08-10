@@ -1,24 +1,15 @@
-import { createError, type H3Event } from "h3";
-
-/**
- * In-memory render service limits — every render payload is buffered in RAM
- * (base64 input + zip output) and takumi's Rust core can only decode
- * JPEG/PNG/WebP/GIF, so a batch of huge PNGs is the worst case. These caps
- * turn that into a clear 4xx response instead of an OOM.
- */
-export const MAX_RENDER_BODY_BYTES = 35 * 1024 * 1024; // single-image POST (base64 of a 25MB photo)
-export const MAX_BATCH_BODY_BYTES = 256 * 1024 * 1024; // batch POST (hard stream cap)
-export const MAX_PHOTO_BYTES = 25 * 1024 * 1024; // one photo, approx binary bytes
-export const MAX_TOTAL_PHOTO_BYTES = 200 * 1024 * 1024; // sum of all photos in a batch
-export const MAX_BATCH_ITEMS = 50;
-export const MAX_JOBS = 2; // concurrent in-memory batch jobs (input + zip each)
-
-/** Approximate binary bytes of a base64 data URL (slight over-estimate). */
-export const estimateBase64Bytes = (dataUrl: string): number => {
-  const i = dataUrl.indexOf(",");
-  const b64 = i >= 0 ? dataUrl.slice(i + 1) : dataUrl;
-  return Math.ceil((b64.length * 3) / 4);
-};
+import { createError, readRawBody, type H3Event } from "h3";
+// Caps + estimateBase64Bytes live in shared/limits.ts so the client (pre-flight)
+// and the server (enforcement) use the SAME numbers.
+export {
+  MAX_RENDER_BODY_BYTES,
+  MAX_BATCH_BODY_BYTES,
+  MAX_PHOTO_BYTES,
+  MAX_TOTAL_PHOTO_BYTES,
+  MAX_BATCH_ITEMS,
+  MAX_JOBS,
+  estimateBase64Bytes,
+} from "../../shared/limits";
 
 const tooLarge = (maxBytes: number) =>
   createError({
@@ -28,9 +19,18 @@ const tooLarge = (maxBytes: number) =>
   });
 
 /**
- * Reads and JSON-parses a request body with a hard byte cap enforced WHILE
- * streaming. h3's readRawBody has no limit option, so an unbounded upload
- * would be fully buffered into memory before we could reject it.
+ * Reads and JSON-parses a request body with a byte cap.
+ *
+ * The read itself is delegated to h3's `readRawBody` — the SAME reader the
+ * pre-hardening code used (via readBody), which works in every runtime
+ * (dev server, Bun production, Node). A hand-rolled stream reader broke in
+ * production: `event.node.req.body` is a Uint8Array there, which hit the
+ * `String(source)` fallback and produced non-JSON garbage ("1,2,3,...").
+ *
+ * h3 offers no mid-stream limit, so the cap is enforced two ways:
+ * 1. upfront: reject from content-length when the client sent one;
+ * 2. after read: check the buffered byte length (bounds the JSON we parse
+ *    and keeps the per-endpoint limits real).
  */
 export async function readJsonBodyCapped(
   event: H3Event,
@@ -49,50 +49,10 @@ export async function readJsonBodyCapped(
     throw tooLarge(maxBytes);
   }
 
-  // h3's readRawBody resolves the body from the web Request stream, then
-  // falls back to reading event.node.req ITSELF as a Node-style stream
-  // (req.body/req.rawBody are undefined on the dev server). Mirror that so
-  // the byte cap applies mid-stream.
-  let source: any = null;
-  if (event.web?.request?.body != null) source = event.web.request.body;
-  else if (req.body != null) source = req.body;
-  else if (req.rawBody != null) source = req.rawBody;
-  else if (typeof req.on === "function") source = req;
-
-  if (source == null) return {};
-  if (typeof source === "string") {
-    if (Buffer.byteLength(source) > maxBytes) throw tooLarge(maxBytes);
-    return parseJson(source);
-  }
-  if (Buffer.isBuffer(source)) {
-    if (source.length > maxBytes) throw tooLarge(maxBytes);
-    return parseJson(source.toString("utf8"));
-  }
-
-  let total = 0;
-  const chunks: Buffer[] = [];
-  const push = (chunk: unknown) => {
-    const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as Uint8Array);
-    total += buf.length;
-    if (total > maxBytes) throw tooLarge(maxBytes);
-    chunks.push(buf);
-  };
-
-  if (typeof source.pipeTo === "function") {
-    // web ReadableStream (Bun / edge)
-    await source.pipeTo(new WritableStream({ write: push }));
-  } else if (typeof source.on === "function") {
-    // Node IncomingMessage (h3's own fallback path)
-    await new Promise((resolve, reject) => {
-      source.on("data", push).on("end", resolve).on("error", reject);
-    });
-  } else if (source.constructor === Object || source instanceof URLSearchParams) {
-    return source as Record<string, unknown>;
-  } else {
-    return parseJson(String(source));
-  }
-
-  return parseJson(Buffer.concat(chunks).toString("utf8"));
+  const raw = await readRawBody(event, "utf8");
+  if (raw == null || raw === "") return {};
+  if (Buffer.byteLength(raw) > maxBytes) throw tooLarge(maxBytes);
+  return parseJson(raw);
 }
 
 function parseJson(raw: string): Record<string, unknown> {

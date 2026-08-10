@@ -72,9 +72,11 @@ Always run `bun run lint`, `bun run fmt:check`, `bun run test` and
 - `server/utils/batchRender.ts` — in-memory job store: `createBatchJob`, `getJob`,
   `releaseJob`, `mapLimit` (concurrency 3), 10-min TTL purge (every access +
   60s timer), `MAX_JOBS` cap
-- `server/utils/limits.ts` — request-body/photo/batch size caps + capped
-  streaming body reader (h3 has no body limit); the render endpoints reject
-  oversized uploads with a clear 413
+- `shared/limits.ts` — size caps + `estimateBase64Bytes`, shared by the server
+  (enforcement) and the client (pre-flight batch warnings)
+- `server/utils/limits.ts` — request-body/photo/batch size caps (re-exported
+  from shared/limits) + capped body reader (h3 has no body limit); the render
+  endpoints reject oversized uploads with a clear 413
 - `scripts/postbuild.mjs` — overlays takumi-js / @takumi-rs over nitro's
   trace-based externalization (nitro wrongly resolves `#backend` to WASM);
   required or native server rendering breaks
