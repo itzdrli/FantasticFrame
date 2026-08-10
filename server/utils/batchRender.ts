@@ -40,13 +40,27 @@ function purgeExpiredJobs() {
   }
 }
 
+// TTL was previously only enforced when a NEW job arrived, so an abandoned
+// job (client never downloads) held its zip in memory indefinitely on an
+// idle server. Purge on every access AND on a background timer.
+const purgeTimer = setInterval(purgeExpiredJobs, 60_000);
+purgeTimer.unref?.();
+
+/** Number of jobs currently held (rendering or awaiting download) */
+export function jobCount(): number {
+  purgeExpiredJobs();
+  return jobs.size;
+}
+
 export function getJob(id: string): BatchJob | undefined {
+  purgeExpiredJobs();
   return jobs.get(id);
 }
 
 /** Removes a finished job and frees its zip bytes from memory */
 export function releaseJob(id: string) {
   jobs.delete(id);
+  purgeExpiredJobs();
 }
 
 export function createBatchJob(items: BatchItem[]): BatchJob {

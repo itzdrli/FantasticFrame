@@ -58,6 +58,8 @@ Always run `bun run lint`, `bun run fmt:check`, `bun run test` and
 - `shared/types.ts` — canonical shared types (`TemplateConfig`, `ExifData`,
   `PhotoCrop`, `RenderPayload`, …). `app/types/index.ts` re-exports them so app
   code keeps importing from `~/types`.
+- `shared/validate.ts` — hand-rolled `validateTemplateConfig()` used by the
+  render/batch endpoints to reject malformed configs with a clear 400.
 - `shared/render.ts` — **the heart of the project**. `buildRenderTree()` builds
   the takumi render node tree from a config; shared verbatim between browser
   (WASM) and server (native). Types come from `shared/types.ts`. Contains
@@ -68,7 +70,11 @@ Always run `bun run lint`, `bun run fmt:check`, `bun run test` and
 - `server/api/render/batch.post.ts`, `batch/status.get.ts`, `batch/download.get.ts`
   — batch job lifecycle (create → poll status → download zip)
 - `server/utils/batchRender.ts` — in-memory job store: `createBatchJob`, `getJob`,
-  `releaseJob`, `mapLimit` (concurrency 3), 10-min TTL purge
+  `releaseJob`, `mapLimit` (concurrency 3), 10-min TTL purge (every access +
+  60s timer), `MAX_JOBS` cap
+- `server/utils/limits.ts` — request-body/photo/batch size caps + capped
+  streaming body reader (h3 has no body limit); the render endpoints reject
+  oversized uploads with a clear 413
 - `scripts/postbuild.mjs` — overlays takumi-js / @takumi-rs over nitro's
   trace-based externalization (nitro wrongly resolves `#backend` to WASM);
   required or native server rendering breaks

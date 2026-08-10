@@ -122,7 +122,7 @@ export const useImageRender = () => {
       });
       return response;
     } catch (err: any) {
-      error.value = err.message || "Render failed";
+      error.value = err?.data?.message || err?.message || "Render failed";
       console.error("Render API error:", err);
       return null;
     }
@@ -216,7 +216,7 @@ export const useImageRender = () => {
       const failed = Number(res.headers.get("x-ff-export-failed")) || status.failed;
       return { success, failed };
     } catch (err: any) {
-      error.value = err?.message || "Batch export failed";
+      error.value = err?.data?.message || err?.message || "Batch export failed";
       console.error("Batch export error:", err);
       return { success: 0, failed: items.length };
     } finally {

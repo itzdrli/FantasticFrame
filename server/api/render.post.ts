@@ -1,22 +1,52 @@
-import { defineEventHandler, readBody, createError } from "h3";
+import { defineEventHandler, createError } from "h3";
 // @ts-ignore
 import { render } from "takumi-js";
 import { buildRenderTree } from "../../shared/render";
+import type { RenderPayload } from "../../shared/types";
+import { validateTemplateConfig } from "../../shared/validate";
+import {
+  MAX_PHOTO_BYTES,
+  MAX_RENDER_BODY_BYTES,
+  estimateBase64Bytes,
+  readJsonBodyCapped,
+} from "../utils/limits";
 
 export default defineEventHandler(async (event) => {
+  const body = await readJsonBodyCapped(event, MAX_RENDER_BODY_BYTES);
+  const { photoBase64, templateConfig } = body ?? {};
+
+  if (typeof photoBase64 !== "string" || !photoBase64.startsWith("data:image/")) {
+    throw createError({
+      statusCode: 400,
+      message: "photoBase64 must be an image data URL",
+    });
+  }
+  if (!templateConfig) {
+    throw createError({
+      statusCode: 400,
+      message: "Missing required parameter: templateConfig",
+    });
+  }
+  if (estimateBase64Bytes(photoBase64) > MAX_PHOTO_BYTES) {
+    throw createError({
+      statusCode: 413,
+      message: `Photo too large (max ${Math.round(MAX_PHOTO_BYTES / 1e6)}MB per photo)`,
+    });
+  }
+  const check = validateTemplateConfig(templateConfig);
+  if (!check.valid) {
+    throw createError({
+      statusCode: 400,
+      message: `Invalid templateConfig: ${check.errors.join("; ")}`,
+    });
+  }
+
   try {
-    const body = await readBody(event);
-    const { photoBase64, templateConfig } = body;
-
-    if (!photoBase64 || !templateConfig) {
-      throw createError({
-        statusCode: 400,
-        message: "Missing required parameters: photoBase64 or templateConfig",
-      });
-    }
-
-    const { nodeTree, width, height, format, quality } = buildRenderTree(body);
-
+    // body was validated above; cast through unknown because readJsonBodyCapped
+    // returns a plain record
+    const { nodeTree, width, height, format, quality } = buildRenderTree(
+      body as unknown as RenderPayload,
+    );
     const imageBuffer = await render(nodeTree, {
       width,
       height,
