@@ -9,29 +9,39 @@
 import type { CropRect, RenderPayload, RenderTreeResult, TemplateConfig } from "./types";
 import { SOCIAL_RATIO_HEIGHTS } from "./types";
 
+/**
+ * Rounds a float for display and strips trailing zeros — EXIF stores values
+ * as rationals, so f/1.8 arrives as 1.7999999999999998 and must never be
+ * shown as-is.
+ */
+const fmtNum = (n: number, maxDecimals = 2): string => {
+  if (!Number.isFinite(n)) return "";
+  return String(parseFloat(n.toFixed(maxDecimals)));
+};
+
 export const formatExif = (data: any, field: string): string => {
   if (!data) return "";
   switch (field) {
     case "fNumber":
-      return data.fNumber ? `f/${data.fNumber}` : "";
+      return data.fNumber ? `f/${fmtNum(data.fNumber)}` : "";
     case "exposureTime":
       return (
         data.exposureTimeFormatted ||
         (data.exposureTime
           ? data.exposureTime < 1
             ? `1/${Math.round(1 / data.exposureTime)}`
-            : `${data.exposureTime}"`
+            : `${fmtNum(data.exposureTime)}"`
           : "")
       );
     case "iso":
       return data.iso ? `ISO ${data.iso}` : "";
     case "focalLength":
-      return data.focalLength ? `${data.focalLength}mm` : "";
+      return data.focalLength ? `${fmtNum(data.focalLength)}mm` : "";
     case "focalLengthIn35mm":
-      return data.focalLengthIn35mm ? `${data.focalLengthIn35mm}mm` : "";
+      return data.focalLengthIn35mm ? `${fmtNum(data.focalLengthIn35mm)}mm` : "";
     case "exposureBias":
       return data.exposureBias !== undefined
-        ? `${data.exposureBias > 0 ? "+" : ""}${data.exposureBias} EV`
+        ? `${data.exposureBias > 0 ? "+" : ""}${fmtNum(data.exposureBias)} EV`
         : "";
     case "dateTimeOriginal":
       return data.dateTimeOriginal ? formatCaptureDate(data.dateTimeOriginal) : "";

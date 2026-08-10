@@ -47,6 +47,14 @@ describe("formatExif", () => {
     expect(formatExif({ exposureBias: 0 }, "exposureBias")).toBe("0 EV");
   });
 
+  it("never shows float noise from EXIF rationals (regression: f/1.8 → 1.7999999999999998)", () => {
+    expect(formatExif({ fNumber: 1.7999999999999998 }, "fNumber")).toBe("f/1.8");
+    expect(formatExif({ exposureBias: 0.30000000000000004 }, "exposureBias")).toBe("+0.3 EV");
+    expect(formatExif({ focalLength: 49.99999999999999 }, "focalLength")).toBe("50mm");
+    expect(formatExif({ focalLengthIn35mm: 74.99999999999999 }, "focalLengthIn35mm")).toBe("75mm");
+    expect(formatExif({ exposureTime: 2.0000000000000004 }, "exposureTime")).toBe('2"');
+  });
+
   it("formats the capture date deterministically (no locale/ICU dependence)", () => {
     const d = new Date(2024, 0, 2, 3, 4, 5);
     expect(formatExif({ dateTimeOriginal: d }, "dateTimeOriginal")).toBe("2024/1/2");

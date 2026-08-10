@@ -47,6 +47,17 @@ describe("extractExif (real exifr pipeline)", () => {
     expect(exif.dateTimeOriginal).toEqual(new Date(2024, 0, 2, 3, 4, 5));
   });
 
+  it("rounds float noise from EXIF rationals at ingestion (regression: f/1.8)", () => {
+    const exif = extractExif({
+      FNumber: 1.7999999999999998,
+      ExposureBiasValue: 0.30000000000000004,
+    });
+    expect(exif.fNumber).toBe(1.8);
+    expect(exif.exposureBias).toBe(0.3);
+    // fallback derivation from ApertureValue is rounded too
+    expect(extractExif({ ApertureValue: 1.7999999999999998 }).fNumber).toBe(1.8);
+  });
+
   it("normalizes corporate brand names", () => {
     const exif = extractExif({ Make: "NIKON CORPORATION", Model: "D850" });
     expect(exif.make).toBe("Nikon");

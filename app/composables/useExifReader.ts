@@ -9,7 +9,11 @@ function toNumber(val: unknown): number | undefined {
   if (val == null) return undefined;
   if (Array.isArray(val)) val = val[0];
   const n = Number(val);
-  return Number.isFinite(n) ? n : undefined;
+  if (!Number.isFinite(n)) return undefined;
+  // EXIF stores values as rationals; 18/10 can arrive as 1.7999999999999998.
+  // Round at ingestion so every field (fNumber, exposureBias, focalLength, …)
+  // is clean for display, storage and the render payload.
+  return Number(n.toFixed(6));
 }
 
 /**
@@ -28,7 +32,7 @@ function toString(val: unknown): string | undefined {
  */
 function formatExposureTime(seconds: number): string {
   if (seconds >= 1) {
-    return `${seconds}"`;
+    return `${parseFloat(seconds.toFixed(2))}"`;
   }
   const denominator = Math.round(1 / seconds);
   return `1/${denominator}`;
