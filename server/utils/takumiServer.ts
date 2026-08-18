@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { render as takumiRender } from "takumi-js";
@@ -10,18 +10,32 @@ import { render as takumiRender } from "takumi-js";
  * unavailable in sandboxed runtimes (Appwrite Sites/Functions). Passing the
  * `module` option forces the WASM backend — takumi-js clears its backend
  * cache on load failure, so a native miss followed by a WASM retry works.
- * The raw bytes are read directly (not via the bundler wrappers, which
- * eagerly initSync() and would fight the renderer's own init), resolving
- * through node resolution so it works both in dev and in the traced nitro
- * output (postbuild overlays the full @takumi-rs package).
  */
 let wasmBytes: Uint8Array | null = null;
 
+/**
+ * Locates the takumi WASM binary. Resolving "./package.json" is not an
+ * option: @takumi-rs/wasm's exports map doesn't expose that subpath, and
+ * Node's strict exports enforcement rejects the lookup (Bun tolerates it,
+ * which is why this only blew up on the Appwrite runtime). Resolving an
+ * exported entry and walking up to the package root dodges the exports map.
+ */
+function locateWasmFile(): string {
+  const entry = createRequire(import.meta.url).resolve("@takumi-rs/wasm");
+  let dir = path.dirname(entry);
+  for (let i = 0; i < 6; i++) {
+    const candidate = path.join(dir, "pkg", "takumi_wasm_bg.wasm");
+    if (existsSync(candidate)) return candidate;
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  throw new Error(`takumi_wasm_bg.wasm not found above ${entry}`);
+}
+
 function getWasmBytes(): Uint8Array {
   if (!wasmBytes) {
-    const pkgJson = createRequire(import.meta.url).resolve("@takumi-rs/wasm/package.json");
-    const file = path.join(path.dirname(pkgJson), "pkg", "takumi_wasm_bg.wasm");
-    wasmBytes = new Uint8Array(readFileSync(file));
+    wasmBytes = new Uint8Array(readFileSync(locateWasmFile()));
   }
   return wasmBytes;
 }
