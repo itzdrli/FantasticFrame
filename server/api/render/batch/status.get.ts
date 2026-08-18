@@ -13,6 +13,6 @@ export default defineEventHandler((event) => {
     total: job.total,
     done: job.done,
     failed: job.failed,
-    errors: job.status === "done" ? job.errors : undefined,
+    errors: job.status === "done" || job.status === "error" ? job.errors : undefined,
   };
 });

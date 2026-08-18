@@ -4,6 +4,15 @@ import checker from "vite-plugin-checker";
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
+
+  runtimeConfig: {
+    public: {
+      appwriteEndpoint: process.env.NUXT_PUBLIC_APPWRITE_ENDPOINT,
+      appwriteProjectId: process.env.NUXT_PUBLIC_APPWRITE_PROJECT_ID,
+      appwriteProjectName: process.env.NUXT_PUBLIC_APPWRITE_PROJECT_NAME,
+      appwriteBatchFunctionId: process.env.NUXT_PUBLIC_APPWRITE_BATCH_FUNCTION_ID,
+    },
+  },
   // Devtools default to on in dev and off in production; enabling them here
   // unconditionally would ship the devtools client in production builds.
   devtools: { enabled: import.meta.dev ?? process.env.NODE_ENV !== "production" },

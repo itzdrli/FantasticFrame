@@ -1,4 +1,5 @@
 import { ref } from "#imports";
+import { useAppwriteBatch } from "~/composables/useAppwriteBatch";
 import { buildRenderTree } from "~~/shared/render";
 import {
   MAX_BATCH_ITEMS,
@@ -55,6 +56,7 @@ export const useImageRender = () => {
   const exportFormat = ref<ExportOptions["format"]>("jpeg");
   const exportQuality = ref<number>(90);
   const batchProgress = ref<BatchExportProgress | null>(null);
+  const appwriteBatch = useAppwriteBatch();
 
   /**
    * Internal render core (does not touch isRendering, shared by renderImage / batchExport)
@@ -220,6 +222,30 @@ export const useImageRender = () => {
         );
       }
 
+      // Appwrite Storage caps a single file at 50MB; base64 inflates by 4/3,
+      // so a request JSON above ~36MB of photos cannot be uploaded at all.
+      if (appwriteBatch.isAvailable() && totalBytes > 36 * 1024 * 1024) {
+        throw new Error(
+          `Batch too large for Appwrite Storage (max ~36MB of photos): reduce the number or size of photos`,
+        );
+      }
+
+      // Appwrite path first (Storage + function): the in-memory server job
+      // store does not survive the Sites SSR runtime, so prefer it whenever
+      // configured. Falls back to /api/render/batch when unavailable or failed
+      // (e.g. no logged-in session — bucket writes need one).
+      if (appwriteBatch.isAvailable()) {
+        try {
+          batchProgress.value = { current: 0, total: finalItems.length, status: "rendering" };
+          return await appwriteBatch.exportBatch(finalItems, (p: BatchExportProgress) => {
+            batchProgress.value = p;
+            onProgress?.(p);
+          });
+        } catch (err: any) {
+          console.warn("[useImageRender] Appwrite batch failed, falling back to server API:", err);
+        }
+      }
+
       const { jobId } = await $fetch<{ jobId: string }>("/api/render/batch", {
         method: "POST",
         body: { items: finalItems },
@@ -238,6 +264,12 @@ export const useImageRender = () => {
         onProgress?.(prog);
       } while (status.status === "rendering");
 
+      if (status.status === "error") {
+        // All items failed — there is no zip to download. Surface the first
+        // server-side error instead of handing the user an empty archive.
+        const detail = (status as any).errors?.[0]?.message as string | undefined;
+        throw new Error(detail || "Batch render failed on server — no files were produced");
+      }
       if (status.status !== "done") {
         throw new Error("Batch render failed on server");
       }

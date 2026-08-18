@@ -1,4 +1,4 @@
-import { render } from "takumi-js";
+import { renderServer } from "../utils/takumiServer";
 import { Zip, ZipDeflate } from "fflate";
 import { buildRenderTree } from "../../shared/render";
 import type { RenderPayload } from "../../shared/types";
@@ -125,9 +125,7 @@ async function runJob(job: BatchJob, items: BatchItem[]) {
         throw new Error("Missing photoBase64");
       }
       const { nodeTree, width, height, format, quality } = buildRenderTree(item.payload);
-      // Native render on Node/Bun; @ts-ignore silences the wasm/native format union mismatch
-      // @ts-ignore
-      const buf = await render(nodeTree, { width, height, format, quality });
+      const buf = await renderServer(nodeTree, { width, height, format, quality });
       const file = new ZipDeflate(zipEntryName(item.originalFilename, format));
       zip.add(file); // wires file.ondata into the zip before any data is pushed
       file.push(new Uint8Array(buf), true);
@@ -141,6 +139,13 @@ async function runJob(job: BatchJob, items: BatchItem[]) {
       console.error("[batchRender] item failed:", item.originalFilename, e);
     }
   });
+
+  // A job where every item failed produced an empty zip — never serve it as
+  // "done" (the client would download a 0-entry archive and call it success).
+  if (job.failed > 0 && job.done === 0) {
+    job.status = "error";
+    return;
+  }
 
   zip.end();
 }

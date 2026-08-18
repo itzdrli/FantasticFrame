@@ -1,6 +1,5 @@
 import { defineEventHandler, createError } from "h3";
-// @ts-ignore
-import { render } from "takumi-js";
+import { renderServer } from "../utils/takumiServer";
 import { buildRenderTree } from "../../shared/render";
 import type { RenderPayload } from "../../shared/types";
 import { validateTemplateConfig } from "../../shared/validate";
@@ -47,12 +46,12 @@ export default defineEventHandler(async (event) => {
     const { nodeTree, width, height, format, quality } = buildRenderTree(
       body as unknown as RenderPayload,
     );
-    const imageBuffer = await render(nodeTree, {
+    const imageBuffer = await renderServer(nodeTree, {
       width,
       height,
       format,
       quality,
-    } as any);
+    });
 
     const buf = Buffer.from(imageBuffer);
     const mimeType =

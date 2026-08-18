@@ -7,6 +7,12 @@ export default defineEventHandler(async (event) => {
   if (!job) {
     throw createError({ statusCode: 404, message: "Job not found" });
   }
+  if (job.status === "error") {
+    throw createError({
+      statusCode: 500,
+      message: job.errors[0]?.message ?? "Batch render failed — nothing to download",
+    });
+  }
   if (job.status !== "done") {
     throw createError({ statusCode: 409, message: "Job not finished yet" });
   }
