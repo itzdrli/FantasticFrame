@@ -32,8 +32,87 @@
   --color-nord-14: #a3be8c;
   --color-nord-15: #b48ead;
 
-  /* Default Nord font family */
-  --font-sans: "Inter", system-ui, sans-serif;
+  /* Default Nord font family — Latin from Inter, CJK from MiSans (self-hosted
+     sliced web font, see nuxt.config links) instead of the OS default. */
+  --font-sans: "Inter", "MiSans", system-ui, sans-serif;
+}
+
+/*
+ * Alternate themes. Every palette keeps the SAME luminance roles as nord
+ * (0 = page bg, 1 = raised panel, 2 = control bg, 3 = border, 4..6 = text
+ * from muted to strong, 8/9 = primary accent, 11 = danger, 12..15 = accents),
+ * so components need zero changes. Set via <html data-theme="…">; utilities
+ * reference var(--color-nord-*) at runtime, so overriding the variables here
+ * re-themes the whole UI.
+ */
+
+/* Frost — light, cool, cyan-on-light accent */
+:root[data-theme="frost"] {
+  --color-nord-0: #e7ecf2;
+  --color-nord-1: #f8fafc;
+  --color-nord-2: #edf1f6;
+  --color-nord-3: #cbd5e1;
+  --color-nord-4: #4a5870;
+  --color-nord-5: #33415a;
+  --color-nord-6: #1f2a3a;
+  --color-nord-7: #0f85a5;
+  --color-nord-8: #0e7490;
+  --color-nord-9: #155e75;
+  --color-nord-10: #3d6ba5;
+  --color-nord-11: #b8342f;
+  --color-nord-12: #c2601c;
+  --color-nord-13: #8f6f1f;
+  --color-nord-14: #3e8e4e;
+  --color-nord-15: #8550b4;
+}
+
+/* Sand — warm paper tones with a umber accent */
+:root[data-theme="sand"] {
+  --color-nord-0: #efe7d9;
+  --color-nord-1: #faf6ec;
+  --color-nord-2: #f1e9da;
+  --color-nord-3: #ddd0b9;
+  --color-nord-4: #5b4e3c;
+  --color-nord-5: #4a3f2f;
+  --color-nord-6: #2e2518;
+  --color-nord-7: #9a6b2f;
+  --color-nord-8: #8a5a23;
+  --color-nord-9: #6f4819;
+  --color-nord-10: #5b6e96;
+  --color-nord-11: #a63d32;
+  --color-nord-12: #b05e23;
+  --color-nord-13: #84661f;
+  --color-nord-14: #5c7a43;
+  --color-nord-15: #735191;
+}
+
+/* Dusk — near-black neutral grey with a pale cyan accent */
+:root[data-theme="dusk"] {
+  --color-nord-0: #0d0f13;
+  --color-nord-1: #191c22;
+  --color-nord-2: #20242c;
+  --color-nord-3: #2e343e;
+  --color-nord-4: #b8c0cc;
+  --color-nord-5: #cad1dc;
+  --color-nord-6: #edf1f7;
+  --color-nord-7: #93c5d8;
+  --color-nord-8: #6fc3de;
+  --color-nord-9: #57acc9;
+  --color-nord-10: #7ea6d8;
+  --color-nord-11: #ef8b96;
+  --color-nord-12: #e5a271;
+  --color-nord-13: #d9c07b;
+  --color-nord-14: #9bd0a5;
+  --color-nord-15: #c09be0;
+}
+
+/* Make the checkerboard behind the preview follow the theme */
+:root[data-theme="frost"],
+:root[data-theme="sand"] {
+  color-scheme: light;
+}
+:root[data-theme="dusk"] {
+  color-scheme: dark;
 }
 
 body {

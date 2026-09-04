@@ -39,8 +39,10 @@ onUnmounted(() => {
     <!-- Section header & Live Sync toggle -->
     <div class="flex items-center justify-between border-b border-nord-2 pb-1">
       <div class="flex items-center gap-2">
-        <span class="text-nord-5 font-medium">Sync</span>
-        <span class="text-[10px] text-nord-4/70">({{ photoStore.count }} photos)</span>
+        <span class="text-nord-5 font-medium">{{ $t("sync.batchSync") }}</span>
+        <span class="text-[10px] text-nord-4/70">{{
+          $t("sync.photosCount", { n: photoStore.count })
+        }}</span>
       </div>
       <label class="flex items-center gap-2 cursor-pointer">
         <input
@@ -48,24 +50,21 @@ onUnmounted(() => {
           v-model="photoStore.syncStyle"
           class="accent-nord-8 w-3.5 h-3.5 rounded"
         />
+        <span class="text-xs">{{ $t("sync.liveSync") }}</span>
       </label>
     </div>
 
     <!-- Live sync status / description -->
     <p class="text-[10px] text-nord-4/70">
-      {{
-        photoStore.syncStyle
-          ? "Edits in selected categories will be synced."
-          : "Edits apply only to the current photo."
-      }}
+      {{ photoStore.syncStyle ? $t("sync.liveOn") : $t("sync.liveOff") }}
     </p>
 
     <!-- Scope selection -->
     <div class="flex flex-col gap-2">
       <div class="flex items-center justify-between">
-        <span class="text-xs text-nord-4">Sync Scope</span>
+        <span class="text-xs text-nord-4">{{ $t("sync.scope") }}</span>
         <button type="button" @click="toggleAll" class="text-[10px] text-nord-8 hover:underline">
-          {{ isAllSelected ? "Clear all" : "Select all" }}
+          {{ isAllSelected ? $t("sync.clearAll") : $t("sync.selectAll") }}
         </button>
       </div>
 
@@ -80,7 +79,7 @@ onUnmounted(() => {
               ? 'bg-nord-8/10 text-nord-8'
               : 'text-nord-4 hover:bg-nord-2'
           "
-          :title="cat.description"
+          :title="$t(`sync.categories.${cat.id}`)"
         >
           <input
             type="checkbox"
@@ -88,7 +87,7 @@ onUnmounted(() => {
             @change="photoStore.toggleSyncCategory(cat.id)"
             class="accent-nord-8 w-3.5 h-3.5 rounded"
           />
-          <span class="text-xs truncate">{{ cat.label }}</span>
+          <span class="text-xs truncate">{{ $t(`sync.categories.${cat.id}`) }}</span>
         </label>
       </div>
     </div>
@@ -123,8 +122,12 @@ onUnmounted(() => {
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
       </svg>
       <span>
-        {{ appliedFlash ? "Applied to all photos" : `Apply to All (${otherPhotosCount})` }}
+        {{ appliedFlash ? $t("sync.applied") : $t("sync.applyToAll", { n: otherPhotosCount }) }}
       </span>
     </button>
+
+    <p class="text-[10px] text-nord-4/70 text-center">
+      {{ $t("sync.cropNote") }}
+    </p>
   </div>
 </template>

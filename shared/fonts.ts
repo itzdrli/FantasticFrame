@@ -5,6 +5,3 @@
  * handing them to takumi.
  */
 export const SELF_HOSTED_FONT_PATHS = ["/fonts/LXGWWenKai-Regular.ttf"] as const;
-
-/** Font family names served by SELF_HOSTED_FONT_PATHS (for the UI list) */
-export const SELF_HOSTED_FONT_FAMILIES = ["LXGW WenKai"] as const;

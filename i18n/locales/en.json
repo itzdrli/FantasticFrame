@@ -1,0 +1,168 @@
+{
+  "app": {
+    "name": "Fantastic Frame",
+    "settings": "Settings",
+    "exif": "EXIF",
+    "exportAll": "Export All ({n})",
+    "exporting": "Exporting {pct}%",
+    "export": "Export",
+    "exportingSingle": "Exporting...",
+    "privacyNotice": "Privacy Notice",
+    "dismiss": "Dismiss",
+    "close": "Close",
+    "exifInfo": "EXIF Info",
+    "emptyTitle": "Get Started",
+    "emptyDesc": "Upload photos to begin creating your fantastic frames.",
+    "exportOk": "All {n} exported successfully",
+    "exportPartial": "{ok} succeeded / {fail} failed",
+    "privacyModal": {
+      "title": "Privacy Notice",
+      "p1": "By default, your photos are processed entirely in your browser. Single export is rendered locally via WASM and never leaves your device.",
+      "p2": "Batch export sends photos to our server for rendering. They are kept only in server memory, never written to disk, never stored in a database. Tasks auto-expire after 10 minutes and memory is released immediately after download.",
+      "p3": "We do not collect accounts, cookies, ads, or any tracking data. No copies of your photos are retained. Server location: Germany, EU (GDPR).",
+      "fullPolicy": "View Full Policy"
+    }
+  },
+  "uploader": {
+    "importing": "Importing {current}/{total}…",
+    "pleaseWait": "Please wait",
+    "dragHint": "Drag photos here, or click to select",
+    "supports": "Supports JPEG, PNG, WebP, GIF",
+    "skipped": "{n} file skipped ({reason})",
+    "skippedPlural": "{n} files skipped ({reason})"
+  },
+  "photoList": {
+    "add": "Add",
+    "addPhoto": "Add Photo",
+    "skipped": "{n} skipped",
+    "empty": "No photos yet, click + to add"
+  },
+  "template": {
+    "sectionTitle": "Template",
+    "selectTemplate": "Select Template"
+  },
+  "exif": {
+    "sectionTitle": "EXIF",
+    "labels": {
+      "make": "Brand",
+      "model": "Model",
+      "lensModel": "Lens",
+      "fNumber": "Aperture",
+      "exposureTime": "Shutter",
+      "iso": "ISO",
+      "focalLength": "Focal Length",
+      "focalLengthIn35mm": "35mm Focal Length",
+      "exposureBias": "Exposure Bias",
+      "dateTimeOriginal": "Date",
+      "gps": "GPS"
+    },
+    "noData": "No EXIF information available"
+  },
+  "border": {
+    "background": "Background",
+    "cornerRadius": "Corner Radius",
+    "radius": "Radius",
+    "padding": "Padding",
+    "top": "Top",
+    "bottom": "Bottom",
+    "horizontal": "Horizontal",
+    "aspectRatio": "Aspect Ratio",
+    "original": "Original",
+    "canvas1080": "1080w",
+    "invertRatio": "Invert Ratio",
+    "followOriginal": "Follow the original ratio",
+    "logo": "Logo",
+    "show": "Show",
+    "position": "Position",
+    "positionLeft": "Left",
+    "positionCenter": "Center",
+    "positionRight": "Right",
+    "logoHiddenHint": "Logo not shown, position will be applied to parameters",
+    "logoImage": "Logo Image (Priority over Text)",
+    "remove": "Remove",
+    "upload": "Upload",
+    "pasteSvg": "Paste SVG",
+    "svgPlaceholder": "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>…</svg>",
+    "apply": "Apply",
+    "cancel": "Cancel",
+    "errSvgEmpty": "Paste SVG markup first.",
+    "errSvgInvalid": "Invalid SVG — must contain <svg>…</svg>.",
+    "scale": "Scale",
+    "svgColor": "SVG Color",
+    "reset": "Reset",
+    "useFontColor": "Use Font Color",
+    "logoText": "Logo Text (Leave blank to use camera brand)",
+    "logoTextPlaceholder": "e.g. Fantastic Frame",
+    "selectPhotoFirst": "Please select a photo first"
+  },
+  "typography": {
+    "sectionTitle": "Typography",
+    "fontFamily": "Font Family",
+    "fontColor": "Font Color",
+    "paramSize": "Parameter Size",
+    "logoSize": "Logo Size",
+    "layout": "Layout",
+    "layoutHorizontal": "Horizontal",
+    "layoutList": "List",
+    "layoutGrid": "Grid",
+    "visibleFields": "Visible Fields",
+    "groups": {
+      "sans": "Sans Serif",
+      "serif": "Serif",
+      "mono": "Mono",
+      "cjk": "CJK",
+      "cjkDisplay": "CJK Display"
+    }
+  },
+  "sync": {
+    "batchSync": "Edit Sync",
+    "photosCount": "({n} photos)",
+    "liveSync": "",
+    "liveOn": "Edits in selected categories update all photos.",
+    "liveOff": "Edits apply only to the selected photo.",
+    "scope": "Sync Scope",
+    "selectAll": "Select all",
+    "clearAll": "Clear all",
+    "applyToAll": "Apply to All ({n})",
+    "applied": "Applied to all photos",
+    "cropNote": "Photo crop and zoom remain independent per photo.",
+    "categories": {
+      "logo": "Logo",
+      "typography": "Typography",
+      "border": "Border",
+      "canvas": "Aspect Ratio",
+      "template": "Template"
+    }
+  },
+  "preview": {
+    "emptyTitle": "Please upload and select a photo",
+    "fill": "Fill",
+    "fillTitle": "Fill the frame (crops the photo)",
+    "fit": "Fit",
+    "fitTitle": "Fit the whole photo (may leave whitespace)",
+    "zoomOut": "Zoom out",
+    "zoomIn": "Zoom in",
+    "reset": "Reset",
+    "resetCrop": "Reset zoom and position"
+  },
+  "appearance": {
+    "sectionTitle": "Appearance",
+    "theme": "Theme",
+    "language": "Language",
+    "themes": {
+      "nord": "Nord",
+      "frost": "Frost",
+      "sand": "Sand",
+      "dusk": "Dusk"
+    },
+    "themeHint": "Theme affects only the app UI, not the exported image."
+  },
+  "export": {
+    "sectionTitle": "Export",
+    "format": "Format",
+    "quality": "Quality",
+    "pngLossless": "PNG is lossless, no quality setting needed",
+    "webpHint": "Browser-side WebP is lossless; the quality slider only applies to the server render",
+    "jpegHint": "JPEG is lossy; higher quality means larger files"
+  }
+}

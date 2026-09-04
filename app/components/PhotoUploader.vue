@@ -93,9 +93,11 @@ const onFileChange = (e: Event) => {
         />
       </svg>
       <p class="text-nord-6 font-medium mb-2">
-        Importing {{ importProgress.current }}/{{ importProgress.total }}…
+        {{
+          $t("uploader.importing", { current: importProgress.current, total: importProgress.total })
+        }}
       </p>
-      <p class="text-nord-4 text-xs">Please wait</p>
+      <p class="text-nord-4 text-xs">{{ $t("uploader.pleaseWait") }}</p>
     </template>
     <template v-else>
       <svg
@@ -117,16 +119,21 @@ const onFileChange = (e: Event) => {
           d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z"
         />
       </svg>
-      <p class="text-nord-6 font-medium mb-2">Drag photos here, or click to select</p>
-      <p class="text-nord-4 text-xs">Supports JPEG, PNG, WebP, GIF</p>
+      <p class="text-nord-6 font-medium mb-2">{{ $t("uploader.dragHint") }}</p>
+      <p class="text-nord-4 text-xs">{{ $t("uploader.supports") }}</p>
     </template>
     <p
       v-if="skippedFiles.length"
       class="mt-2 text-[11px] text-nord-11 bg-nord-11/10 border border-nord-11/30 rounded-lg px-3 py-1.5 max-w-full"
     >
-      {{ skippedFiles.length }} file{{ skippedFiles.length > 1 ? "s" : "" }} skipped ({{
-        skippedFiles[0]?.reason
-      }})
+      {{
+        skippedFiles.length > 1
+          ? $t("uploader.skippedPlural", {
+              n: skippedFiles.length,
+              reason: skippedFiles[0]?.reason,
+            })
+          : $t("uploader.skipped", { n: skippedFiles.length, reason: skippedFiles[0]?.reason })
+      }}
     </p>
     <input
       type="file"

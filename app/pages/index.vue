@@ -162,7 +162,7 @@ const batchExportDisabled = computed(
               d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
             />
           </svg>
-          Settings
+          {{ $t("app.settings") }}
         </button>
         <button
           @click="showExif = !showExif"
@@ -179,12 +179,15 @@ const batchExportDisabled = computed(
               d="M9 17h6m-6-4h6m-6-4h6M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"
             />
           </svg>
-          EXIF
+          {{ $t("app.exif") }}
         </button>
       </div>
 
       <!-- Top-right export area -->
       <div class="flex items-center gap-2">
+        <!-- Appearance: theme + language (app-level prefs, not per-photo) -->
+        <AppearanceMenu />
+
         <!-- GitHub repo link -->
         <a
           href="https://github.com/itzdrli/FantasticFrame"
@@ -207,7 +210,7 @@ const batchExportDisabled = computed(
           @click="handleBatchExport"
           :disabled="batchExportDisabled"
           class="px-4 py-2 bg-nord-3 text-nord-6 font-medium rounded shadow hover:bg-nord-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 text-sm"
-          :title="`Batch export all ${photoStore.photos.length} photos`"
+          :title="$t('app.exportAll', { n: photoStore.photos.length })"
         >
           <svg
             v-if="!isBatchExporting"
@@ -238,8 +241,10 @@ const batchExportDisabled = computed(
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
             />
           </svg>
-          <span v-if="!isBatchExporting">Export All ({{ photoStore.photos.length }})</span>
-          <span v-else>Exporting {{ batchPercent }}%</span>
+          <span v-if="!isBatchExporting">{{
+            $t("app.exportAll", { n: photoStore.photos.length })
+          }}</span>
+          <span v-else>{{ $t("app.exporting", { pct: batchPercent }) }}</span>
         </button>
 
         <!-- Single export button -->
@@ -248,8 +253,8 @@ const batchExportDisabled = computed(
           :disabled="exportButtonDisabled"
           class="px-4 py-2 bg-nord-8 text-nord-0 font-medium rounded shadow hover:bg-nord-9 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
-          <span v-if="isRendering && !isBatchExporting">Exporting...</span>
-          <span v-else>Export</span>
+          <span v-if="isRendering && !isBatchExporting">{{ $t("app.exportingSingle") }}</span>
+          <span v-else>{{ $t("app.export") }}</span>
         </button>
       </div>
     </header>
@@ -331,9 +336,11 @@ const batchExportDisabled = computed(
           />
         </svg>
         <span v-if="batchResult.failed === 0">
-          All {{ batchResult.success }} exported successfully
+          {{ $t("app.exportOk", { n: batchResult.success }) }}
         </span>
-        <span v-else> {{ batchResult.success }} succeeded / {{ batchResult.failed }} failed </span>
+        <span v-else>
+          {{ $t("app.exportPartial", { ok: batchResult.success, fail: batchResult.failed }) }}
+        </span>
       </div>
     </Transition>
 
@@ -343,7 +350,7 @@ const batchExportDisabled = computed(
       <main class="flex-1 flex flex-col relative overflow-hidden bg-nord-0">
         <!-- Preview Area -->
         <div
-          class="flex-1 relative overflow-auto flex items-center justify-center p-8 bg-[repeating-conic-gradient(#3B4252_0_25%,#2E3440_0_50%)] bg-[length:24px_24px]"
+          class="flex-1 relative overflow-auto flex items-center justify-center p-8 bg-[repeating-conic-gradient(var(--color-nord-1)_0_25%,var(--color-nord-0)_0_50%)] bg-[length:24px_24px]"
         >
           <div
             v-if="photoStore.selectedPhoto"
@@ -355,10 +362,10 @@ const batchExportDisabled = computed(
             v-else
             class="flex flex-col items-center justify-center max-w-md w-full bg-nord-1/80 backdrop-blur rounded-xl p-8 border border-nord-2 shadow-lg"
           >
-            <h2 class="text-xl text-nord-6 font-semibold mb-4 text-center">Get Started</h2>
-            <p class="text-nord-4 text-center mb-6">
-              Upload photos to begin creating your fantastic frames.
-            </p>
+            <h2 class="text-xl text-nord-6 font-semibold mb-4 text-center">
+              {{ $t("app.emptyTitle") }}
+            </h2>
+            <p class="text-nord-4 text-center mb-6">{{ $t("app.emptyDesc") }}</p>
             <PhotoUploader />
             <button
               @click="showPrivacyModal = true"
@@ -372,7 +379,7 @@ const batchExportDisabled = computed(
                   d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
-              Privacy Notice
+              {{ $t("app.privacyNotice") }}
             </button>
           </div>
         </div>
@@ -392,7 +399,7 @@ const batchExportDisabled = computed(
           class="fixed top-16 left-0 z-40 w-[380px] max-h-[calc(100vh-4rem)] bg-nord-1 border-r-2 border-b-2 border-nord-3 shadow-2xl flex flex-col rounded-br-xl overflow-hidden"
         >
           <div class="p-4 flex items-center justify-between border-b border-nord-2 shrink-0">
-            <span class="text-sm font-semibold text-nord-6">EXIF Info</span>
+            <span class="text-sm font-semibold text-nord-6">{{ $t("app.exifInfo") }}</span>
             <button
               @click="showExif = false"
               class="w-7 h-7 flex items-center justify-center rounded hover:bg-nord-3 text-nord-4 hover:text-nord-6 transition-colors"
@@ -420,7 +427,7 @@ const batchExportDisabled = computed(
           class="fixed top-16 right-0 bottom-0 w-[400px] z-40 bg-nord-1 border-l-2 border-nord-3 shadow-2xl flex flex-col"
         >
           <div class="p-4 flex items-center justify-between border-b border-nord-2 shrink-0">
-            <span class="text-sm font-semibold text-nord-6">Settings</span>
+            <span class="text-sm font-semibold text-nord-6">{{ $t("app.settings") }}</span>
             <button
               @click="showSettings = false"
               class="w-7 h-7 flex items-center justify-center rounded hover:bg-nord-3 text-nord-4 hover:text-nord-6 transition-colors"
@@ -439,7 +446,7 @@ const batchExportDisabled = computed(
           <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-6">
             <section>
               <h3 class="text-sm font-semibold text-nord-6 uppercase tracking-wider mb-3">
-                Template
+                {{ $t("template.sectionTitle") }}
               </h3>
               <TemplateSelector />
             </section>
@@ -454,7 +461,7 @@ const batchExportDisabled = computed(
 
             <section>
               <h3 class="text-sm font-semibold text-nord-6 uppercase tracking-wider mb-3">
-                Typography
+                {{ $t("typography.sectionTitle") }}
               </h3>
               <TypeSettings />
             </section>
@@ -464,12 +471,12 @@ const batchExportDisabled = computed(
             <!-- Export Section -->
             <section>
               <h3 class="text-sm font-semibold text-nord-6 uppercase tracking-wider mb-3">
-                Export
+                {{ $t("export.sectionTitle") }}
               </h3>
               <div class="flex flex-col gap-3 text-sm text-nord-4">
                 <!-- Format -->
                 <div class="flex items-center justify-between">
-                  <span class="text-xs text-nord-4">Format</span>
+                  <span class="text-xs text-nord-4">{{ $t("export.format") }}</span>
                   <div class="flex rounded-lg overflow-hidden border border-nord-3">
                     <button
                       v-for="f in exportFormats"
@@ -490,20 +497,19 @@ const batchExportDisabled = computed(
                 <SliderField
                   v-if="exportFormat !== 'png'"
                   v-model="exportQuality"
-                  label="Quality"
+                  :label="$t('export.quality')"
                   :min="50"
                   :max="100"
                   suffix="%"
                 />
                 <p v-if="exportFormat === 'png'" class="text-[10px] text-nord-4/70">
-                  PNG is lossless, no quality setting needed
+                  {{ $t("export.pngLossless") }}
                 </p>
                 <p v-else-if="exportFormat === 'webp'" class="text-[10px] text-nord-4/70">
-                  Browser-side WebP is lossless; the quality slider only applies to the server
-                  render
+                  {{ $t("export.webpHint") }}
                 </p>
                 <p v-else class="text-[10px] text-nord-4/70">
-                  JPEG is lossy; higher quality means larger files
+                  {{ $t("export.jpegHint") }}
                 </p>
               </div>
             </section>
@@ -523,7 +529,7 @@ const batchExportDisabled = computed(
           class="modal-dialog max-w-lg w-full bg-nord-1 border border-nord-3 rounded-xl shadow-2xl p-6 flex flex-col gap-4"
         >
           <div class="flex items-start justify-between gap-4">
-            <h3 class="text-lg font-semibold text-nord-6">Privacy Notice</h3>
+            <h3 class="text-lg font-semibold text-nord-6">{{ $t("app.privacyModal.title") }}</h3>
             <button
               @click="showPrivacyModal = false"
               class="w-7 h-7 flex items-center justify-center rounded hover:bg-nord-3 text-nord-4 hover:text-nord-6 transition-colors shrink-0"
@@ -541,19 +547,9 @@ const batchExportDisabled = computed(
           </div>
 
           <div class="text-sm text-nord-4 flex flex-col gap-3">
-            <p>
-              By default, your photos are processed entirely in your browser. Single export is
-              rendered locally via WASM and never leaves your device.
-            </p>
-            <p>
-              Batch export sends photos to our server for rendering. They are kept only in server
-              memory, never written to disk, never stored in a database. Tasks auto-expire after 10
-              minutes and memory is released immediately after download.
-            </p>
-            <p>
-              We do not collect accounts, cookies, ads, or any tracking data. No copies of your
-              photos are retained. Server location: Germany, EU (GDPR).
-            </p>
+            <p>{{ $t("app.privacyModal.p1") }}</p>
+            <p>{{ $t("app.privacyModal.p2") }}</p>
+            <p>{{ $t("app.privacyModal.p3") }}</p>
           </div>
 
           <div class="flex justify-end">
@@ -563,7 +559,7 @@ const batchExportDisabled = computed(
               rel="noopener noreferrer"
               class="px-4 py-2 bg-nord-8 text-nord-0 font-medium rounded shadow hover:bg-nord-9 transition-colors text-sm"
             >
-              View Full Policy
+              {{ $t("app.privacyModal.fullPolicy") }}
             </a>
           </div>
         </div>

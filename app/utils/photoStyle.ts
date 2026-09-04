@@ -46,44 +46,18 @@ export const CANVAS_KEYS: (keyof TemplateConfig)[] = [
   "socialRatio",
 ];
 
+/** Key groups per syncable category (display names live in i18n sync.categories.*) */
 export interface SyncCategoryMeta {
   id: SyncCategory;
-  label: string;
-  description: string;
   keys: (keyof TemplateConfig)[];
 }
 
 export const SYNC_CATEGORIES: SyncCategoryMeta[] = [
-  {
-    id: "logo",
-    label: "Logo",
-    description: "Image, text, scale, position",
-    keys: LOGO_KEYS,
-  },
-  {
-    id: "typography",
-    label: "Typography",
-    description: "Font family, size, color, visible fields",
-    keys: TYPOGRAPHY_KEYS,
-  },
-  {
-    id: "border",
-    label: "Border & Background",
-    description: "Background color, padding, radius, scale",
-    keys: BORDER_KEYS,
-  },
-  {
-    id: "canvas",
-    label: "Aspect Ratio",
-    description: "Canvas mode and aspect ratio",
-    keys: CANVAS_KEYS,
-  },
-  {
-    id: "template",
-    label: "Template",
-    description: "Base template preset",
-    keys: [],
-  },
+  { id: "logo", keys: LOGO_KEYS },
+  { id: "typography", keys: TYPOGRAPHY_KEYS },
+  { id: "border", keys: BORDER_KEYS },
+  { id: "canvas", keys: CANVAS_KEYS },
+  { id: "template", keys: [] },
 ];
 
 export const ALL_SYNC_CATEGORIES: SyncCategory[] = [

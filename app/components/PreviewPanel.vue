@@ -280,12 +280,15 @@ function onPanMove(e: PointerEvent) {
   const { spanX, spanY } = panRanges();
   const patch: Partial<PhotoCrop> = {};
   if (spanX > 0.5) {
-    patch.offsetX = clamp(dragStart.value.ox + (e.clientX - dragStart.value.x) / spanX, -1, 1);
+    // Inverted so the photo follows the cursor (grab-the-paper feel): a drag
+    // right shows more of the photo's right side, which needs offsetX to go
+    // DOWN (offsetX 1 = right edge = content pushed left).
+    patch.offsetX = clamp(dragStart.value.ox - (e.clientX - dragStart.value.x) / spanX, -1, 1);
   } else {
     patch.offsetX = 0;
   }
   if (spanY > 0.5) {
-    patch.offsetY = clamp(dragStart.value.oy + (e.clientY - dragStart.value.y) / spanY, -1, 1);
+    patch.offsetY = clamp(dragStart.value.oy - (e.clientY - dragStart.value.y) / spanY, -1, 1);
   } else {
     patch.offsetY = 0;
   }
@@ -443,7 +446,7 @@ const footerStyle = computed(() => {
           <circle cx="9" cy="9" r="2" />
           <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
         </svg>
-        <p class="text-xl font-semibold">Please upload and select a photo</p>
+        <p class="text-xl font-semibold">{{ $t("preview.emptyTitle") }}</p>
       </div>
     </div>
 
@@ -542,10 +545,10 @@ const footerStyle = computed(() => {
               ? 'bg-nord-8 text-nord-0 font-medium border-nord-8'
               : 'bg-nord-1 border-nord-3 hover:bg-nord-2'
           "
-          title="Fill the frame (crops the photo)"
+          :title="$t('preview.fillTitle')"
           @click="setFitMode('cover')"
         >
-          Fill
+          {{ $t("preview.fill") }}
         </button>
         <button
           class="px-2.5 py-1 rounded border transition-colors"
@@ -554,16 +557,16 @@ const footerStyle = computed(() => {
               ? 'bg-nord-8 text-nord-0 font-medium border-nord-8'
               : 'bg-nord-1 border-nord-3 hover:bg-nord-2'
           "
-          title="Fit the whole photo (may leave whitespace)"
+          :title="$t('preview.fitTitle')"
           @click="setFitMode('contain')"
         >
-          Fit
+          {{ $t("preview.fit") }}
         </button>
         <template v-if="isCover">
           <span class="w-px h-4 bg-nord-3 mx-1" />
           <button
             class="w-6 h-6 flex items-center justify-center rounded border border-nord-3 bg-nord-1 hover:bg-nord-2 transition-colors"
-            title="Zoom out"
+            :title="$t('preview.zoomOut')"
             @click="setZoom(cropScale - 0.25)"
           >
             -
@@ -582,17 +585,17 @@ const footerStyle = computed(() => {
           <span class="text-[10px] text-nord-4">%</span>
           <button
             class="w-6 h-6 flex items-center justify-center rounded border border-nord-3 bg-nord-1 hover:bg-nord-2 transition-colors"
-            title="Zoom in"
+            :title="$t('preview.zoomIn')"
             @click="setZoom(cropScale + 0.25)"
           >
             +
           </button>
           <button
             class="px-2.5 py-1 rounded border border-nord-3 bg-nord-1 hover:bg-nord-2 transition-colors"
-            title="Reset zoom and position"
+            :title="$t('preview.resetCrop')"
             @click="resetCrop"
           >
-            Reset
+            {{ $t("preview.reset") }}
           </button>
         </template>
       </div>

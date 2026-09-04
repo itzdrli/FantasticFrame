@@ -66,7 +66,7 @@ const importPercent = computed(() => {
       @click="fileInput?.click()"
       :disabled="isImporting"
       class="shrink-0 w-20 h-20 rounded-lg border-2 border-dashed border-nord-3 hover:border-nord-8 hover:bg-nord-2 transition-all flex flex-col items-center justify-center gap-1 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group"
-      title="Add Photo"
+      :title="$t('photoList.addPhoto')"
     >
       <template v-if="!isImporting">
         <svg
@@ -82,7 +82,9 @@ const importPercent = computed(() => {
             d="M12 4v16m8-8H4"
           />
         </svg>
-        <span class="text-[10px] text-nord-3 group-hover:text-nord-8 transition-colors">Add</span>
+        <span class="text-[10px] text-nord-3 group-hover:text-nord-8 transition-colors">{{
+          $t("photoList.add")
+        }}</span>
       </template>
       <template v-else>
         <!-- Import progress -->
@@ -113,7 +115,7 @@ const importPercent = computed(() => {
       class="shrink-0 text-[10px] text-nord-11 bg-nord-11/10 border border-nord-11/30 rounded px-2 py-1"
       :title="skippedFiles.map((f) => f.name).join('\n')"
     >
-      {{ skippedFiles.length }} skipped
+      {{ $t("photoList.skipped", { n: skippedFiles.length }) }}
     </span>
 
     <!-- Photo list -->
@@ -149,7 +151,7 @@ const importPercent = computed(() => {
         v-if="photoStore.photos.length === 0"
         class="flex items-center justify-center text-nord-4 text-sm min-w-[160px]"
       >
-        No photos yet, click + to add
+        {{ $t("photoList.empty") }}
       </div>
     </div>
 

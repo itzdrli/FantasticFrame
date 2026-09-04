@@ -1,0 +1,168 @@
+{
+  "app": {
+    "name": "Fantastic Frame",
+    "settings": "设置",
+    "exif": "EXIF",
+    "exportAll": "全部导出（{n}）",
+    "exporting": "正在导出 {pct}%",
+    "export": "导出",
+    "exportingSingle": "导出中…",
+    "privacyNotice": "隐私说明",
+    "dismiss": "关闭",
+    "close": "关闭",
+    "exifInfo": "EXIF 信息",
+    "emptyTitle": "开始使用",
+    "emptyDesc": "上传照片，开始制作你的相框。",
+    "exportOk": "全部 {n} 张导出成功",
+    "exportPartial": "{ok} 成功 / {fail} 失败",
+    "privacyModal": {
+      "title": "隐私说明",
+      "p1": "默认情况下，照片处理完全在你的浏览器中进行。单张导出通过 WASM 在本地渲染，不会离开你的设备。",
+      "p2": "批量导出会将照片发送到服务器渲染。数据只保存在服务器内存中，绝不写入磁盘或数据库。任务在 10 分钟后自动过期，下载完成后立即释放内存。",
+      "p3": "我们不收集账号、Cookie、广告或任何跟踪数据，不保留照片的任何副本。服务器位于德国（欧盟，符合 GDPR）。",
+      "fullPolicy": "查看完整隐私政策"
+    }
+  },
+  "uploader": {
+    "importing": "正在导入 {current}/{total}…",
+    "pleaseWait": "请稍候",
+    "dragHint": "将照片拖到此处，或点击选择",
+    "supports": "支持 JPEG、PNG、WebP、GIF",
+    "skipped": "{n} 个文件已跳过（{reason}）",
+    "skippedPlural": "{n} 个文件已跳过（{reason}）"
+  },
+  "photoList": {
+    "add": "添加",
+    "addPhoto": "添加照片",
+    "skipped": "{n} 个已跳过",
+    "empty": "还没有照片，点击 + 添加"
+  },
+  "template": {
+    "sectionTitle": "模板",
+    "selectTemplate": "选择模板"
+  },
+  "exif": {
+    "sectionTitle": "EXIF",
+    "labels": {
+      "make": "品牌",
+      "model": "型号",
+      "lensModel": "镜头",
+      "fNumber": "光圈",
+      "exposureTime": "快门",
+      "iso": "ISO",
+      "focalLength": "焦距",
+      "focalLengthIn35mm": "35mm 等效焦距",
+      "exposureBias": "曝光补偿",
+      "dateTimeOriginal": "拍摄日期",
+      "gps": "GPS"
+    },
+    "noData": "没有可用的 EXIF 信息"
+  },
+  "border": {
+    "background": "背景",
+    "cornerRadius": "圆角",
+    "radius": "圆角",
+    "padding": "内边距",
+    "top": "顶部",
+    "bottom": "底部",
+    "horizontal": "左右",
+    "aspectRatio": "画幅比例",
+    "original": "原始",
+    "canvas1080": "1080w",
+    "invertRatio": "反转比例",
+    "followOriginal": "跟随照片原始比例",
+    "logo": "Logo",
+    "show": "显示",
+    "position": "位置",
+    "positionLeft": "左",
+    "positionCenter": "居中",
+    "positionRight": "右",
+    "logoHiddenHint": "Logo 未显示，位置将作用于参数文字",
+    "logoImage": "Logo 图片（优先于文字）",
+    "remove": "移除",
+    "upload": "上传",
+    "pasteSvg": "粘贴 SVG",
+    "svgPlaceholder": "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>…</svg>",
+    "apply": "应用",
+    "cancel": "取消",
+    "errSvgEmpty": "请先粘贴 SVG 内容。",
+    "errSvgInvalid": "SVG 无效 —— 必须包含 <svg>…</svg>。",
+    "scale": "缩放",
+    "svgColor": "SVG 颜色",
+    "reset": "重置",
+    "useFontColor": "使用文字颜色",
+    "logoText": "Logo 文字（留空则使用相机品牌）",
+    "logoTextPlaceholder": "例如：Fantastic Frame",
+    "selectPhotoFirst": "请先选择一张照片"
+  },
+  "typography": {
+    "sectionTitle": "字体排版",
+    "fontFamily": "字体",
+    "fontColor": "文字颜色",
+    "paramSize": "参数字号",
+    "logoSize": "Logo 字号",
+    "layout": "排版方式",
+    "layoutHorizontal": "横向",
+    "layoutList": "列表",
+    "layoutGrid": "网格",
+    "visibleFields": "可见字段",
+    "groups": {
+      "sans": "无衬线",
+      "serif": "衬线",
+      "mono": "等宽",
+      "cjk": "中文",
+      "cjkDisplay": "中文展示"
+    }
+  },
+  "sync": {
+    "batchSync": "同步编辑",
+    "photosCount": "（{n} 张）",
+    "liveSync": "",
+    "liveOn": "勾选分类下的修改会同步到所有照片。",
+    "liveOff": "修改只作用于当前照片。",
+    "scope": "同步范围",
+    "selectAll": "全选",
+    "clearAll": "清空",
+    "applyToAll": "应用到全部（{n}）",
+    "applied": "已应用到全部照片",
+    "cropNote": "每张照片的裁剪与缩放保持独立，不受同步影响。",
+    "categories": {
+      "logo": "Logo",
+      "typography": "字体排版",
+      "border": "边框背景",
+      "canvas": "画幅比例",
+      "template": "模板风格"
+    }
+  },
+  "preview": {
+    "emptyTitle": "请先上传并选择一张照片",
+    "fill": "裁剪",
+    "fillTitle": "填充画框（会裁剪照片）",
+    "fit": "完整",
+    "fitTitle": "完整显示照片（可能有留白）",
+    "zoomOut": "缩小",
+    "zoomIn": "放大",
+    "reset": "重置",
+    "resetCrop": "重置缩放与位置"
+  },
+  "appearance": {
+    "sectionTitle": "外观",
+    "theme": "主题",
+    "language": "语言",
+    "themes": {
+      "nord": "Nord",
+      "frost": "霜白",
+      "sand": "沙棕",
+      "dusk": "暮灰"
+    },
+    "themeHint": "主题只影响应用界面，不影响导出图片。"
+  },
+  "export": {
+    "sectionTitle": "导出",
+    "format": "格式",
+    "quality": "质量",
+    "pngLossless": "PNG 为无损格式，无需设置质量",
+    "webpHint": "浏览器端 WebP 为无损格式；质量滑块只作用于服务器渲染",
+    "jpegHint": "JPEG 为有损格式；质量越高文件越大"
+  }
+}

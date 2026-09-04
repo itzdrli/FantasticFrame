@@ -30,7 +30,7 @@ const selectTemplate = (templateId: string) => {
 
 <template>
   <div class="flex flex-col gap-4">
-    <h3 class="text-nord-6 text-sm font-medium">Select Template</h3>
+    <h3 class="text-nord-6 text-sm font-medium">{{ $t("template.selectTemplate") }}</h3>
     <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
       <button
         v-for="tpl in resolvedTemplates"

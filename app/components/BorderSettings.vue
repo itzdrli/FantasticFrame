@@ -7,6 +7,7 @@ import type { TemplateConfig } from "~/types";
 
 const photoStore = usePhotoStore();
 const { getResolvedConfig } = useTemplate();
+const { t } = useI18n();
 
 const selectedPhoto = computed(() => photoStore.selectedPhoto);
 const templateId = computed(() => selectedPhoto.value?.templateId || "classic");
@@ -269,11 +270,11 @@ watch(svgColor, () => refreshLogo());
 function applySvg() {
   const svg = svgInput.value.trim();
   if (!svg) {
-    svgError.value = "Paste SVG markup first.";
+    svgError.value = t("border.errSvgEmpty");
     return;
   }
   if (!/<svg[\s>]/i.test(svg) || !/<\/svg>/i.test(svg)) {
-    svgError.value = "Invalid SVG — must contain <svg>…</svg>.";
+    svgError.value = t("border.errSvgInvalid");
     return;
   }
   loadSvg(svg);
@@ -401,27 +402,51 @@ function setCanvasMode(mode: "original" | "social") {
   <div v-if="resolvedConfig" class="flex flex-col gap-5 text-sm text-nord-4">
     <!-- Background -->
     <div class="flex items-center justify-between">
-      <span class="text-nord-5 font-medium">Background</span>
+      <span class="text-nord-5 font-medium">{{ $t("border.background") }}</span>
       <ColorPicker v-model="backgroundColor" />
     </div>
 
     <!-- Corner Radius -->
     <div class="flex flex-col gap-3">
-      <span class="text-nord-5 font-medium border-b border-nord-2 pb-1">Corner Radius</span>
-      <SliderField v-model="borderRadius" label="Radius" :min="0" :max="60" suffix="px" />
+      <span class="text-nord-5 font-medium border-b border-nord-2 pb-1">{{
+        $t("border.cornerRadius")
+      }}</span>
+      <SliderField
+        v-model="borderRadius"
+        :label="$t('border.radius')"
+        :min="0"
+        :max="60"
+        suffix="px"
+      />
     </div>
 
     <!-- Padding -->
     <div class="flex flex-col gap-3">
-      <span class="text-nord-5 font-medium border-b border-nord-2 pb-1">Padding</span>
-      <SliderField v-model="paddingTop" label="Top" :min="0" :max="200" suffix="px" />
-      <SliderField v-model="paddingBottom" label="Bottom" :min="0" :max="300" suffix="px" />
-      <SliderField v-model="paddingHorizontal" label="Horizontal" :min="0" :max="200" suffix="px" />
+      <span class="text-nord-5 font-medium border-b border-nord-2 pb-1">{{
+        $t("border.padding")
+      }}</span>
+      <SliderField v-model="paddingTop" :label="$t('border.top')" :min="0" :max="200" suffix="px" />
+      <SliderField
+        v-model="paddingBottom"
+        :label="$t('border.bottom')"
+        :min="0"
+        :max="300"
+        suffix="px"
+      />
+      <SliderField
+        v-model="paddingHorizontal"
+        :label="$t('border.horizontal')"
+        :min="0"
+        :max="200"
+        suffix="px"
+      />
     </div>
 
     <!-- Aspect Ratio -->
     <div class="flex flex-col gap-2">
-      <span class="text-nord-5 font-medium border-b border-nord-2 pb-1">Aspect Ratio</span>
+      <span class="text-nord-5 font-medium border-b border-nord-2 pb-1">{{
+        $t("border.aspectRatio")
+      }}</span>
       <div class="flex rounded-lg overflow-hidden border border-nord-3">
         <button
           @click="setCanvasMode('original')"
@@ -432,7 +457,7 @@ function setCanvasMode(mode: "original" | "social") {
               : 'bg-nord-2 text-nord-4 hover:bg-nord-3'
           "
         >
-          Original
+          {{ $t("border.original") }}
         </button>
         <button
           @click="setCanvasMode('social')"
@@ -443,7 +468,7 @@ function setCanvasMode(mode: "original" | "social") {
               : 'bg-nord-2 text-nord-4 hover:bg-nord-3'
           "
         >
-          1080w
+          {{ $t("border.canvas1080") }}
         </button>
       </div>
       <div v-if="canvasMode === 'social'" class="grid grid-cols-3 gap-1">
@@ -501,26 +526,26 @@ function setCanvasMode(mode: "original" | "social") {
             d="M4 4v5h5M20 20v-5h-5M5.07 9A8 8 0 019 4.07M19.93 15A8 8 0 0115 19.93"
           />
         </svg>
-        Invert Ratio
+        {{ $t("border.invertRatio") }}
       </button>
       <p class="text-[10px] text-nord-4/70">
-        {{ canvasMode === "social" ? socialDimsText : "Follow the original ratio" }}
+        {{ canvasMode === "social" ? socialDimsText : $t("border.followOriginal") }}
       </p>
     </div>
 
     <!-- Logo -->
     <div class="flex flex-col gap-3">
       <div class="flex items-center justify-between border-b border-nord-2 pb-1">
-        <span class="text-nord-5 font-medium">Logo</span>
+        <span class="text-nord-5 font-medium">{{ $t("border.logo") }}</span>
         <label class="flex items-center gap-2 cursor-pointer">
           <input type="checkbox" v-model="showLogo" class="accent-nord-8 w-4 h-4" />
-          <span class="text-xs">Show</span>
+          <span class="text-xs">{{ $t("border.show") }}</span>
         </label>
       </div>
 
       <!-- Position (always available: positions the logo when shown, otherwise the parameters) -->
       <div class="flex items-center justify-between">
-        <span class="text-xs text-nord-4">Position</span>
+        <span class="text-xs text-nord-4">{{ $t("border.position") }}</span>
         <div class="flex rounded-lg overflow-hidden border border-nord-3">
           <button
             v-for="pos in ['left', 'center', 'right']"
@@ -533,18 +558,26 @@ function setCanvasMode(mode: "original" | "social") {
                 : 'bg-nord-2 text-nord-4 hover:bg-nord-3'
             "
           >
-            {{ pos === "left" ? "Left" : pos === "center" ? "Center" : "Right" }}
+            {{
+              $t(
+                pos === "left"
+                  ? "border.positionLeft"
+                  : pos === "center"
+                    ? "border.positionCenter"
+                    : "border.positionRight",
+              )
+            }}
           </button>
         </div>
       </div>
       <p v-if="!showLogo" class="text-[10px] text-nord-4/70">
-        Logo not shown, position will be applied to parameters
+        {{ $t("border.logoHiddenHint") }}
       </p>
 
       <template v-if="showLogo">
         <!-- Logo image upload -->
         <div class="flex flex-col gap-2">
-          <span class="text-xs text-nord-4">Logo Image (Priority over Text)</span>
+          <span class="text-xs text-nord-4">{{ $t("border.logoImage") }}</span>
           <div
             v-if="logoImageUrl"
             class="relative flex items-center gap-2 p-2 bg-nord-2 rounded-lg"
@@ -554,7 +587,7 @@ function setCanvasMode(mode: "original" | "social") {
               @click="clearLogoImage"
               class="ml-auto text-xs text-nord-11 hover:text-red-400 transition-colors px-2 py-1 rounded hover:bg-nord-3"
             >
-              Remove
+              {{ $t("border.remove") }}
             </button>
           </div>
           <template v-else>
@@ -571,7 +604,7 @@ function setCanvasMode(mode: "original" | "social") {
                     d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                   />
                 </svg>
-                Upload
+                {{ $t("border.upload") }}
               </button>
               <button
                 @click="showPasteSvg = !showPasteSvg"
@@ -586,7 +619,7 @@ function setCanvasMode(mode: "original" | "social") {
                     d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
                   />
                 </svg>
-                Paste SVG
+                {{ $t("border.pasteSvg") }}
               </button>
             </div>
 
@@ -594,7 +627,7 @@ function setCanvasMode(mode: "original" | "social") {
               <textarea
                 v-model="svgInput"
                 @paste="onSvgPaste"
-                placeholder="<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>…</svg>"
+                :placeholder="$t('border.svgPlaceholder')"
                 rows="5"
                 spellcheck="false"
                 class="w-full bg-nord-2 border border-nord-3 rounded-lg px-2 py-1.5 text-xs font-mono text-nord-6 focus:border-nord-8 focus:outline-none transition-colors placeholder:text-nord-6 resize-y"
@@ -604,13 +637,13 @@ function setCanvasMode(mode: "original" | "social") {
                   @click="applySvg"
                   class="flex-1 py-1.5 rounded-lg text-xs font-medium bg-nord-8 text-nord-0 hover:bg-nord-9 transition-colors"
                 >
-                  Apply
+                  {{ $t("border.apply") }}
                 </button>
                 <button
                   @click="cancelSvgPaste"
                   class="flex-1 py-1.5 rounded-lg text-xs bg-nord-2 text-nord-4 hover:bg-nord-3 transition-colors"
                 >
-                  Cancel
+                  {{ $t("border.cancel") }}
                 </button>
               </div>
               <p v-if="svgError" class="text-[10px] text-nord-11">{{ svgError }}</p>
@@ -626,11 +659,17 @@ function setCanvasMode(mode: "original" | "social") {
 
           <!-- Logo image size -->
           <template v-if="logoImageUrl">
-            <SliderField v-model="logoScale" label="Scale" :min="20" :max="300" suffix="%" />
+            <SliderField
+              v-model="logoScale"
+              :label="$t('border.scale')"
+              :min="20"
+              :max="300"
+              suffix="%"
+            />
 
             <!-- SVG color override (only shown for SVG logos) -->
             <div v-if="isSvgLogo" class="flex items-center justify-between mt-1">
-              <span class="text-xs text-nord-4">SVG Color</span>
+              <span class="text-xs text-nord-4">{{ $t("border.svgColor") }}</span>
               <div class="flex items-center gap-2">
                 <button
                   v-if="svgColor"
@@ -638,7 +677,7 @@ function setCanvasMode(mode: "original" | "social") {
                   class="text-[10px] text-nord-11 hover:text-red-400 transition-colors px-1.5 py-1 rounded hover:bg-nord-3"
                   title="Reset to original colors"
                 >
-                  Reset
+                  {{ $t("border.reset") }}
                 </button>
                 <button
                   @click="svgColor = fontColor"
@@ -650,7 +689,7 @@ function setCanvasMode(mode: "original" | "social") {
                     class="w-2.5 h-2.5 rounded-full border border-nord-3/40 shrink-0"
                     :style="{ backgroundColor: fontColor }"
                   />
-                  Use Font Color
+                  {{ $t("border.useFontColor") }}
                 </button>
                 <ColorPicker
                   :model-value="svgColor || '#000000'"
@@ -663,18 +702,16 @@ function setCanvasMode(mode: "original" | "social") {
 
         <!-- Logo text (fallback) -->
         <div>
-          <span class="text-xs text-nord-4 mb-1 block"
-            >Logo Text (Leave blank to use camera brand)</span
-          >
+          <span class="text-xs text-nord-4 mb-1 block">{{ $t("border.logoText") }}</span>
           <input
             type="text"
             v-model="logoText"
-            placeholder="e.g. Fantastic Frame"
+            :placeholder="$t('border.logoTextPlaceholder')"
             class="w-full bg-nord-2 border border-nord-3 rounded-lg px-3 py-1.5 text-nord-6 text-xs focus:border-nord-8 focus:outline-none transition-colors placeholder:text-nord-6"
           />
         </div>
       </template>
     </div>
   </div>
-  <div v-else class="text-nord-4 text-sm text-center py-8">Please select a photo first</div>
+  <div v-else class="text-nord-4 text-sm text-center py-8">{{ $t("border.selectPhotoFirst") }}</div>
 </template>
