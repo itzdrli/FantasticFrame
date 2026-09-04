@@ -4,9 +4,11 @@ import {
   ALL_SYNC_CATEGORIES,
   filterOverridesByCategories,
   mergeTemplateOverrides,
+  preserveLogoOverridesOnTemplateSwitch,
   SYNC_CATEGORIES,
   type SyncCategory,
 } from "~/utils/photoStyle";
+import { useTemplate } from "~/composables/useTemplate";
 import type { Photo, PhotoCrop, TemplateConfig } from "~/types";
 
 /**
@@ -26,6 +28,8 @@ export const usePhotoStore = defineStore("photos", () => {
 
   /** Active categories for sync & apply */
   const syncCategories = ref<SyncCategory[]>([...DEFAULT_ACTIVE_CATEGORIES]);
+
+  const { getResolvedConfig } = useTemplate();
 
   function setSyncCategories(cats: SyncCategory[]) {
     syncCategories.value = [...cats];
@@ -132,22 +136,29 @@ export const usePhotoStore = defineStore("photos", () => {
     if (photo) mergeOverrides(photo, overrides);
   }
 
+  /**
+   * Retargets a photo to a new template. A user-added logo (content, size,
+   * visibility) survives the switch — see preserveLogoOverridesOnTemplateSwitch;
+   * everything else resets to the new template's defaults and its position.
+   */
+  function switchPhotoTemplate(photo: Photo, templateId: string) {
+    photo.templateOverrides = preserveLogoOverridesOnTemplateSwitch(
+      photo.templateOverrides,
+      getResolvedConfig(photo.templateId, photo.templateOverrides),
+      getResolvedConfig(templateId),
+    );
+    photo.templateId = templateId;
+  }
+
   /** Switches the template used by a photo */
   function setPhotoTemplate(id: string, templateId: string) {
     if (syncStyle.value && syncCategories.value.includes("template")) {
-      photos.value.forEach((photo) => {
-        photo.templateId = templateId;
-        photo.templateOverrides = undefined;
-      });
+      photos.value.forEach((photo) => switchPhotoTemplate(photo, templateId));
       return;
     }
 
     const photo = photos.value.find((p) => p.id === id);
-    if (photo) {
-      photo.templateId = templateId;
-      // Clear per-photo overrides when switching templates
-      photo.templateOverrides = undefined;
-    }
+    if (photo) switchPhotoTemplate(photo, templateId);
   }
 
   /** Sets a photo's crop/zoom state */
@@ -158,12 +169,9 @@ export const usePhotoStore = defineStore("photos", () => {
     }
   }
 
-  /** Applies the same template to all photos */
+  /** Applies the same template to all photos (user logos preserved per photo) */
   function applyTemplateToAll(templateId: string) {
-    photos.value.forEach((photo) => {
-      photo.templateId = templateId;
-      photo.templateOverrides = undefined;
-    });
+    photos.value.forEach((photo) => switchPhotoTemplate(photo, templateId));
   }
 
   /**

@@ -4,7 +4,9 @@ import {
   cloneTemplateOverrides,
   filterOverridesByCategories,
   mergeTemplateOverrides,
+  preserveLogoOverridesOnTemplateSwitch,
 } from "../app/utils/photoStyle";
+import type { TemplateConfig } from "../app/types";
 
 describe("cloneTemplateOverrides", () => {
   it("returns undefined when there is nothing to clone", () => {
@@ -123,5 +125,110 @@ describe("clonePhotoStyle", () => {
     expect(cloned?.templateId).toBe("dark");
     expect(cloned?.templateOverrides).toEqual(src.templateOverrides);
     expect(cloned?.templateOverrides).not.toBe(src.templateOverrides);
+  });
+});
+
+describe("preserveLogoOverridesOnTemplateSwitch", () => {
+  // Only showLogo / modelFontSize are read off the resolved configs
+  const resolved = (c: Partial<TemplateConfig>) => c as TemplateConfig;
+  const classic = resolved({ showLogo: true, modelFontSize: 24 });
+  const dark = resolved({ showLogo: true, modelFontSize: 22 });
+  const minimal = resolved({ showLogo: false, modelFontSize: 20 });
+
+  it("keeps the legacy full reset when the photo has no custom logo", () => {
+    expect(
+      preserveLogoOverridesOnTemplateSwitch(
+        { fontColor: "#fff", logoPosition: "right" },
+        classic,
+        dark,
+      ),
+    ).toBeUndefined();
+    expect(preserveLogoOverridesOnTemplateSwitch(undefined, classic, dark)).toBeUndefined();
+  });
+
+  it("keeps an image logo (content, aspect, scale) but drops position and non-logo keys", () => {
+    const result = preserveLogoOverridesOnTemplateSwitch(
+      {
+        logoImageUrl: "data:image/png;base64,xx",
+        logoAspect: 2,
+        logoScale: 120,
+        logoPosition: "right",
+        fontColor: "#fff",
+      },
+      classic,
+      dark,
+    );
+    expect(result).toEqual({
+      logoImageUrl: "data:image/png;base64,xx",
+      logoAspect: 2,
+      logoScale: 120,
+      // pin the old size baseline so the absolute logo size survives
+      modelFontSize: 24,
+    });
+    expect("logoPosition" in (result ?? {})).toBe(false);
+  });
+
+  it("keeps a text logo's content and its explicit font size", () => {
+    const result = preserveLogoOverridesOnTemplateSwitch(
+      { logoText: "Atelier", modelFontSize: 40, fontSize: 18 },
+      classic,
+      dark,
+    );
+    expect(result).toEqual({ logoText: "Atelier", modelFontSize: 40 });
+  });
+
+  it("carries legacy logoWidth/logoHeight overrides too", () => {
+    const result = preserveLogoOverridesOnTemplateSwitch(
+      { logoImageUrl: "data:image/png;base64,xx", logoWidth: 120, logoHeight: 60 },
+      classic,
+      dark,
+    );
+    expect(result?.logoWidth).toBe(120);
+    expect(result?.logoHeight).toBe(60);
+  });
+
+  it("pins visibility so a shown logo survives a hide-logo template (e.g. minimal)", () => {
+    const result = preserveLogoOverridesOnTemplateSwitch(
+      { logoImageUrl: "data:image/png;base64,xx" },
+      classic,
+      minimal,
+    );
+    expect(result?.showLogo).toBe(true);
+  });
+
+  it("keeps an explicit showLogo=false override (user hid the logo)", () => {
+    const result = preserveLogoOverridesOnTemplateSwitch(
+      { logoImageUrl: "data:image/png;base64,xx", showLogo: false },
+      classic,
+      minimal,
+    );
+    expect(result?.showLogo).toBe(false);
+  });
+
+  it("does not force showLogo when the old template already hid it", () => {
+    const result = preserveLogoOverridesOnTemplateSwitch(
+      { logoText: "hidden but typed" },
+      minimal,
+      dark,
+    );
+    expect("showLogo" in (result ?? {})).toBe(false);
+  });
+
+  it("does not pin modelFontSize when old and new template agree on it", () => {
+    const result = preserveLogoOverridesOnTemplateSwitch(
+      { logoImageUrl: "data:image/png;base64,xx" },
+      classic,
+      resolved({ showLogo: true, modelFontSize: 24 }),
+    );
+    expect("modelFontSize" in (result ?? {})).toBe(false);
+  });
+
+  it("keeps an explicit showLogo=true override even when the template hides logos", () => {
+    const result = preserveLogoOverridesOnTemplateSwitch(
+      { logoImageUrl: "data:image/png;base64,xx", showLogo: true },
+      classic,
+      minimal,
+    );
+    expect(result?.showLogo).toBe(true);
   });
 });

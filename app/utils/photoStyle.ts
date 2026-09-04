@@ -116,6 +116,70 @@ export function clonePhotoStyle(style?: PhotoStyle | null): PhotoStyle | undefin
 }
 
 /**
+ * Overrides a photo keeps when its template is switched, provided the photo
+ * carries a user-added logo (uploaded/pasted image, SVG, or typed text).
+ *
+ * A logo is user-owned, so its content (logoText / logoImageUrl), its size
+ * (logoScale + logoAspect / modelFontSize), and its on/off state survive the
+ * switch — only `logoPosition` resets so the new template's placement wins.
+ * Text logos keep their font size (`modelFontSize`) too, but their face and
+ * color follow the template: they are shared with the EXIF text (fontColor /
+ * fontFamily) and pinning them could leave invisible text on a template with
+ * a contrasting background.
+ *
+ * Returns undefined when there is no custom logo — the classic
+ * "switch clears every override" behavior. Template-level fallbacks (e.g. the
+ * make-derived text logo) are not user logos and never trigger preservation.
+ *
+ * @param overrides  photo's current templateOverrides
+ * @param oldResolved  resolved config before the switch (getResolvedConfig)
+ * @param newResolved  resolved default of the target template (no preserved keys)
+ */
+export function preserveLogoOverridesOnTemplateSwitch(
+  overrides: Partial<TemplateConfig> | undefined,
+  oldResolved: TemplateConfig,
+  newResolved: TemplateConfig,
+): Partial<TemplateConfig> | undefined {
+  if (!overrides?.logoText && !overrides?.logoImageUrl) return undefined;
+
+  const next: Partial<TemplateConfig> = {};
+  const nextAny = next as Record<string, unknown>;
+
+  // Logo keys the user touched, minus position (the new template's own wins)
+  for (const k of LOGO_KEYS) {
+    if (k === "logoPosition") continue;
+    const v = overrides[k];
+    if (v !== undefined) nextAny[k] = v;
+  }
+
+  // modelFontSize sizes a text logo (and is the baseline for image-logo
+  // Scale %), so a custom value is part of the logo, not of the template.
+  if (overrides.modelFontSize !== undefined) next.modelFontSize = overrides.modelFontSize;
+
+  // A logo the user chose to show must not silently vanish on a template whose
+  // preset hides logos (e.g. minimal) — unless they explicitly turned it off.
+  if (
+    oldResolved.showLogo !== false &&
+    newResolved.showLogo === false &&
+    overrides.showLogo === undefined
+  ) {
+    next.showLogo = true;
+  }
+
+  // Keep the absolute logo size instead of reflowing to the new template's
+  // modelFontSize default (which would resize text logos and rescale image
+  // logos, since Scale % is relative to that baseline).
+  if (
+    overrides.modelFontSize === undefined &&
+    (oldResolved.modelFontSize ?? 26) !== (newResolved.modelFontSize ?? 26)
+  ) {
+    next.modelFontSize = oldResolved.modelFontSize;
+  }
+
+  return Object.keys(next).length > 0 ? next : undefined;
+}
+
+/**
  * Merge a patch into existing overrides.
  * Must not write `visibleFields: undefined` — spreading that into getResolvedConfig
  * wipes the preset's array and the preview crashes on `.map`.
