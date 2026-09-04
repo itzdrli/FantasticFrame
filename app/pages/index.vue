@@ -435,6 +435,7 @@ const batchExportDisabled = computed(
               </svg>
             </button>
           </div>
+          <StyleSyncBar v-if="photoStore.count > 1" />
           <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-6">
             <section>
               <h3 class="text-sm font-semibold text-nord-6 uppercase tracking-wider mb-3">
@@ -486,17 +487,14 @@ const batchExportDisabled = computed(
                   </div>
                 </div>
 
-                <!-- Quality -->
-                <div v-if="exportFormat !== 'png'">
-                  <span class="text-xs text-nord-4 mb-1 block">Quality {{ exportQuality }}%</span>
-                  <input
-                    type="range"
-                    min="50"
-                    max="100"
-                    v-model.number="exportQuality"
-                    class="w-full accent-nord-8"
-                  />
-                </div>
+                <SliderField
+                  v-if="exportFormat !== 'png'"
+                  v-model="exportQuality"
+                  label="Quality"
+                  :min="50"
+                  :max="100"
+                  suffix="%"
+                />
                 <p v-if="exportFormat === 'png'" class="text-[10px] text-nord-4/70">
                   PNG is lossless, no quality setting needed
                 </p>

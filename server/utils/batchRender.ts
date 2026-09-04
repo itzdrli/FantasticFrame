@@ -125,7 +125,11 @@ async function runJob(job: BatchJob, items: BatchItem[]) {
         throw new Error("Missing photoBase64");
       }
       const { nodeTree, width, height, format, quality } = buildRenderTree(item.payload);
-      const buf = await renderServer(nodeTree, { width, height, format, quality });
+      const buf = await renderServer(
+        nodeTree,
+        { width, height, format, quality },
+        item.payload.fonts,
+      );
       const file = new ZipDeflate(zipEntryName(item.originalFilename, format));
       zip.add(file); // wires file.ondata into the zip before any data is pushed
       file.push(new Uint8Array(buf), true);

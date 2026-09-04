@@ -93,6 +93,11 @@ export interface RenderPayload {
   photoWidth?: number;
   photoHeight?: number;
   crop?: Partial<PhotoCrop>;
+  /**
+   * Self-hosted font URLs (families outside takumi's Google catalog, e.g.
+   * LXGW WenKai). Relative paths are resolved to absolute by the server.
+   */
+  fonts?: string[];
 }
 
 export interface RenderTreeResult {

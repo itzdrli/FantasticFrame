@@ -32,7 +32,7 @@ export const PRESET_TEMPLATES: Record<string, Partial<TemplateConfig>> = {
     backgroundColor: "#FFFFFF",
     photoScale: 1.0,
     paddingTop: 32,
-    paddingBottom: 32,
+    paddingBottom: 16,
     paddingHorizontal: 32,
     borderRadius: 0,
     showLogo: true,
@@ -146,10 +146,16 @@ export function useTemplate() {
     overrides: Partial<TemplateConfig> = {},
   ): TemplateConfig => {
     const preset = PRESET_TEMPLATES[templateId] || {};
+    // Drop explicit `undefined` so a partial patch cannot wipe preset arrays
+    // (e.g. visibleFields) — spreading `{ visibleFields: undefined }` would.
+    const clean: Partial<TemplateConfig> = {};
+    for (const [k, v] of Object.entries(overrides)) {
+      if (v !== undefined) (clean as Record<string, unknown>)[k] = v;
+    }
     return {
       ...DEFAULT_TEMPLATE_CONFIG,
       ...preset,
-      ...overrides,
+      ...clean,
     };
   };
 

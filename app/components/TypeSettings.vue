@@ -69,18 +69,52 @@ function toggleField(value: ExifFieldKey) {
   update("visibleFields", fields);
 }
 
-const fontOptions = [
-  { label: "Inter", value: "Inter, sans-serif" },
-  { label: "Roboto", value: "Roboto, sans-serif" },
-  { label: "Noto Sans SC", value: "'Noto Sans SC', sans-serif" },
-  { label: "Noto Serif SC", value: "'Noto Serif SC', serif" },
-  { label: "Georgia", value: "Georgia, serif" },
-  // ── Royalty-free (OFL/SIL) additions ─────────────────────────────────────
-  { label: "Source Sans 3", value: "'Source Sans 3', sans-serif" },
-  { label: "JetBrains Mono", value: "'JetBrains Mono', monospace" },
-  { label: "Playfair Display", value: "'Playfair Display', serif" },
-  { label: "Space Grotesk", value: "'Space Grotesk', sans-serif" },
-  { label: "Cormorant Garamond", value: "'Cormorant Garamond', serif" },
+const fontGroups: { label: string; fonts: { label: string; value: string }[] }[] = [
+  {
+    label: "Sans Serif",
+    fonts: [
+      { label: "Inter", value: "Inter, sans-serif" },
+      { label: "IBM Plex Sans", value: "'IBM Plex Sans', sans-serif" },
+      { label: "DM Sans", value: "'DM Sans', sans-serif" },
+      { label: "Outfit", value: "Outfit, sans-serif" },
+      { label: "Roboto", value: "Roboto, sans-serif" },
+      { label: "Source Sans 3", value: "'Source Sans 3', sans-serif" },
+      { label: "Space Grotesk", value: "'Space Grotesk', sans-serif" },
+    ],
+  },
+  {
+    label: "Serif",
+    fonts: [
+      { label: "IBM Plex Serif", value: "'IBM Plex Serif', serif" },
+      { label: "Lora", value: "Lora, serif" },
+      { label: "Playfair Display", value: "'Playfair Display', serif" },
+      { label: "Cormorant Garamond", value: "'Cormorant Garamond', serif" },
+      { label: "Georgia", value: "Georgia, serif" },
+    ],
+  },
+  {
+    label: "Mono",
+    fonts: [
+      { label: "IBM Plex Mono", value: "'IBM Plex Mono', monospace" },
+      { label: "JetBrains Mono", value: "'JetBrains Mono', monospace" },
+    ],
+  },
+  {
+    label: "CJK",
+    fonts: [
+      { label: "LXGW WenKai", value: "'LXGW WenKai', serif" },
+      { label: "Noto Sans SC", value: "'Noto Sans SC', sans-serif" },
+      { label: "Noto Serif SC", value: "'Noto Serif SC', serif" },
+    ],
+  },
+  {
+    label: "CJK Display",
+    fonts: [
+      { label: "ZCOOL XiaoWei", value: "'ZCOOL XiaoWei', serif" },
+      { label: "ZCOOL QingKe HuangYou", value: "'ZCOOL QingKe HuangYou', sans-serif" },
+      { label: "ZCOOL KuaiLe", value: "'ZCOOL KuaiLe', sans-serif" },
+    ],
+  },
 ];
 
 const layoutOptions: { label: string; value: "horizontal" | "list" | "grid" }[] = [
@@ -94,17 +128,29 @@ const layoutOptions: { label: string; value: "horizontal" | "list" | "grid" }[] 
   <div v-if="resolvedConfig" class="flex flex-col gap-5 text-sm text-nord-4">
     <!-- Typography -->
     <div class="flex flex-col gap-3">
-      <span class="text-nord-5 font-medium border-b border-nord-2 pb-1">Typography</span>
-
       <!-- Font selection -->
-      <div class="flex items-center justify-between">
-        <span class="text-xs text-nord-4">Font Family</span>
-        <select
-          v-model="fontFamily"
-          class="bg-nord-2 border border-nord-3 rounded-lg px-2 py-1.5 text-nord-6 text-xs focus:border-nord-8 focus:outline-none transition-colors"
-        >
-          <option v-for="f in fontOptions" :key="f.value" :value="f.value">{{ f.label }}</option>
-        </select>
+      <div class="flex items-center justify-between gap-2">
+        <span class="text-xs text-nord-4 shrink-0">Font Family</span>
+        <div class="flex items-center gap-2 min-w-0 flex-1 justify-end">
+          <!-- Live preview of the current selection, drawn in its own face -->
+          <span
+            class="w-7 h-6 shrink-0 flex items-center justify-center rounded border border-nord-3/70 bg-nord-2 text-[13px] leading-none text-nord-6 overflow-hidden"
+            :style="{ fontFamily: fontFamily }"
+            aria-hidden="true"
+          >
+            Ag
+          </span>
+          <select
+            v-model="fontFamily"
+            class="min-w-0 w-32 bg-nord-2 border border-nord-3 rounded-lg px-2 py-1.5 text-nord-6 text-xs focus:border-nord-8 focus:outline-none transition-colors"
+          >
+            <optgroup v-for="group in fontGroups" :key="group.label" :label="group.label">
+              <option v-for="f in group.fonts" :key="f.value" :value="f.value">
+                {{ f.label }}
+              </option>
+            </optgroup>
+          </select>
+        </div>
       </div>
 
       <!-- Color -->
@@ -113,29 +159,17 @@ const layoutOptions: { label: string; value: "horizontal" | "list" | "grid" }[] 
         <ColorPicker v-model="fontColor" />
       </div>
 
-      <!-- Parameter font size -->
-      <div>
-        <span class="text-xs text-nord-4 mb-1 block">Parameter Size {{ fontSize }}px</span>
-        <input
-          type="range"
-          min="10"
-          max="36"
-          v-model.number="fontSize"
-          class="w-full accent-nord-8"
-        />
-      </div>
+      <SliderField v-model="fontSize" label="Parameter Size" :min="10" :max="36" suffix="px" />
 
       <!-- Logo font size (text logos only — image logos are sized by Scale % in BorderSettings) -->
-      <div v-if="!hasImageLogo">
-        <span class="text-xs text-nord-4 mb-1 block">Logo Size {{ modelFontSize }}px</span>
-        <input
-          type="range"
-          min="14"
-          max="48"
-          v-model.number="modelFontSize"
-          class="w-full accent-nord-8"
-        />
-      </div>
+      <SliderField
+        v-if="!hasImageLogo"
+        v-model="modelFontSize"
+        label="Logo Size"
+        :min="14"
+        :max="48"
+        suffix="px"
+      />
     </div>
 
     <!-- Layout -->

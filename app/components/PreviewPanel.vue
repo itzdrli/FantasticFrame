@@ -34,7 +34,7 @@ const parsedExif = computed(() => {
 const exifTexts = computed(() => {
   const cfg = templateConfig.value;
   if (!cfg) return [];
-  return cfg.visibleFields.map((f) => parsedExif.value[f]).filter((v): v is string => !!v);
+  return (cfg.visibleFields ?? []).map((f) => parsedExif.value[f]).filter((v): v is string => !!v);
 });
 
 // 1080-base scale factor (see layoutScaleFactor in shared/render.ts):
@@ -129,6 +129,12 @@ function setFitMode(mode: "contain" | "cover") {
 
 function setZoom(zoom: number) {
   updateCrop({ scale: clamp(zoom, 1, 5) });
+}
+
+function onZoomInput(e: Event) {
+  const n = Number((e.target as HTMLInputElement).value);
+  if (!Number.isFinite(n)) return;
+  setZoom(n / 100);
 }
 
 function resetCrop() {
@@ -299,7 +305,7 @@ function onWheel(e: WheelEvent) {
 
 const displayExifEntries = computed(() => {
   if (!templateConfig.value || !parsedExif.value) return [];
-  return templateConfig.value.visibleFields
+  return (templateConfig.value.visibleFields ?? [])
     .map((f) => ({ key: f, value: parsedExif.value[f] }))
     .filter((e) => e.value);
 });
@@ -562,9 +568,18 @@ const footerStyle = computed(() => {
           >
             -
           </button>
-          <span class="min-w-[3rem] text-center tabular-nums"
-            >{{ Math.round(cropScale * 100) }}%</span
-          >
+          <input
+            type="number"
+            min="100"
+            max="500"
+            step="1"
+            :value="Math.round(cropScale * 100)"
+            class="w-12 bg-nord-1 border border-nord-3 rounded px-1 py-0.5 text-xs text-nord-6 text-center tabular-nums focus:border-nord-8 focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            aria-label="Zoom percent"
+            @change="onZoomInput"
+            @focus="($event.target as HTMLInputElement).select()"
+          />
+          <span class="text-[10px] text-nord-4">%</span>
           <button
             class="w-6 h-6 flex items-center justify-center rounded border border-nord-3 bg-nord-1 hover:bg-nord-2 transition-colors"
             title="Zoom in"

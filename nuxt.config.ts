@@ -5,14 +5,6 @@ import checker from "vite-plugin-checker";
 export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
 
-  runtimeConfig: {
-    public: {
-      appwriteEndpoint: process.env.NUXT_PUBLIC_APPWRITE_ENDPOINT,
-      appwriteProjectId: process.env.NUXT_PUBLIC_APPWRITE_PROJECT_ID,
-      appwriteProjectName: process.env.NUXT_PUBLIC_APPWRITE_PROJECT_NAME,
-      appwriteBatchFunctionId: process.env.NUXT_PUBLIC_APPWRITE_BATCH_FUNCTION_ID,
-    },
-  },
   // Devtools default to on in dev and off in production; enabling them here
   // unconditionally would ship the devtools client in production builds.
   devtools: { enabled: import.meta.dev ?? process.env.NODE_ENV !== "production" },
@@ -72,7 +64,7 @@ export default defineNuxtConfig({
         },
         {
           rel: "stylesheet",
-          href: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;700&family=Inter:wght@400;700&family=JetBrains+Mono:wght@400;700&family=Noto+Sans+SC:wght@400;700&family=Noto+Serif+SC:wght@400;700&family=Playfair+Display:wght@400;700&family=Roboto:wght@400;700&family=Source+Sans+3:wght@400;700&family=Space+Grotesk:wght@400;700&display=swap",
+          href: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;700&family=DM+Sans:wght@400;700&family=IBM+Plex+Mono:wght@400;700&family=IBM+Plex+Sans:wght@400;700&family=IBM+Plex+Serif:wght@400;700&family=Inter:wght@400;700&family=JetBrains+Mono:wght@400;700&family=Lora:wght@400;700&family=Noto+Sans+SC:wght@400;700&family=Noto+Serif+SC:wght@400;700&family=Outfit:wght@400;700&family=Playfair+Display:wght@400;700&family=Roboto:wght@400;700&family=Source+Sans+3:wght@400;700&family=Space+Grotesk:wght@400;700&family=ZCOOL+KuaiLe&family=ZCOOL+QingKe+HuangYou&family=ZCOOL+XiaoWei&display=swap",
         },
       ],
     },

@@ -408,51 +408,15 @@ function setCanvasMode(mode: "original" | "social") {
     <!-- Corner Radius -->
     <div class="flex flex-col gap-3">
       <span class="text-nord-5 font-medium border-b border-nord-2 pb-1">Corner Radius</span>
-      <div>
-        <span class="text-xs text-nord-4 mb-1 block">Radius {{ borderRadius }}px</span>
-        <input
-          type="range"
-          min="0"
-          max="60"
-          v-model.number="borderRadius"
-          class="w-full accent-nord-8"
-        />
-      </div>
+      <SliderField v-model="borderRadius" label="Radius" :min="0" :max="60" suffix="px" />
     </div>
 
     <!-- Padding -->
     <div class="flex flex-col gap-3">
       <span class="text-nord-5 font-medium border-b border-nord-2 pb-1">Padding</span>
-      <div>
-        <span class="text-xs text-nord-4 mb-1 block">Top {{ paddingTop }}px</span>
-        <input
-          type="range"
-          min="0"
-          max="200"
-          v-model.number="paddingTop"
-          class="w-full accent-nord-8"
-        />
-      </div>
-      <div>
-        <span class="text-xs text-nord-4 mb-1 block">Bottom {{ paddingBottom }}px</span>
-        <input
-          type="range"
-          min="0"
-          max="300"
-          v-model.number="paddingBottom"
-          class="w-full accent-nord-8"
-        />
-      </div>
-      <div>
-        <span class="text-xs text-nord-4 mb-1 block">Horizontal {{ paddingHorizontal }}px</span>
-        <input
-          type="range"
-          min="0"
-          max="200"
-          v-model.number="paddingHorizontal"
-          class="w-full accent-nord-8"
-        />
-      </div>
+      <SliderField v-model="paddingTop" label="Top" :min="0" :max="200" suffix="px" />
+      <SliderField v-model="paddingBottom" label="Bottom" :min="0" :max="300" suffix="px" />
+      <SliderField v-model="paddingHorizontal" label="Horizontal" :min="0" :max="200" suffix="px" />
     </div>
 
     <!-- Aspect Ratio -->
@@ -662,16 +626,7 @@ function setCanvasMode(mode: "original" | "social") {
 
           <!-- Logo image size -->
           <template v-if="logoImageUrl">
-            <div>
-              <span class="text-xs text-nord-4 mb-1 block">Scale {{ logoScale }}%</span>
-              <input
-                type="range"
-                min="20"
-                max="300"
-                v-model.number="logoScale"
-                class="w-full accent-nord-8"
-              />
-            </div>
+            <SliderField v-model="logoScale" label="Scale" :min="20" :max="300" suffix="%" />
 
             <!-- SVG color override (only shown for SVG logos) -->
             <div v-if="isSvgLogo" class="flex items-center justify-between mt-1">

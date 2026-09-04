@@ -1,4 +1,12 @@
 import { defineStore } from "pinia";
+import {
+  DEFAULT_ACTIVE_CATEGORIES,
+  ALL_SYNC_CATEGORIES,
+  filterOverridesByCategories,
+  mergeTemplateOverrides,
+  SYNC_CATEGORIES,
+  type SyncCategory,
+} from "~/utils/photoStyle";
 import type { Photo, PhotoCrop, TemplateConfig } from "~/types";
 
 /**
@@ -12,6 +20,33 @@ export const usePhotoStore = defineStore("photos", () => {
 
   /** ID of the currently selected photo */
   const selectedId = ref<string | null>(null);
+
+  /** When on, later style edits write to every photo, filtered by syncCategories. */
+  const syncStyle = ref(false);
+
+  /** Active categories for sync & apply */
+  const syncCategories = ref<SyncCategory[]>([...DEFAULT_ACTIVE_CATEGORIES]);
+
+  function setSyncCategories(cats: SyncCategory[]) {
+    syncCategories.value = [...cats];
+  }
+
+  function toggleSyncCategory(cat: SyncCategory) {
+    const idx = syncCategories.value.indexOf(cat);
+    if (idx >= 0) {
+      syncCategories.value.splice(idx, 1);
+    } else {
+      syncCategories.value.push(cat);
+    }
+  }
+
+  function selectAllCategories() {
+    syncCategories.value = [...ALL_SYNC_CATEGORIES];
+  }
+
+  function clearAllCategories() {
+    syncCategories.value = [];
+  }
 
   // ==================== Getters ====================
 
@@ -75,19 +110,38 @@ export const usePhotoStore = defineStore("photos", () => {
     }
   }
 
-  /** Updates a photo's template config overrides */
+  function mergeOverrides(photo: Photo, overrides: Partial<TemplateConfig>) {
+    photo.templateOverrides = mergeTemplateOverrides(photo.templateOverrides, overrides);
+  }
+
+  /** Updates a photo's template config overrides (or every photo when syncStyle is on, filtered by syncCategories) */
   function updateTemplateOverrides(id: string, overrides: Partial<TemplateConfig>) {
-    const photo = photos.value.find((p) => p.id === id);
-    if (photo) {
-      photo.templateOverrides = {
-        ...photo.templateOverrides,
-        ...overrides,
-      };
+    if (syncStyle.value) {
+      const syncablePatch = filterOverridesByCategories(overrides, syncCategories.value);
+      const currentPhoto = photos.value.find((p) => p.id === id);
+      if (currentPhoto) mergeOverrides(currentPhoto, overrides);
+
+      if (Object.keys(syncablePatch).length > 0) {
+        photos.value.forEach((p) => {
+          if (p.id !== id) mergeOverrides(p, syncablePatch);
+        });
+      }
+      return;
     }
+    const photo = photos.value.find((p) => p.id === id);
+    if (photo) mergeOverrides(photo, overrides);
   }
 
   /** Switches the template used by a photo */
   function setPhotoTemplate(id: string, templateId: string) {
+    if (syncStyle.value && syncCategories.value.includes("template")) {
+      photos.value.forEach((photo) => {
+        photo.templateId = templateId;
+        photo.templateOverrides = undefined;
+      });
+      return;
+    }
+
     const photo = photos.value.find((p) => p.id === id);
     if (photo) {
       photo.templateId = templateId;
@@ -112,10 +166,47 @@ export const usePhotoStore = defineStore("photos", () => {
     });
   }
 
+  /**
+   * Copies the selected photo's template + style overrides onto every other photo,
+   * filtered by chosen categories (defaults to active syncCategories).
+   * Crop is left alone.
+   */
+  function applyStyleToAll(categories: SyncCategory[] = syncCategories.value) {
+    const src = selectedPhoto.value;
+    if (!src) return;
+
+    const keysToReplace = new Set<keyof TemplateConfig>();
+    for (const cat of SYNC_CATEGORIES) {
+      if (categories.includes(cat.id)) {
+        for (const k of cat.keys) keysToReplace.add(k);
+      }
+    }
+
+    const srcPatch = filterOverridesByCategories(src.templateOverrides, categories);
+
+    photos.value.forEach((photo) => {
+      if (photo.id === src.id) return;
+
+      if (categories.includes("template")) {
+        photo.templateId = src.templateId;
+      }
+
+      const preserved: Partial<TemplateConfig> = { ...photo.templateOverrides };
+      for (const k of keysToReplace) {
+        delete preserved[k];
+      }
+
+      const merged = mergeTemplateOverrides(preserved, srcPatch);
+      photo.templateOverrides = Object.keys(merged).length > 0 ? merged : undefined;
+    });
+  }
+
   return {
     // state
     photos,
     selectedId,
+    syncStyle,
+    syncCategories,
     // getters
     selectedPhoto,
     count,
@@ -134,5 +225,10 @@ export const usePhotoStore = defineStore("photos", () => {
     updatePhotoTemplate: setPhotoTemplate,
     setPhotoCrop,
     applyTemplateToAll,
+    applyStyleToAll,
+    setSyncCategories,
+    toggleSyncCategory,
+    selectAllCategories,
+    clearAllCategories,
   };
 });

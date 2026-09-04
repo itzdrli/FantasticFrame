@@ -1,5 +1,5 @@
-import { defineEventHandler, createError } from "h3";
-import { renderServer } from "../utils/takumiServer";
+import { defineEventHandler, createError, getRequestHeaders } from "h3";
+import { renderServer, absolutizeAssetUrl } from "../utils/takumiServer";
 import { buildRenderTree } from "../../shared/render";
 import type { RenderPayload } from "../../shared/types";
 import { validateTemplateConfig } from "../../shared/validate";
@@ -46,12 +46,11 @@ export default defineEventHandler(async (event) => {
     const { nodeTree, width, height, format, quality } = buildRenderTree(
       body as unknown as RenderPayload,
     );
-    const imageBuffer = await renderServer(nodeTree, {
-      width,
-      height,
-      format,
-      quality,
-    });
+    const headers = getRequestHeaders(event);
+    const fonts = ((body?.fonts as string[] | undefined) ?? []).map((p) =>
+      absolutizeAssetUrl(p, headers),
+    );
+    const imageBuffer = await renderServer(nodeTree, { width, height, format, quality }, fonts);
 
     const buf = Buffer.from(imageBuffer);
     const mimeType =

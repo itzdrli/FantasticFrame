@@ -30,6 +30,15 @@ describe("useTemplate.getResolvedConfig", () => {
     expect(cfg.fontFamily).toBe("'JetBrains Mono', monospace");
   });
 
+  it("undefined override keys do not wipe preset visibleFields", () => {
+    const cfg = getResolvedConfig("classic", {
+      fontSize: 20,
+      visibleFields: undefined,
+    } as Partial<typeof DEFAULT_TEMPLATE_CONFIG>);
+    expect(cfg.visibleFields.length).toBeGreaterThan(0);
+    expect(cfg.fontSize).toBe(20);
+  });
+
   it("overrides never leak into the preset or the default", () => {
     getResolvedConfig("classic", { backgroundColor: "#FF0000" });
     expect(PRESET_TEMPLATES.classic?.backgroundColor).toBe("#FFFFFF");

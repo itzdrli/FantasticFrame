@@ -3,6 +3,7 @@ import { ref } from "vue";
 import { usePhotoStore } from "~/composables/usePhotoStore";
 import { useExifReader } from "~/composables/useExifReader";
 import { importImageFiles } from "~/utils/photoImport";
+import { clonePhotoStyle } from "~/utils/photoStyle";
 
 const photoStore = usePhotoStore();
 const { readExif } = useExifReader();
@@ -28,6 +29,7 @@ async function handleFiles(files: FileList | File[]) {
   isImporting.value = true;
   importProgress.value = { current: 0, total: imageFiles.length };
 
+  const style = clonePhotoStyle(photoStore.selectedPhoto);
   const result = await importImageFiles(
     imageFiles,
     readExif,
@@ -35,6 +37,8 @@ async function handleFiles(files: FileList | File[]) {
     (done) => {
       importProgress.value.current = done;
     },
+    3,
+    style,
   );
   skippedFiles.value = result.skipped;
 

@@ -6,19 +6,18 @@ import { render as takumiRender } from "takumi-js";
 /**
  * Server-side takumi render with a native-to-WASM backend fallback.
  *
- * `#backend` resolves to @takumi-rs/core (native addon) on Node/Bun, which is
- * unavailable in sandboxed runtimes (Appwrite Sites/Functions). Passing the
- * `module` option forces the WASM backend — takumi-js clears its backend
- * cache on load failure, so a native miss followed by a WASM retry works.
+ * `#backend` resolves to @takumi-rs/core (native addon) on Node/Bun, which may be
+ * unavailable in some sandboxed runtimes. Passing the `module` option forces the
+ * WASM backend — takumi-js clears its backend cache on load failure, so a native
+ * miss followed by a WASM retry works.
  */
 let wasmBytes: Uint8Array | null = null;
 
 /**
  * Locates the takumi WASM binary. Resolving "./package.json" is not an
  * option: @takumi-rs/wasm's exports map doesn't expose that subpath, and
- * Node's strict exports enforcement rejects the lookup (Bun tolerates it,
- * which is why this only blew up on the Appwrite runtime). Resolving an
- * exported entry and walking up to the package root dodges the exports map.
+ * Node's strict exports enforcement rejects the lookup (Bun tolerates it).
+ * Resolving an exported entry and walking up to the package root dodges the exports map.
  */
 function locateWasmFile(): string {
   const entry = createRequire(import.meta.url).resolve("@takumi-rs/wasm");
@@ -58,13 +57,29 @@ function probeBackend() {
 
 /**
  * Renders a takumi node tree — native when available, WASM otherwise.
+ * `fonts` are extra font URLs (e.g. self-hosted faces); takumi fetches them
+ * lazily and registers the family names read from the font files.
  */
 export async function renderServer(
   nodeTree: unknown,
   opts: { width: number; height: number; format: string; quality?: number },
+  fonts?: string[],
 ): Promise<Uint8Array> {
   const backend = await probeBackend();
   const options = backend === "wasm" ? ({ ...opts, module: getWasmBytes() } as any) : (opts as any);
+  if (fonts && fonts.length > 0) options.fonts = fonts;
   const buf = await takumiRender(nodeTree as any, options);
   return new Uint8Array(buf as unknown as ArrayBufferLike);
+}
+
+/** Builds the absolute URL for a local asset path ("/fonts/x.ttf") from request headers. */
+export function absolutizeAssetUrl(
+  path: string,
+  headers: Record<string, string | undefined>,
+): string {
+  if (/^https?:\/\//i.test(path)) return path;
+  if (!path.startsWith("/")) path = `/${path}`;
+  const proto = headers["x-forwarded-proto"]?.split(",")[0]?.trim() || "http";
+  const host = headers["x-forwarded-host"]?.split(",")[0]?.trim() || headers["host"] || "localhost";
+  return `${proto}://${host}${path}`;
 }

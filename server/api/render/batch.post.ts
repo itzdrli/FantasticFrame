@@ -1,4 +1,5 @@
-import { defineEventHandler, createError } from "h3";
+import { defineEventHandler, createError, getRequestHeaders } from "h3";
+import { absolutizeAssetUrl } from "../../utils/takumiServer";
 import { createBatchJob, jobCount } from "../../utils/batchRender";
 import { validateTemplateConfig } from "../../../shared/validate";
 import {
@@ -34,7 +35,17 @@ export default defineEventHandler(async (event) => {
   // Validate + size every item BEFORE creating the job, so a batch of huge
   // PNGs is rejected up front instead of being buffered into a job.
   let totalBytes = 0;
-  for (const item of items) {
+  const headers = getRequestHeaders(event);
+  const normalizedItems = items.map((item: any) => ({
+    ...item,
+    payload: {
+      ...item.payload,
+      // takumi fetches these from an absolute URL in the worker; normalize
+      // relative asset paths against this request's origin first.
+      fonts: (item.payload.fonts ?? []).map((p: string) => absolutizeAssetUrl(p, headers)),
+    },
+  }));
+  for (const item of normalizedItems) {
     const name = item?.originalFilename ?? "?";
     const payload = item?.payload;
     const photoBase64 = payload?.photoBase64;
@@ -70,6 +81,6 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  const job = createBatchJob(items);
+  const job = createBatchJob(normalizedItems);
   return { jobId: job.id, total: job.total };
 });

@@ -1,6 +1,6 @@
 import { ref } from "#imports";
-import { useAppwriteBatch } from "~/composables/useAppwriteBatch";
 import { buildRenderTree } from "~~/shared/render";
+import { SELF_HOSTED_FONT_PATHS } from "~~/shared/fonts";
 import {
   MAX_BATCH_ITEMS,
   MAX_PHOTO_BYTES,
@@ -56,16 +56,23 @@ export const useImageRender = () => {
   const exportFormat = ref<ExportOptions["format"]>("jpeg");
   const exportQuality = ref<number>(90);
   const batchProgress = ref<BatchExportProgress | null>(null);
-  const appwriteBatch = useAppwriteBatch();
 
   /**
    * Internal render core (does not touch isRendering, shared by renderImage / batchExport)
    */
   const _renderOne = async (payload: RenderPayload): Promise<RenderResponse | null> => {
-    const finalPayload = payload.exportOptions
-      ? payload
-      : { ...payload, exportOptions: { format: exportFormat.value, quality: exportQuality.value } };
-
+    const finalPayload: RenderPayload = {
+      ...(payload.exportOptions
+        ? payload
+        : {
+            ...payload,
+            exportOptions: { format: exportFormat.value, quality: exportQuality.value },
+          }),
+      // Self-hosted faces are always registered; takumi loads them lazily and
+      // only fetches the bytes when a node actually uses the family.
+      fonts:
+        payload.fonts && payload.fonts.length > 0 ? payload.fonts : [...SELF_HOSTED_FONT_PATHS],
+    };
     if (import.meta.client) {
       // WASM can fail in many ways (module load, render reject, OOM). Any
       // throw must fall through to the server renderer — returning null
@@ -108,6 +115,7 @@ export const useImageRender = () => {
       height,
       format: format as "png" | "jpeg" | "webp",
       quality,
+      fonts: payload.fonts,
     } as any);
     const mimeType =
       format === "png" ? "image/png" : format === "webp" ? "image/webp" : "image/jpeg";
@@ -137,19 +145,46 @@ export const useImageRender = () => {
   };
 
   /**
-   * Downloads the returned Base64 image (browser download)
+   * Converts a base64 data URL to a binary Uint8Array.
+   */
+  const dataUrlToUint8Array = (dataUrl: string): Uint8Array => {
+    const commaIdx = dataUrl.indexOf(",");
+    const b64 = commaIdx === -1 ? dataUrl : dataUrl.slice(commaIdx + 1);
+    const binary = atob(b64);
+    const len = binary.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+  };
+
+  /**
+   * Converts a base64 data URL to a Blob.
+   */
+  const dataUrlToBlob = (dataUrl: string): Blob => {
+    const commaIdx = dataUrl.indexOf(",");
+    if (commaIdx === -1) {
+      return new Blob([], { type: "image/jpeg" });
+    }
+    const header = dataUrl.slice(0, commaIdx);
+    const mime = header.match(/:(.*?);/)?.[1] || "image/jpeg";
+    const bytes = dataUrlToUint8Array(dataUrl);
+    return new Blob([bytes as unknown as BlobPart], { type: mime });
+  };
+
+  /**
+   * Downloads the returned Base64 image via an object URL Blob
+   * (avoids Chrome/Safari URL length limits on data: URLs)
    * @param base64 Complete base64 image string (includes data:image/...)
    * @param filename Download file name, without extension
    */
   const downloadImage = (base64: string, filename = "exported-image") => {
     try {
-      const link = document.createElement("a");
-      link.href = base64;
       const ext = extFromDataUrl(base64);
-      link.download = buildExportFilename(filename, ext);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      const outName = buildExportFilename(filename, ext);
+      const blob = dataUrlToBlob(base64);
+      downloadBlob(blob, outName);
     } catch (err) {
       console.error("Download error:", err);
     }
@@ -163,10 +198,87 @@ export const useImageRender = () => {
   };
 
   /**
+   * Client-side batch render and zip packing.
+   * Renders photos sequentially in the browser via WASM and bundles them
+   * using fflate without requiring server-side state or huge file uploads.
+   */
+  const exportBatchClientSide = async (
+    items: Array<{ payload: RenderPayload; originalFilename: string }>,
+    onProgress?: (p: BatchExportProgress) => void,
+  ): Promise<{ success: number; failed: number }> => {
+    const { Zip, ZipDeflate } = await import("fflate");
+    const zipChunks: Uint8Array[] = [];
+    let zipError: Error | null = null;
+    const zip = new Zip((err, data) => {
+      if (err) zipError = err;
+      if (data) zipChunks.push(data);
+    });
+
+    let done = 0;
+    let failed = 0;
+    const total = items.length;
+
+    for (let i = 0; i < total; i++) {
+      const item = items[i]!;
+      const prog: BatchExportProgress = { current: i, total, status: "rendering" };
+      batchProgress.value = prog;
+      onProgress?.(prog);
+
+      try {
+        const res = await _renderOne(item.payload);
+        if (!res?.imageBase64) {
+          throw new Error("Render returned empty result");
+        }
+        const ext = extFromDataUrl(res.imageBase64);
+        const outName = buildExportFilename(item.originalFilename, ext);
+        const buf = dataUrlToUint8Array(res.imageBase64);
+
+        const file = new ZipDeflate(outName);
+        zip.add(file);
+        file.push(buf, true);
+        done++;
+      } catch (err) {
+        failed++;
+        console.error(`[batchExport] Failed to render item ${item.originalFilename}:`, err);
+      }
+      // Yield to let UI update and allow garbage collection
+      await new Promise((r) => setTimeout(r, 10));
+    }
+
+    if (zipError) throw zipError;
+    if (done === 0) {
+      throw new Error("Batch render failed: all items failed to render");
+    }
+
+    const saveProg: BatchExportProgress = { current: total, total, status: "saving" };
+    batchProgress.value = saveProg;
+    onProgress?.(saveProg);
+
+    zip.end();
+
+    const totalLen = zipChunks.reduce((acc, c) => acc + c.length, 0);
+    const zipMerged = new Uint8Array(totalLen);
+    let offset = 0;
+    for (const c of zipChunks) {
+      zipMerged.set(c, offset);
+      offset += c.length;
+    }
+
+    const first = items[0]?.originalFilename?.replace(/\.[^.]+$/, "") || "export";
+    const safe = first.replace(/[^\w\u4e00-\u9fa5-]+/g, "-").slice(0, 60) || "export";
+    downloadBlob(
+      new Blob([zipMerged as unknown as BlobPart], { type: "application/zip" }),
+      `${safe}-export.zip`,
+    );
+
+    return { success: done, failed };
+  };
+
+  /**
    * Batch-renders and exports photos as a single zip.
    *
-   * Rendering runs server-side (native takumi) so the main thread stays free;
-   * progress is polled from the server and reported per completed photo.
+   * Client-side WASM batching is preferred in the browser,
+   * with server fallback for other environments.
    *
    * @param items Render params and original file name for each photo
    * @param onProgress Progress callback (optional)
@@ -184,20 +296,23 @@ export const useImageRender = () => {
       // built by callers may omit exportOptions, and buildRenderTree then
       // defaults to PNG@95 (regression: picking JPEG 90% and batch-exporting
       // produced PNGs). Mirror _renderOne's fallback for every item.
-      const finalItems = items.map((item) =>
-        item.payload.exportOptions
-          ? item
-          : {
-              ...item,
-              payload: {
-                ...item.payload,
-                exportOptions: {
-                  format: exportFormat.value,
-                  quality: exportQuality.value,
-                },
-              },
+      const finalItems = items.map((item) => {
+        const payload = item.payload;
+        return {
+          ...item,
+          payload: {
+            ...payload,
+            exportOptions: payload.exportOptions ?? {
+              format: exportFormat.value,
+              quality: exportQuality.value,
             },
-      );
+            fonts:
+              payload.fonts && payload.fonts.length > 0
+                ? payload.fonts
+                : [...SELF_HOSTED_FONT_PATHS],
+          },
+        };
+      });
       // Pre-flight against the SAME limits the server enforces (shared/limits.ts),
       // so a batch the server would reject (e.g. many large PNGs) fails fast
       // with a clear message instead of uploading hundreds of MB first.
@@ -222,28 +337,9 @@ export const useImageRender = () => {
         );
       }
 
-      // Appwrite Storage caps a single file at 50MB; base64 inflates by 4/3,
-      // so a request JSON above ~36MB of photos cannot be uploaded at all.
-      if (appwriteBatch.isAvailable() && totalBytes > 36 * 1024 * 1024) {
-        throw new Error(
-          `Batch too large for Appwrite Storage (max ~36MB of photos): reduce the number or size of photos`,
-        );
-      }
-
-      // Appwrite path first (Storage + function): the in-memory server job
-      // store does not survive the Sites SSR runtime, so prefer it whenever
-      // configured. Falls back to /api/render/batch when unavailable or failed
-      // (e.g. no logged-in session — bucket writes need one).
-      if (appwriteBatch.isAvailable()) {
-        try {
-          batchProgress.value = { current: 0, total: finalItems.length, status: "rendering" };
-          return await appwriteBatch.exportBatch(finalItems, (p: BatchExportProgress) => {
-            batchProgress.value = p;
-            onProgress?.(p);
-          });
-        } catch (err: any) {
-          console.warn("[useImageRender] Appwrite batch failed, falling back to server API:", err);
-        }
+      // Client-side batch export: runs directly in the browser using WASM + fflate.
+      if (import.meta.client) {
+        return await exportBatchClientSide(finalItems, onProgress);
       }
 
       const { jobId } = await $fetch<{ jobId: string }>("/api/render/batch", {
@@ -310,17 +406,21 @@ export const useImageRender = () => {
   };
 
   /**
-   * Triggers a browser download for a Blob (zip exports)
+   * Triggers a browser download for a Blob (images & zip exports)
    */
   const downloadBlob = (blob: Blob, filename: string): void => {
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    try {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    } catch (err) {
+      console.error("Download error:", err);
+    }
   };
 
   return {

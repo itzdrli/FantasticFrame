@@ -1,6 +1,19 @@
 @import "tailwindcss";
 @import "vue-color/style.css";
 
+/*
+ * Self-hosted fonts (LXGW WenKai is not on Google Fonts).
+ * Takumi exports fetch the same file via the SELF_HOSTED_FONT_PATHS list;
+ * this @font-face only feeds the DOM preview. OFL-1.1 licensed.
+ */
+@font-face {
+  font-family: "LXGW WenKai";
+  src: url("/fonts/LXGWWenKai-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
   --color-nord-0: #2e3440;
   --color-nord-1: #3b4252;

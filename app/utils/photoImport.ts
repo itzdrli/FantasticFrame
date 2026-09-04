@@ -1,4 +1,5 @@
 import { uuid } from "~/utils/uuid";
+import { clonePhotoStyle, type PhotoStyle } from "~/utils/photoStyle";
 import type { ExifData, Photo } from "~/types";
 
 /**
@@ -76,12 +77,14 @@ export function getImageDimensions(
 export async function createPhotoFromFile(
   file: File,
   readExif: (file: File) => Promise<ExifData>,
+  style?: PhotoStyle,
 ): Promise<Photo> {
   const [exif, dataUrl] = await Promise.all([readExif(file), fileToDataUrl(file)]);
   const { width, height } = await getImageDimensions(dataUrl);
   // Drop the raw exifr result before storing: it's never rendered (ExifPanel
   // uses formatExifForDisplay) and can be several KB per photo.
   const { raw: _raw, ...storedExif } = exif;
+  const inherited = clonePhotoStyle(style);
   return {
     id: uuid(),
     fileName: file.name,
@@ -91,7 +94,8 @@ export async function createPhotoFromFile(
     width,
     height,
     exif: storedExif,
-    templateId: "classic",
+    templateId: inherited?.templateId ?? "classic",
+    templateOverrides: inherited?.templateOverrides,
     crop: { fitMode: "cover", scale: 1, offsetX: 0, offsetY: 0 },
     addedAt: new Date(),
   };
@@ -137,6 +141,7 @@ export async function importImageFiles(
   onPhoto: (photo: Photo) => void,
   onProgress?: (done: number, total: number) => void,
   concurrency = 3,
+  style?: PhotoStyle,
 ): Promise<ImportResult> {
   const skipped: ImportResult["skipped"] = [];
   const imageFiles = Array.from(files).filter((f) => {
@@ -157,7 +162,7 @@ export async function importImageFiles(
   let done = 0;
   await mapLimit(imageFiles, concurrency, async (file) => {
     try {
-      onPhoto(await createPhotoFromFile(file, readExif));
+      onPhoto(await createPhotoFromFile(file, readExif, style));
     } catch (err) {
       console.error("[FantasticFrame] import failed:", file.name, err);
     }
