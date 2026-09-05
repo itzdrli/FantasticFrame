@@ -3,7 +3,6 @@ import type { TemplateConfig } from "~/types";
 export const DEFAULT_TEMPLATE_CONFIG: TemplateConfig = {
   borderRadius: 0,
   backgroundColor: "#FFFFFF",
-  photoScale: 1.0,
   paddingTop: 40,
   paddingBottom: 40,
   paddingHorizontal: 40,
@@ -30,7 +29,6 @@ export const PRESET_TEMPLATES: Record<string, Partial<TemplateConfig>> = {
   // Pure white museum mat — even breathing room, centered model + full specs row
   classic: {
     backgroundColor: "#FFFFFF",
-    photoScale: 1.0,
     paddingTop: 32,
     paddingBottom: 16,
     paddingHorizontal: 32,
@@ -49,7 +47,6 @@ export const PRESET_TEMPLATES: Record<string, Partial<TemplateConfig>> = {
   // Cinematic near-black, borderless full-bleed, monospace spec readout, model left
   dark: {
     backgroundColor: "#18181B",
-    photoScale: 1.0,
     paddingTop: 0,
     paddingBottom: 0,
     paddingHorizontal: 0,
@@ -68,7 +65,6 @@ export const PRESET_TEMPLATES: Record<string, Partial<TemplateConfig>> = {
   // Quiet gallery off-white, only model + capture date in muted neutral sans
   minimal: {
     backgroundColor: "#F5F5F3",
-    photoScale: 1.0,
     paddingTop: 0,
     paddingBottom: 0,
     paddingHorizontal: 0,
@@ -86,7 +82,6 @@ export const PRESET_TEMPLATES: Record<string, Partial<TemplateConfig>> = {
   // Pure-black celluloid frame, warm cream serif (Playfair), make + model + key specs
   "film-style": {
     backgroundColor: "#0A0A0A",
-    photoScale: 1.0,
     paddingTop: 18,
     paddingBottom: 18,
     paddingHorizontal: 18,
@@ -105,7 +100,6 @@ export const PRESET_TEMPLATES: Record<string, Partial<TemplateConfig>> = {
   // Warm paper surface, large rounded photo (Polaroid-like), brand + specs centered
   "card-style": {
     backgroundColor: "#EFEDEC",
-    photoScale: 1.0,
     paddingTop: 24,
     paddingBottom: 28,
     paddingHorizontal: 24,
@@ -124,7 +118,6 @@ export const PRESET_TEMPLATES: Record<string, Partial<TemplateConfig>> = {
   // Polar-night surface (nord0) with snow-storm ink (nord4), monospace terminal-luxe
   nord: {
     backgroundColor: "#2E3440",
-    photoScale: 1.0,
     paddingTop: 0,
     paddingBottom: 0,
     paddingHorizontal: 0,
@@ -140,28 +133,20 @@ export const PRESET_TEMPLATES: Record<string, Partial<TemplateConfig>> = {
   },
 };
 
-export function useTemplate() {
-  const getResolvedConfig = (
-    templateId: string,
-    overrides: Partial<TemplateConfig> = {},
-  ): TemplateConfig => {
-    const preset = PRESET_TEMPLATES[templateId] || {};
-    // Drop explicit `undefined` so a partial patch cannot wipe preset arrays
-    // (e.g. visibleFields) — spreading `{ visibleFields: undefined }` would.
-    const clean: Partial<TemplateConfig> = {};
-    for (const [k, v] of Object.entries(overrides)) {
-      if (v !== undefined) (clean as Record<string, unknown>)[k] = v;
-    }
-    return {
-      ...DEFAULT_TEMPLATE_CONFIG,
-      ...preset,
-      ...clean,
-    };
-  };
-
+export function getResolvedConfig(
+  templateId: string,
+  overrides: Partial<TemplateConfig> = {},
+): TemplateConfig {
+  const preset = PRESET_TEMPLATES[templateId] || {};
+  // Drop explicit `undefined` so a partial patch cannot wipe preset arrays
+  // (e.g. visibleFields) — spreading `{ visibleFields: undefined }` would.
+  const clean: Partial<TemplateConfig> = {};
+  for (const [k, v] of Object.entries(overrides)) {
+    if (v !== undefined) (clean as Record<string, unknown>)[k] = v;
+  }
   return {
-    getResolvedConfig,
-    PRESET_TEMPLATES,
-    DEFAULT_TEMPLATE_CONFIG,
+    ...DEFAULT_TEMPLATE_CONFIG,
+    ...preset,
+    ...clean,
   };
 }

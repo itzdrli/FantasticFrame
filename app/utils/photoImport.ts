@@ -1,5 +1,6 @@
 import { uuid } from "~/utils/uuid";
 import { clonePhotoStyle, type PhotoStyle } from "~/utils/photoStyle";
+import { mapLimit } from "~~/shared/mapLimit";
 import type { ExifData, Photo } from "~/types";
 
 /**
@@ -41,17 +42,36 @@ export function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
+const THUMB_MAX_EDGE = 256;
+
+function makeThumb(img: HTMLImageElement, fallback: string): string {
+  const scale = Math.min(1, THUMB_MAX_EDGE / Math.max(img.naturalWidth, img.naturalHeight));
+  const w = Math.max(1, Math.round(img.naturalWidth * scale));
+  const h = Math.max(1, Math.round(img.naturalHeight * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return fallback;
+  ctx.drawImage(img, 0, 0, w, h);
+  try {
+    return canvas.toDataURL("image/jpeg", 0.7);
+  } catch {
+    return fallback;
+  }
+}
+
 /**
- * Loads an image to read its intrinsic dimensions.
+ * Loads an image to read its intrinsic dimensions and a small JPEG thumb.
  *
  * Rejects on decode failure or after a timeout: an undecodable file (HEIC in
  * Chrome/Firefox, TIFF, corrupt data) never fires `onload`, and without this
  * the import would hang forever.
  */
-export function getImageDimensions(
+function inspectImage(
   dataUrl: string,
   timeoutMs = 10_000,
-): Promise<{ width: number; height: number }> {
+): Promise<{ width: number; height: number; thumbUrl: string }> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const timer = setTimeout(() => {
@@ -60,7 +80,11 @@ export function getImageDimensions(
     }, timeoutMs);
     img.onload = () => {
       clearTimeout(timer);
-      resolve({ width: img.naturalWidth, height: img.naturalHeight });
+      resolve({
+        width: img.naturalWidth,
+        height: img.naturalHeight,
+        thumbUrl: makeThumb(img, dataUrl),
+      });
     };
     img.onerror = () => {
       clearTimeout(timer);
@@ -80,7 +104,7 @@ export async function createPhotoFromFile(
   style?: PhotoStyle,
 ): Promise<Photo> {
   const [exif, dataUrl] = await Promise.all([readExif(file), fileToDataUrl(file)]);
-  const { width, height } = await getImageDimensions(dataUrl);
+  const { width, height, thumbUrl } = await inspectImage(dataUrl);
   // Drop the raw exifr result before storing: it's never rendered (ExifPanel
   // uses formatExifForDisplay) and can be several KB per photo.
   const { raw: _raw, ...storedExif } = exif;
@@ -91,6 +115,7 @@ export async function createPhotoFromFile(
     fileSize: file.size,
     mimeType: file.type,
     dataUrl,
+    thumbUrl,
     width,
     height,
     exif: storedExif,
@@ -99,24 +124,6 @@ export async function createPhotoFromFile(
     crop: { fitMode: "cover", scale: 1, offsetX: 0, offsetY: 0 },
     addedAt: new Date(),
   };
-}
-
-/** Runs fn over items with limited concurrency. */
-export async function mapLimit<T, R>(
-  items: T[],
-  limit: number,
-  fn: (item: T) => Promise<R>,
-): Promise<R[]> {
-  let cursor = 0;
-  const results: R[] = Array.from({ length: items.length });
-  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
-    while (cursor < items.length) {
-      const idx = cursor++;
-      results[idx] = await fn(items[idx]!);
-    }
-  });
-  await Promise.all(workers);
-  return results;
 }
 
 export interface ImportResult {

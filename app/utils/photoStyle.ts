@@ -15,8 +15,6 @@ export const LOGO_KEYS: (keyof TemplateConfig)[] = [
   "logoImageUrl",
   "logoScale",
   "logoAspect",
-  "logoWidth",
-  "logoHeight",
 ];
 
 export const TYPOGRAPHY_KEYS: (keyof TemplateConfig)[] = [
@@ -30,21 +28,13 @@ export const TYPOGRAPHY_KEYS: (keyof TemplateConfig)[] = [
 
 export const BORDER_KEYS: (keyof TemplateConfig)[] = [
   "backgroundColor",
-  "backgroundGradient",
   "borderRadius",
-  "photoScale",
   "paddingTop",
   "paddingBottom",
   "paddingHorizontal",
 ];
 
-export const CANVAS_KEYS: (keyof TemplateConfig)[] = [
-  "canvasMode",
-  "canvasWidth",
-  "canvasHeight",
-  "socialPreset",
-  "socialRatio",
-];
+export const CANVAS_KEYS: (keyof TemplateConfig)[] = ["canvasMode", "socialRatio"];
 
 /** Key groups per syncable category (display names live in i18n sync.categories.*) */
 export interface SyncCategoryMeta {

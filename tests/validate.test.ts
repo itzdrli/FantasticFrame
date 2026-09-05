@@ -5,8 +5,6 @@ import { estimateBase64Bytes } from "../shared/limits";
 const fullConfig = {
   borderRadius: 14,
   backgroundColor: "#FFFFFF",
-  backgroundGradient: "linear-gradient(...)",
-  photoScale: 0.9,
   paddingTop: 40,
   paddingBottom: 40,
   paddingHorizontal: 40,
@@ -23,8 +21,6 @@ const fullConfig = {
   fontColor: "#333333",
   modelFontSize: 26,
   canvasMode: "original",
-  canvasWidth: 1080,
-  socialPreset: "instagram",
   socialRatio: "4:5",
 };
 
@@ -43,7 +39,7 @@ describe("validateTemplateConfig", () => {
     // strings coerce silently, objects become NaN in Math.round
     expect(validateTemplateConfig({ ...fullConfig, paddingTop: "40" }).valid).toBe(false);
     expect(validateTemplateConfig({ ...fullConfig, paddingTop: {} }).valid).toBe(false);
-    expect(validateTemplateConfig({ ...fullConfig, photoScale: Infinity }).valid).toBe(false);
+    expect(validateTemplateConfig({ ...fullConfig, fontSize: Infinity }).valid).toBe(false);
     expect(validateTemplateConfig({ ...fullConfig, visibleFields: ["model", 42] }).valid).toBe(
       false,
     );
@@ -53,7 +49,6 @@ describe("validateTemplateConfig", () => {
     expect(validateTemplateConfig({ ...fullConfig, canvasMode: "square" }).valid).toBe(false);
     expect(validateTemplateConfig({ ...fullConfig, infoLayout: "columns" }).valid).toBe(false);
     expect(validateTemplateConfig({ ...fullConfig, logoPosition: "top" }).valid).toBe(false);
-    expect(validateTemplateConfig({ ...fullConfig, socialPreset: "facebook" }).valid).toBe(false);
   });
 
   it("rejects non-object configs", () => {

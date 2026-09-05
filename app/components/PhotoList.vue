@@ -129,7 +129,7 @@ const importPercent = computed(() => {
         :class="{ 'ring-2 ring-nord-8 border-nord-8': photoStore.selectedId === photo.id }"
         @click="selectPhoto(photo.id)"
       >
-        <img :src="photo.dataUrl" alt="" class="w-full h-full object-cover" />
+        <img :src="photo.thumbUrl" alt="" class="w-full h-full object-cover" />
 
         <!-- Delete Button -->
         <button

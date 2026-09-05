@@ -177,16 +177,6 @@ describe("preserveLogoOverridesOnTemplateSwitch", () => {
     expect(result).toEqual({ logoText: "Atelier", modelFontSize: 40 });
   });
 
-  it("carries legacy logoWidth/logoHeight overrides too", () => {
-    const result = preserveLogoOverridesOnTemplateSwitch(
-      { logoImageUrl: "data:image/png;base64,xx", logoWidth: 120, logoHeight: 60 },
-      classic,
-      dark,
-    );
-    expect(result?.logoWidth).toBe(120);
-    expect(result?.logoHeight).toBe(60);
-  });
-
   it("pins visibility so a shown logo survives a hide-logo template (e.g. minimal)", () => {
     const result = preserveLogoOverridesOnTemplateSwitch(
       { logoImageUrl: "data:image/png;base64,xx" },

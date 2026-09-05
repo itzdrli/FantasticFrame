@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { usePhotoStore } from "~/composables/usePhotoStore";
-import { useTemplate } from "~/composables/useTemplate";
+import { getResolvedConfig } from "~/composables/useTemplate";
 import type { TemplateConfig, ExifFieldKey } from "~/types";
 
 const photoStore = usePhotoStore();
-const { getResolvedConfig } = useTemplate();
 
 const selectedPhoto = computed(() => photoStore.selectedPhoto);
 const templateId = computed(() => selectedPhoto.value?.templateId || "classic");

@@ -8,7 +8,7 @@ import {
   SYNC_CATEGORIES,
   type SyncCategory,
 } from "~/utils/photoStyle";
-import { useTemplate } from "~/composables/useTemplate";
+import { getResolvedConfig } from "~/composables/useTemplate";
 import type { Photo, PhotoCrop, TemplateConfig } from "~/types";
 
 /**
@@ -28,12 +28,6 @@ export const usePhotoStore = defineStore("photos", () => {
 
   /** Active categories for sync & apply */
   const syncCategories = ref<SyncCategory[]>([...DEFAULT_ACTIVE_CATEGORIES]);
-
-  const { getResolvedConfig } = useTemplate();
-
-  function setSyncCategories(cats: SyncCategory[]) {
-    syncCategories.value = [...cats];
-  }
 
   function toggleSyncCategory(cat: SyncCategory) {
     const idx = syncCategories.value.indexOf(cat);
@@ -74,15 +68,6 @@ export const usePhotoStore = defineStore("photos", () => {
     }
   }
 
-  /** Adds multiple photos */
-  function addPhotos(newPhotos: Photo[]) {
-    const wasEmpty = photos.value.length === 0;
-    photos.value.push(...newPhotos);
-    if (wasEmpty && photos.value.length > 0) {
-      selectedId.value = photos.value[0]!.id;
-    }
-  }
-
   /** Removes a photo */
   function removePhoto(id: string) {
     const index = photos.value.findIndex((p) => p.id === id);
@@ -119,7 +104,7 @@ export const usePhotoStore = defineStore("photos", () => {
   }
 
   /** Updates a photo's template config overrides (or every photo when syncStyle is on, filtered by syncCategories) */
-  function updateTemplateOverrides(id: string, overrides: Partial<TemplateConfig>) {
+  function updatePhotoOverrides(id: string, overrides: Partial<TemplateConfig>) {
     if (syncStyle.value) {
       const syncablePatch = filterOverridesByCategories(overrides, syncCategories.value);
       const currentPhoto = photos.value.find((p) => p.id === id);
@@ -151,7 +136,7 @@ export const usePhotoStore = defineStore("photos", () => {
   }
 
   /** Switches the template used by a photo */
-  function setPhotoTemplate(id: string, templateId: string) {
+  function updatePhotoTemplate(id: string, templateId: string) {
     if (syncStyle.value && syncCategories.value.includes("template")) {
       photos.value.forEach((photo) => switchPhotoTemplate(photo, templateId));
       return;
@@ -221,20 +206,14 @@ export const usePhotoStore = defineStore("photos", () => {
     hasPhotos,
     // actions
     addPhoto,
-    addPhotos,
     removePhoto,
     clearAll,
     selectPhoto,
-    updateTemplateOverrides,
-    /** Alias: components use updatePhotoOverrides */
-    updatePhotoOverrides: updateTemplateOverrides,
-    setPhotoTemplate,
-    /** Alias: components use updatePhotoTemplate */
-    updatePhotoTemplate: setPhotoTemplate,
+    updatePhotoOverrides,
+    updatePhotoTemplate,
     setPhotoCrop,
     applyTemplateToAll,
     applyStyleToAll,
-    setSyncCategories,
     toggleSyncCategory,
     selectAllCategories,
     clearAllCategories,

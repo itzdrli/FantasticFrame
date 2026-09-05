@@ -1,15 +1,4 @@
 import { createError, readRawBody, type H3Event } from "h3";
-// Caps + estimateBase64Bytes live in shared/limits.ts so the client (pre-flight)
-// and the server (enforcement) use the SAME numbers.
-export {
-  MAX_RENDER_BODY_BYTES,
-  MAX_BATCH_BODY_BYTES,
-  MAX_PHOTO_BYTES,
-  MAX_TOTAL_PHOTO_BYTES,
-  MAX_BATCH_ITEMS,
-  MAX_JOBS,
-  estimateBase64Bytes,
-} from "../../shared/limits";
 
 const tooLarge = (maxBytes: number) =>
   createError({

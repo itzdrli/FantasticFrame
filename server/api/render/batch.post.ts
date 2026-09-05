@@ -9,8 +9,8 @@ import {
   MAX_PHOTO_BYTES,
   MAX_TOTAL_PHOTO_BYTES,
   estimateBase64Bytes,
-  readJsonBodyCapped,
-} from "../../utils/limits";
+} from "../../../shared/limits";
+import { readJsonBodyCapped } from "../../utils/limits";
 
 export default defineEventHandler(async (event) => {
   const body = await readJsonBodyCapped(event, MAX_BATCH_BODY_BYTES);

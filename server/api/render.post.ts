@@ -3,12 +3,8 @@ import { renderServer, absolutizeAssetUrl } from "../utils/takumiServer";
 import { buildRenderTree } from "../../shared/render";
 import type { RenderPayload } from "../../shared/types";
 import { validateTemplateConfig } from "../../shared/validate";
-import {
-  MAX_PHOTO_BYTES,
-  MAX_RENDER_BODY_BYTES,
-  estimateBase64Bytes,
-  readJsonBodyCapped,
-} from "../utils/limits";
+import { MAX_PHOTO_BYTES, MAX_RENDER_BODY_BYTES, estimateBase64Bytes } from "../../shared/limits";
+import { readJsonBodyCapped } from "../utils/limits";
 
 export default defineEventHandler(async (event) => {
   const body = await readJsonBodyCapped(event, MAX_RENDER_BODY_BYTES);

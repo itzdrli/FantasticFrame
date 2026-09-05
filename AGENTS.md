@@ -42,7 +42,7 @@ Always run `bun run lint`, `bun run fmt:check`, `bun run test` and
 ## Project structure
 
 - `app/pages/index.vue` — single-page app shell
-- `app/components/` — Vue components: `EditorPanel`, `PreviewPanel`,
+- `app/components/` — Vue components: `PreviewPanel`,
   `PhotoUploader`, `PhotoList`, `TemplateSelector`, `BorderSettings`,
   `TypeSettings`, `ExifPanel`, `ColorPicker`
 - `app/composables/`
@@ -53,8 +53,8 @@ Always run `bun run lint`, `bun run fmt:check`, `bun run test` and
   - `useImageRender.ts` — client WASM render, server-side fallback, single save,
     `batchExport()` (server job + zip download)
   - `useExifReader.ts` — exifr-based EXIF extraction
-- `app/types/index.ts` — app-only types (`Photo`, `Template`,
-  `RenderRequest/Response`) plus re-exports of the shared types
+- `app/types/index.ts` — app-only types (`Photo` with `dataUrl` + `thumbUrl`,
+  `RenderResponse`) plus re-exports of the shared types
 - `shared/types.ts` — canonical shared types (`TemplateConfig`, `ExifData`,
   `PhotoCrop`, `RenderPayload`, …). `app/types/index.ts` re-exports them so app
   code keeps importing from `~/types`.
@@ -70,13 +70,12 @@ Always run `bun run lint`, `bun run fmt:check`, `bun run test` and
 - `server/api/render/batch.post.ts`, `batch/status.get.ts`, `batch/download.get.ts`
   — batch job lifecycle (create → poll status → download zip)
 - `server/utils/batchRender.ts` — in-memory job store: `createBatchJob`, `getJob`,
-  `releaseJob`, `mapLimit` (concurrency 3), 10-min TTL purge (every access +
-  60s timer), `MAX_JOBS` cap
+  `releaseJob`, 10-min TTL purge (every access + 60s timer), `MAX_JOBS` cap
 - `shared/limits.ts` — size caps + `estimateBase64Bytes`, shared by the server
   (enforcement) and the client (pre-flight batch warnings)
-- `server/utils/limits.ts` — request-body/photo/batch size caps (re-exported
-  from shared/limits) + capped body reader (h3 has no body limit); the render
-  endpoints reject oversized uploads with a clear 413
+- `shared/mapLimit.ts` — bounded-concurrency mapper (import + batch render)
+- `server/utils/limits.ts` — capped body reader (h3 has no body limit); the
+  render endpoints reject oversized uploads with a clear 413
 - `scripts/postbuild.mjs` — overlays takumi-js / @takumi-rs over nitro's
   trace-based externalization (nitro wrongly resolves `#backend` to WASM);
   required or native server rendering breaks
@@ -85,7 +84,7 @@ Always run `bun run lint`, `bun run fmt:check`, `bun run test` and
 
 - All template layout math is 1080px-base: `scaleFactor = max(w,h) / 1080` scales
   paddings, fonts, radii. Canvas modes: `original` (auto-height, no letterbox),
-  `fixed` (explicit W/H), `social` (1080-wide, `socialRatio` like "1:1"/"16:9").
+  `social` (1080-wide, `socialRatio` like "1:1"/"16:9").
 - Per-photo state = `templateId` + `templateOverrides`; resolved config via
   `getResolvedConfig(templateId, overrides)`. Switching template clears overrides.
 - Crop/zoom: `PhotoCrop { fitMode, scale, offsetX, offsetY }`; "cover" clips via

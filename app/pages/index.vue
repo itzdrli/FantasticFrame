@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { usePhotoStore } from "~/composables/usePhotoStore";
 import { useImageRender } from "~/composables/useImageRender";
-import { useTemplate } from "~/composables/useTemplate";
+import { getResolvedConfig } from "~/composables/useTemplate";
 
 useHead({
   title: "FantasticFrame",
@@ -19,7 +19,6 @@ const {
   exportQuality,
   batchProgress,
 } = useImageRender();
-const { getResolvedConfig } = useTemplate();
 
 // Drawers stay hidden until the first photo is uploaded
 const showSettings = ref(false);
@@ -78,9 +77,7 @@ async function handleExport() {
     photoHeight: photo.height,
     crop: photo.crop,
   });
-  if (res?.imageBase64) {
-    await saveImage(res.imageBase64, photo.fileName);
-  }
+  if (res) saveImage(res.bytes, res.mimeType, photo.fileName);
 }
 
 // ── Batch export ────────────────────────────────────────────────────────────

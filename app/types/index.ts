@@ -17,11 +17,7 @@ export type {
   CropRect,
 } from "~~/shared/types";
 
-export { SOCIAL_RATIO_HEIGHTS } from "~~/shared/types";
-
-import type { ExifData, TemplateConfig, PhotoCrop, ExportOptions } from "~~/shared/types";
-
-// ==================== Photo (app-only) ====================
+import type { ExifData, TemplateConfig, PhotoCrop } from "~~/shared/types";
 
 /** Full state of a single photo */
 export interface Photo {
@@ -31,6 +27,8 @@ export interface Photo {
   mimeType: string;
   /** Original image Base64 Data URL */
   dataUrl: string;
+  /** JPEG thumb for the filmstrip (~256px); full `dataUrl` is for preview/export */
+  thumbUrl: string;
   width: number;
   height: number;
   exif: ExifData;
@@ -38,28 +36,6 @@ export interface Photo {
   templateOverrides?: Partial<TemplateConfig>;
   crop?: PhotoCrop;
   addedAt: Date;
-}
-
-// ==================== Template system (app-only) ====================
-
-/** Border template definition */
-export interface Template {
-  id: string;
-  name: string;
-  description: string;
-  thumbnail?: string;
-  defaultConfig: TemplateConfig;
-}
-
-// ==================== Render request/response (app-only) ====================
-
-/** Request body sent to server/api/render */
-export interface RenderRequest {
-  photoBase64: string;
-  exifData: ExifData;
-  templateId: string;
-  templateConfig: TemplateConfig;
-  exportOptions: ExportOptions;
 }
 
 /** Render result */

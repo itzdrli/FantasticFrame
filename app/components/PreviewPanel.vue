@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { usePhotoStore } from "~/composables/usePhotoStore";
-import { useTemplate } from "~/composables/useTemplate";
+import { getResolvedConfig } from "~/composables/useTemplate";
 import { formatExifForDisplay } from "~/composables/useExifReader";
 import {
   coverCropRect,
@@ -12,7 +12,6 @@ import {
 import type { PhotoCrop } from "~/types";
 
 const photoStore = usePhotoStore();
-const { getResolvedConfig } = useTemplate();
 
 const MAX_PREVIEW_W = 1100;
 const MAX_PREVIEW_H = 760;
@@ -38,7 +37,7 @@ const exifTexts = computed(() => {
 });
 
 // 1080-base scale factor (see layoutScaleFactor in shared/render.ts):
-// social/fixed follow the canvas; original mode anchors to the photo's
+// social follows the canvas; original mode anchors to the photo's
 // longer edge so the preview can never drift from the exported image.
 const baseScaleFactor = computed(() => {
   const cfg = templateConfig.value;
@@ -170,10 +169,7 @@ const photoLayout = computed(() => {
     imgW = Math.round(availH * pAspect);
   }
 
-  const finalW = Math.round(imgW * (cfg.photoScale ?? 0.9));
-  const finalH = Math.round(imgH * (cfg.photoScale ?? 0.9));
-
-  return { imgW, imgH, finalW, finalH, availW, availH };
+  return { imgW, imgH, availW, availH };
 });
 
 const imageRenderStyle = computed(() => {
@@ -184,8 +180,8 @@ const imageRenderStyle = computed(() => {
   const ps = previewScale.value;
 
   return {
-    width: `${Math.round(layout.finalW * ps)}px`,
-    height: `${Math.round(layout.finalH * ps)}px`,
+    width: `${Math.round(layout.imgW * ps)}px`,
+    height: `${Math.round(layout.imgH * ps)}px`,
     borderRadius: `${s(cfg.borderRadius)}px`,
     objectFit: "contain" as const,
     display: "block" as const,
@@ -391,7 +387,7 @@ const canvasStyle = computed(() => {
   return {
     width: `${previewDims.value.w}px`,
     height: `${previewDims.value.h}px`,
-    background: cfg.backgroundGradient || cfg.backgroundColor || "#fff",
+    background: cfg.backgroundColor || "#fff",
     fontFamily: cfg.fontFamily,
     color: cfg.fontColor,
     position: "relative" as const,

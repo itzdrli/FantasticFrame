@@ -2,12 +2,10 @@ import { describe, it, expect } from "vitest";
 import {
   DEFAULT_TEMPLATE_CONFIG,
   PRESET_TEMPLATES,
-  useTemplate,
+  getResolvedConfig,
 } from "../app/composables/useTemplate";
 
-describe("useTemplate.getResolvedConfig", () => {
-  const { getResolvedConfig } = useTemplate();
-
+describe("getResolvedConfig", () => {
   it("returns the default config for an unknown template id", () => {
     expect(getResolvedConfig("nope")).toEqual(DEFAULT_TEMPLATE_CONFIG);
   });

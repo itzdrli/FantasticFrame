@@ -7,7 +7,6 @@
  */
 
 import type { CropRect, RenderPayload, RenderTreeResult, TemplateConfig } from "./types";
-import { SOCIAL_RATIO_HEIGHTS } from "./types";
 
 /**
  * Rounds a float for display and strips trailing zeros — EXIF stores values
@@ -104,10 +103,9 @@ export const coverCropRect = (
 
 // ── Pure layout helpers (single source of truth for preview + export) ───────
 
-/** 1080-wide social canvas dims for a "W:H" ratio (known table or computed). */
+/** 1080-wide social canvas dims for a "W:H" ratio. */
 export function socialCanvasDims(ratio?: string): { w: number; h: number } {
   const r = ratio || "4:5";
-  if (SOCIAL_RATIO_HEIGHTS[r]) return { w: 1080, h: SOCIAL_RATIO_HEIGHTS[r]! };
   const parts = r.split(":").map(Number);
   const w = parts[0];
   const h = parts[1];
@@ -124,8 +122,8 @@ export interface LogoImageSize {
 
 /**
  * Image-logo dimensions at the given scale factor / footer width.
- * Preferred model: logoScale % of baseline (modelFontSizeBase × 1.4), width
- * from logoAspect, capped to footerInnerW. Legacy fallback: logoWidth/Height.
+ * logoScale % of baseline (modelFontSizeBase × 1.4), width from logoAspect,
+ * capped to footerInnerW.
  */
 export function computeLogoImageSize(
   cfg: TemplateConfig,
@@ -145,8 +143,8 @@ export function computeLogoImageSize(
     return { width: w, height: h };
   }
   return {
-    width: Math.round((cfg.logoWidth ?? modelFontSizeBase * 5) * scaleFactor),
-    height: Math.round((cfg.logoHeight ?? modelFontSizeBase * 1.4) * scaleFactor),
+    width: Math.round(modelFontSizeBase * 5 * scaleFactor),
+    height: Math.round(modelFontSizeBase * 1.4 * scaleFactor),
   };
 }
 
@@ -262,14 +260,8 @@ export interface CanvasDimsInput {
 export function computeCanvasDims(input: CanvasDimsInput): { w: number; h: number } {
   const { cfg, photoWidth, photoHeight } = input;
 
-  if (cfg.canvasMode === "social" && cfg.socialPreset === "instagram") {
+  if (cfg.canvasMode === "social") {
     return socialCanvasDims(cfg.socialRatio);
-  }
-  if (cfg.canvasMode === "fixed") {
-    return {
-      w: cfg.canvasWidth || photoWidth || 1080,
-      h: cfg.canvasHeight || photoHeight || 1080,
-    };
   }
 
   // original mode: auto-height from photo aspect + paddings + footer.
@@ -299,11 +291,6 @@ export function computeCanvasDims(input: CanvasDimsInput): { w: number; h: numbe
   return { w, h: Math.round(imgH + paddingTop + paddingBottom + footerH) };
 }
 
-/** Scale factor relative to a 1080px base (longer canvas edge). */
-export function canvasScaleFactor(w: number, h: number): number {
-  return Math.max(w, h) / 1080;
-}
-
 export interface LayoutScaleInput {
   cfg: TemplateConfig;
   canvasWidth: number;
@@ -313,7 +300,7 @@ export interface LayoutScaleInput {
 }
 
 /**
- * The single layout scale for a canvas. Social/fixed canvases are explicit,
+ * The single layout scale for a canvas. Social canvases are explicit,
  * so the scale follows the canvas. Original-mode canvases auto-size from the
  * photo (height depends on the footer, which depends on the scale), so the
  * scale is anchored to the photo's longer edge — deterministic and identical
@@ -349,7 +336,7 @@ export const buildRenderTree = (payload: RenderPayload): RenderTreeResult => {
     makeFallback: exifData?.make,
   });
 
-  // For social/fixed the dims above are final; for original they already
+  // For social the dims above are final; for original they already
   // include the footer. Re-run the footer layout at the resolved scale so the
   // rest of the builder has logo sizes / paddings ready.
   const scaleFactor = layoutScaleFactor({
@@ -369,7 +356,6 @@ export const buildRenderTree = (payload: RenderPayload): RenderTreeResult => {
   const { footerH, hasLogo, hasExif, logoTxt, logoImageW, logoImageH, footerPaddingX } = footer;
 
   const bgColor = templateConfig.backgroundColor || "#ffffff";
-  const photoScale = templateConfig.photoScale ?? 0.9;
 
   const paddingTop = Math.round((templateConfig.paddingTop ?? 0) * scaleFactor);
   const paddingBottom = Math.round((templateConfig.paddingBottom ?? 0) * scaleFactor);
@@ -405,14 +391,10 @@ export const buildRenderTree = (payload: RenderPayload): RenderTreeResult => {
     imgW = Math.round(availH * pAspect);
   }
 
-  const finalW = Math.round(imgW * photoScale);
-  const finalH = Math.round(imgH * photoScale);
-
   const crop = payload.crop;
   const useCover = crop?.fitMode === "cover";
-  // In cover mode the photo fills the whole available area (no photoScale inset)
-  const boxW = useCover ? Math.round(availW) : finalW;
-  const boxH = useCover ? Math.round(availH) : finalH;
+  const boxW = useCover ? Math.round(availW) : Math.round(imgW);
+  const boxH = useCover ? Math.round(availH) : Math.round(imgH);
 
   const children: any[] = [];
 
@@ -638,8 +620,7 @@ export const buildRenderTree = (payload: RenderPayload): RenderTreeResult => {
       flexDirection: "column",
       width: canvasWidth,
       height: canvasHeight,
-      backgroundColor: templateConfig.backgroundGradient ? undefined : bgColor,
-      background: templateConfig.backgroundGradient || undefined,
+      backgroundColor: bgColor,
       overflow: "hidden",
     },
     children,

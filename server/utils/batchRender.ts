@@ -1,6 +1,7 @@
 import { renderServer } from "../utils/takumiServer";
 import { Zip, ZipDeflate } from "fflate";
 import { buildRenderTree } from "../../shared/render";
+import { mapLimit } from "../../shared/mapLimit";
 import type { RenderPayload } from "../../shared/types";
 
 /**
@@ -94,22 +95,6 @@ function zipEntryName(originalFilename: string, format: string): string {
   const base = originalFilename.replace(/\.[^.]+$/, "") || "photo";
   const ext = format === "jpeg" ? "jpg" : format === "webp" ? "webp" : "png";
   return `${base}.${ext}`;
-}
-
-/** Runs fn over items with limited concurrency (single-threaded JS, so no races on the cursor) */
-async function mapLimit<T>(
-  items: T[],
-  limit: number,
-  fn: (item: T) => Promise<void>,
-): Promise<void> {
-  let cursor = 0;
-  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
-    while (cursor < items.length) {
-      const idx = cursor++;
-      await fn(items[idx]!);
-    }
-  });
-  await Promise.all(workers);
 }
 
 async function runJob(job: BatchJob, items: BatchItem[]) {

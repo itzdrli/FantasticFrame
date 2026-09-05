@@ -12,6 +12,14 @@ import type { RenderResponse } from "~/types";
 
 export type { RenderPayload, RenderResponse };
 
+/** Client-side render result — raw bytes, no base64 round-trip. */
+export interface RenderResult {
+  bytes: Uint8Array;
+  mimeType: string;
+  width: number;
+  height: number;
+}
+
 export interface BatchExportProgress {
   /** Index of the photo currently being processed (0-based) */
   current: number;
@@ -23,26 +31,16 @@ export interface BatchExportProgress {
   errorMessage?: string;
 }
 
-const bytesToBase64 = (bytes: Uint8Array) => {
-  let binary = "";
-  const chunk = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunk) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
-  }
-  return btoa(binary);
-};
-
 let wasmPromise: Promise<typeof import("takumi-js")> | null = null;
 const getTakumi = () => {
   wasmPromise ??= import("takumi-js");
   return wasmPromise;
 };
 
-/** Infers the file extension from a base64 data URL */
-function extFromDataUrl(dataUrl: string): string {
-  const m = dataUrl.match(/^data:image\/(png|jpeg|jpg|webp);base64,/);
-  if (!m) return "jpg";
-  return m[1] === "jpeg" ? "jpg" : m[1]!;
+function extFromMime(mime: string): string {
+  if (mime === "image/jpeg") return "jpg";
+  if (mime === "image/webp") return "webp";
+  return "png";
 }
 
 /** Builds an export file name: strips the original extension and adds the new one */
@@ -60,7 +58,7 @@ export const useImageRender = () => {
   /**
    * Internal render core (does not touch isRendering, shared by renderImage / batchExport)
    */
-  const _renderOne = async (payload: RenderPayload): Promise<RenderResponse | null> => {
+  const _renderOne = async (payload: RenderPayload): Promise<RenderResult | null> => {
     const finalPayload: RenderPayload = {
       ...(payload.exportOptions
         ? payload
@@ -90,7 +88,7 @@ export const useImageRender = () => {
   /**
    * Renders a single image (with state management)
    */
-  const renderImage = async (payload: RenderPayload): Promise<RenderResponse | null> => {
+  const renderImage = async (payload: RenderPayload): Promise<RenderResult | null> => {
     isRendering.value = true;
     error.value = null;
     try {
@@ -107,7 +105,7 @@ export const useImageRender = () => {
   /**
    * Client-side WASM rendering (takumi-js automatically uses the WASM backend in browsers)
    */
-  const renderClientSide = async (payload: RenderPayload): Promise<RenderResponse | null> => {
+  const renderClientSide = async (payload: RenderPayload): Promise<RenderResult | null> => {
     const takumi = await getTakumi();
     const { nodeTree, width, height, format, quality } = buildRenderTree(payload);
     const buf = await takumi.render(nodeTree, {
@@ -119,24 +117,25 @@ export const useImageRender = () => {
     } as any);
     const mimeType =
       format === "png" ? "image/png" : format === "webp" ? "image/webp" : "image/jpeg";
-    return {
-      imageBase64: `data:${mimeType};base64,${bytesToBase64(new Uint8Array(buf))}`,
-      mimeType,
-      width,
-      height,
-    };
+    return { bytes: new Uint8Array(buf), mimeType, width, height };
   };
 
   /**
    * Calls the backend render API (fallback when WASM rendering fails)
    */
-  const renderServerSide = async (payload: RenderPayload): Promise<RenderResponse | null> => {
+  const renderServerSide = async (payload: RenderPayload): Promise<RenderResult | null> => {
     try {
       const response = await $fetch<RenderResponse>("/api/render", {
         method: "POST",
         body: payload,
       });
-      return response;
+      if (!response?.imageBase64) return null;
+      return {
+        bytes: dataUrlToUint8Array(response.imageBase64),
+        mimeType: response.mimeType,
+        width: response.width,
+        height: response.height,
+      };
     } catch (err: any) {
       error.value = err?.data?.message || err?.message || "Render failed";
       console.error("Render API error:", err);
@@ -159,42 +158,13 @@ export const useImageRender = () => {
     return bytes;
   };
 
-  /**
-   * Converts a base64 data URL to a Blob.
-   */
-  const dataUrlToBlob = (dataUrl: string): Blob => {
-    const commaIdx = dataUrl.indexOf(",");
-    if (commaIdx === -1) {
-      return new Blob([], { type: "image/jpeg" });
-    }
-    const header = dataUrl.slice(0, commaIdx);
-    const mime = header.match(/:(.*?);/)?.[1] || "image/jpeg";
-    const bytes = dataUrlToUint8Array(dataUrl);
-    return new Blob([bytes as unknown as BlobPart], { type: mime });
-  };
-
-  /**
-   * Downloads the returned Base64 image via an object URL Blob
-   * (avoids Chrome/Safari URL length limits on data: URLs)
-   * @param base64 Complete base64 image string (includes data:image/...)
-   * @param filename Download file name, without extension
-   */
-  const downloadImage = (base64: string, filename = "exported-image") => {
+  const saveImage = (bytes: Uint8Array, mimeType: string, originalFilename: string): void => {
     try {
-      const ext = extFromDataUrl(base64);
-      const outName = buildExportFilename(filename, ext);
-      const blob = dataUrlToBlob(base64);
-      downloadBlob(blob, outName);
+      const outName = buildExportFilename(originalFilename, extFromMime(mimeType));
+      downloadBlob(new Blob([bytes as unknown as BlobPart], { type: mimeType }), outName);
     } catch (err) {
       console.error("Download error:", err);
     }
-  };
-
-  /**
-   * Saves a single image (triggers a browser download)
-   */
-  const saveImage = (base64: string, originalFilename: string): void => {
-    downloadImage(base64, originalFilename);
   };
 
   /**
@@ -226,16 +196,14 @@ export const useImageRender = () => {
 
       try {
         const res = await _renderOne(item.payload);
-        if (!res?.imageBase64) {
+        if (!res) {
           throw new Error("Render returned empty result");
         }
-        const ext = extFromDataUrl(res.imageBase64);
-        const outName = buildExportFilename(item.originalFilename, ext);
-        const buf = dataUrlToUint8Array(res.imageBase64);
+        const outName = buildExportFilename(item.originalFilename, extFromMime(res.mimeType));
 
         const file = new ZipDeflate(outName);
         zip.add(file);
-        file.push(buf, true);
+        file.push(res.bytes, true);
         done++;
       } catch (err) {
         failed++;
@@ -431,7 +399,6 @@ export const useImageRender = () => {
     batchProgress,
     renderImage,
     batchExport,
-    downloadImage,
     saveImage,
   };
 };

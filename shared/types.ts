@@ -1,6 +1,6 @@
 /**
  * Canonical types shared by the browser (WASM) renderer, the server (native)
- * renderer, and the Vue app. App-only types (Photo, Template, …) live in
+ * renderer, and the Vue app. App-only types (Photo, …) live in
  * app/types/index.ts and re-export from here.
  */
 
@@ -39,9 +39,7 @@ export interface ExifData {
 /** Template configurable options (1080px-base layout units) */
 export interface TemplateConfig {
   backgroundColor: string;
-  backgroundGradient?: string;
   borderRadius: number;
-  photoScale: number;
   paddingTop: number;
   paddingBottom: number;
   paddingHorizontal: number;
@@ -51,20 +49,13 @@ export interface TemplateConfig {
   logoImageUrl?: string;
   logoScale?: number;
   logoAspect?: number;
-  /** @deprecated prefer logoScale + logoAspect */
-  logoWidth?: number;
-  /** @deprecated prefer logoScale + logoAspect */
-  logoHeight?: number;
   infoLayout: "grid" | "list" | "horizontal";
   visibleFields: ExifFieldKey[] | string[];
   fontFamily: string;
   fontSize: number;
   fontColor: string;
   modelFontSize: number;
-  canvasMode: "original" | "fixed" | "social";
-  canvasWidth?: number;
-  canvasHeight?: number;
-  socialPreset?: "instagram";
+  canvasMode: "original" | "social";
   /** Output aspect ratio (W:H), e.g. "1:1", "16:9", "7:5" */
   socialRatio?: string;
 }
@@ -115,21 +106,3 @@ export interface CropRect {
   width: number;
   height: number;
 }
-
-/**
- * Known social-canvas heights for a 1080-wide canvas.
- * Unknown "W:H" pairs are computed as round(1080 × H / W).
- */
-export const SOCIAL_RATIO_HEIGHTS: Record<string, number> = {
-  "1:1": 1080,
-  "4:5": 1350,
-  "5:4": 864,
-  "3:4": 1440,
-  "4:3": 810,
-  "16:9": 608,
-  "9:16": 1920,
-  "21:9": 463,
-  "9:21": 2520,
-  "1.91:1": 565,
-  "1:1.91": 2063,
-};

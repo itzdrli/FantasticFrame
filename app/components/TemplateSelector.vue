@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { usePhotoStore } from "~/composables/usePhotoStore";
-import { useTemplate } from "~/composables/useTemplate";
+import { getResolvedConfig } from "~/composables/useTemplate";
 
 const photoStore = usePhotoStore();
-const { getResolvedConfig } = useTemplate();
 
 const selectedPhoto = computed(() => photoStore.selectedPhoto);
 

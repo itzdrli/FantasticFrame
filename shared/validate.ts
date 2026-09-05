@@ -6,14 +6,12 @@
  * so every field is type-checked. Optional fields may be absent.
  */
 
-const CANVAS_MODES = ["original", "fixed", "social"] as const;
+const CANVAS_MODES = ["original", "social"] as const;
 const INFO_LAYOUTS = ["grid", "list", "horizontal"] as const;
 const LOGO_POSITIONS = ["left", "center", "right"] as const;
-const SOCIAL_PRESETS = ["instagram"] as const;
 
 const STRING_FIELDS = [
   "backgroundColor",
-  "backgroundGradient",
   "logoText",
   "logoImageUrl",
   "fontFamily",
@@ -23,18 +21,13 @@ const STRING_FIELDS = [
 
 const NUMERIC_FIELDS = [
   "borderRadius",
-  "photoScale",
   "paddingTop",
   "paddingBottom",
   "paddingHorizontal",
   "fontSize",
   "modelFontSize",
-  "canvasWidth",
-  "canvasHeight",
   "logoScale",
   "logoAspect",
-  "logoWidth",
-  "logoHeight",
 ] as const;
 
 const BOOLEAN_FIELDS = ["showLogo"] as const;
@@ -71,7 +64,6 @@ export function validateTemplateConfig(value: unknown): ValidationResult {
   inList(CANVAS_MODES)(cfg.canvasMode, "canvasMode");
   inList(INFO_LAYOUTS)(cfg.infoLayout, "infoLayout");
   inList(LOGO_POSITIONS)(cfg.logoPosition, "logoPosition");
-  inList(SOCIAL_PRESETS)(cfg.socialPreset, "socialPreset");
 
   const vf = cfg.visibleFields;
   if (vf !== undefined) {

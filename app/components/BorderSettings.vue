@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { usePhotoStore } from "~/composables/usePhotoStore";
-import { useTemplate } from "~/composables/useTemplate";
+import { getResolvedConfig } from "~/composables/useTemplate";
 import { socialCanvasDims } from "~~/shared/render";
 import type { TemplateConfig } from "~/types";
 
 const photoStore = usePhotoStore();
-const { getResolvedConfig } = useTemplate();
 const { t } = useI18n();
 
 const selectedPhoto = computed(() => photoStore.selectedPhoto);
@@ -388,7 +387,6 @@ function setCanvasMode(mode: "original" | "social") {
   if (mode === "social") {
     photoStore.updatePhotoOverrides(selectedPhoto.value.id, {
       canvasMode: "social",
-      socialPreset: "instagram",
     });
   } else {
     photoStore.updatePhotoOverrides(selectedPhoto.value.id, {

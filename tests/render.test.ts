@@ -12,7 +12,6 @@ import type { RenderPayload } from "../shared/types";
 const baseCfg: RenderPayload["templateConfig"] = {
   borderRadius: 0,
   backgroundColor: "#FFFFFF",
-  photoScale: 1.0,
   paddingTop: 40,
   paddingBottom: 40,
   paddingHorizontal: 40,
@@ -130,7 +129,6 @@ describe("buildRenderTree", () => {
       templateConfig: {
         ...baseCfg,
         canvasMode: "social",
-        socialPreset: "instagram",
         socialRatio: "4:5",
       },
       photoWidth: 4000,
@@ -145,7 +143,6 @@ describe("buildRenderTree", () => {
       templateConfig: {
         ...baseCfg,
         canvasMode: "social",
-        socialPreset: "instagram",
         socialRatio: "7:5",
       },
       photoWidth: 4000,
@@ -160,7 +157,6 @@ describe("buildRenderTree", () => {
       templateConfig: {
         ...baseCfg,
         canvasMode: "social",
-        socialPreset: "instagram",
         socialRatio: "x:y",
       },
       photoWidth: 4000,
