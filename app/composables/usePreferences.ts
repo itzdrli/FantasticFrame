@@ -48,6 +48,22 @@ const LOCALE_KEY = "ff:locale";
 export const SUPPORTED_LOCALES = ["en", "zh-CN"] as const;
 export type LocaleCode = (typeof SUPPORTED_LOCALES)[number];
 
+/**
+ * The active theme — module-level so every usePreferences() consumer shares
+ * one source of truth. Seeded from `<html data-theme>` on the client: the
+ * pre-paint inline script (nuxt.config) already applied the saved theme there
+ * before this module runs, so the UI indicator matches what is rendered
+ * without re-reading localStorage. Server markup always starts at the nord
+ * default (the theme menu is client-only, so no hydration concern).
+ */
+const themeId = ref<ThemeId>(import.meta.client ? (readAppliedTheme() ?? "nord") : "nord");
+
+function readAppliedTheme(): ThemeId | null {
+  const applied = document.documentElement.dataset.theme;
+  if (!applied) return null;
+  return THEME_LIST.some((t) => t.id === applied) ? (applied as ThemeId) : null;
+}
+
 function safeWrite(key: string, value: string) {
   try {
     localStorage.setItem(key, value);
@@ -58,9 +74,6 @@ function safeWrite(key: string, value: string) {
 
 export function usePreferences() {
   const { locale, setLocale } = useI18n();
-
-  /** The active theme id (defaults to nord until a saved value is applied) */
-  const themeId = ref<ThemeId>("nord");
 
   const localeCode = computed<LocaleCode>({
     get: () => (locale.value === "zh-CN" ? "zh-CN" : "en"),
