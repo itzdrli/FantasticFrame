@@ -48,6 +48,12 @@ function buildExportFilename(originalName: string, ext: string): string {
   return originalName.replace(/\.[^.]+$/, "") + "." + ext;
 }
 
+/** Message from an Error or a $fetch error (server message lives in `data.message`) */
+const errorMessage = (err: unknown, fallback: string): string => {
+  const e = err as { data?: { message?: string }; message?: string } | null;
+  return e?.data?.message || e?.message || fallback;
+};
+
 export const useImageRender = () => {
   const isRendering = ref(false);
   const error = ref<string | null>(null);
@@ -93,8 +99,8 @@ export const useImageRender = () => {
     error.value = null;
     try {
       return await _renderOne(payload);
-    } catch (err: any) {
-      error.value = err.message || "Render failed";
+    } catch (err) {
+      error.value = errorMessage(err, "Render failed");
       console.error("Render error:", err);
       return null;
     } finally {
@@ -136,8 +142,8 @@ export const useImageRender = () => {
         width: response.width,
         height: response.height,
       };
-    } catch (err: any) {
-      error.value = err?.data?.message || err?.message || "Render failed";
+    } catch (err) {
+      error.value = errorMessage(err, "Render failed");
       console.error("Render API error:", err);
       return null;
     }
@@ -315,7 +321,13 @@ export const useImageRender = () => {
         body: { items: finalItems },
       });
 
-      let status: { status: string; total: number; done: number; failed: number };
+      let status: {
+        status: string;
+        total: number;
+        done: number;
+        failed: number;
+        errors?: { filename: string; message: string }[];
+      };
       do {
         await new Promise((r) => setTimeout(r, 300));
         status = await $fetch(`/api/render/batch/status?jobId=${jobId}`);
@@ -331,7 +343,7 @@ export const useImageRender = () => {
       if (status.status === "error") {
         // All items failed — there is no zip to download. Surface the first
         // server-side error instead of handing the user an empty archive.
-        const detail = (status as any).errors?.[0]?.message as string | undefined;
+        const detail = status.errors?.[0]?.message;
         throw new Error(detail || "Batch render failed on server — no files were produced");
       }
       if (status.status !== "done") {
@@ -359,8 +371,8 @@ export const useImageRender = () => {
       const success = Number(res.headers.get("x-ff-export-success")) || status.done;
       const failed = Number(res.headers.get("x-ff-export-failed")) || status.failed;
       return { success, failed };
-    } catch (err: any) {
-      error.value = err?.data?.message || err?.message || "Batch export failed";
+    } catch (err) {
+      error.value = errorMessage(err, "Batch export failed");
       console.error("Batch export error:", err);
       return { success: 0, failed: items.length };
     } finally {

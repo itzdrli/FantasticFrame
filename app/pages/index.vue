@@ -347,12 +347,11 @@ const batchExportDisabled = computed(
       <main class="flex-1 flex flex-col relative overflow-hidden bg-nord-0">
         <!-- Preview Area -->
         <div
-          class="flex-1 relative overflow-auto flex items-center justify-center p-8 bg-[repeating-conic-gradient(var(--color-nord-1)_0_25%,var(--color-nord-0)_0_50%)] bg-[length:24px_24px]"
+          class="flex-1 relative overflow-hidden flex items-center justify-center p-8 bg-[repeating-conic-gradient(var(--color-nord-1)_0_25%,var(--color-nord-0)_0_50%)] bg-[length:24px_24px]"
         >
-          <div
-            v-if="photoStore.selectedPhoto"
-            class="max-w-full max-h-full flex items-center justify-center"
-          >
+          <!-- PreviewPanel is its own pan/zoom viewport: it fills the area and
+               fits the canvas to the measured size, so large photos never overflow -->
+          <div v-if="photoStore.selectedPhoto" class="absolute inset-0">
             <PreviewPanel />
           </div>
           <div

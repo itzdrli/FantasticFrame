@@ -6,7 +6,14 @@
  * (PreviewPanel) and the rasterizer share one source of truth.
  */
 
-import type { CropRect, RenderPayload, RenderTreeResult, TemplateConfig } from "./types";
+import type {
+  CropRect,
+  ExifData,
+  RenderNode,
+  RenderPayload,
+  RenderTreeResult,
+  TemplateConfig,
+} from "./types";
 
 /**
  * Rounds a float for display and strips trailing zeros — EXIF stores values
@@ -18,7 +25,7 @@ const fmtNum = (n: number, maxDecimals = 2): string => {
   return String(parseFloat(n.toFixed(maxDecimals)));
 };
 
-export const formatExif = (data: any, field: string): string => {
+export const formatExif = (data: ExifData | null | undefined, field: string): string => {
   if (!data) return "";
   switch (field) {
     case "fNumber":
@@ -55,7 +62,7 @@ export const formatExif = (data: any, field: string): string => {
         ? `${Number(data.latitude).toFixed(6)}, ${Number(data.longitude).toFixed(6)}`
         : "";
     default:
-      return data[field] || "";
+      return String((data as Record<string, unknown>)[field] || "");
   }
 };
 
@@ -396,7 +403,7 @@ export const buildRenderTree = (payload: RenderPayload): RenderTreeResult => {
   const boxW = useCover ? Math.round(availW) : Math.round(imgW);
   const boxH = useCover ? Math.round(availH) : Math.round(imgH);
 
-  const children: any[] = [];
+  const children: RenderNode[] = [];
 
   const photoNode = (() => {
     if (!useCover) {
@@ -469,7 +476,7 @@ export const buildRenderTree = (payload: RenderPayload): RenderTreeResult => {
   });
 
   if (hasLogo || hasExif) {
-    const footerChildren: any[] = [];
+    const footerChildren: RenderNode[] = [];
     const mkSpacer = () => ({ type: "container" as const, style: { flex: 1 } });
 
     // Build logo node: image or text
@@ -504,7 +511,7 @@ export const buildRenderTree = (payload: RenderPayload): RenderTreeResult => {
       },
     });
 
-    let exifNode: any;
+    let exifNode: RenderNode;
     if (infoLayout === "list") {
       exifNode = {
         type: "container",

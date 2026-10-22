@@ -91,8 +91,11 @@ export interface RenderPayload {
   fonts?: string[];
 }
 
+/** A takumi node (container/text/image); its shape is owned by takumi-js */
+export type RenderNode = Record<string, any>;
+
 export interface RenderTreeResult {
-  nodeTree: Record<string, any>;
+  nodeTree: RenderNode;
   width: number;
   height: number;
   format: ExportFormat;

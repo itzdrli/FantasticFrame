@@ -143,7 +143,12 @@
     "zoomOut": "Zoom out",
     "zoomIn": "Zoom in",
     "reset": "Reset",
-    "resetCrop": "Reset zoom and position"
+    "resetCrop": "Reset zoom and position",
+    "viewZoomIn": "Zoom in canvas",
+    "viewZoomOut": "Zoom out canvas",
+    "fitView": "Fit view",
+    "fitViewTitle": "Fit the canvas to the workspace (or double-click the background)",
+    "viewHint": "Scroll to zoom, drag to pan (Ctrl/⌘ + scroll over the photo)"
   },
   "appearance": {
     "sectionTitle": "Appearance",
