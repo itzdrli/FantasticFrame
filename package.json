@@ -3,8 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "nuxt typecheck && nuxt build && bun scripts/postbuild.mjs",
-    "dev": "nuxt dev",
+    "build": "bun scripts/fetch-fonts.mjs && nuxt typecheck && nuxt build && bun scripts/postbuild.mjs",
+    "dev": "bun scripts/fetch-fonts.mjs && nuxt dev",
+    "fonts": "bun scripts/fetch-fonts.mjs",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",

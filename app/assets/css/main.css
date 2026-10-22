@@ -197,3 +197,39 @@ body {
   transform: scale(0.95);
   opacity: 0;
 }
+
+/*
+ * Phones: the drawers are in-flow bottom sheets (see index.vue), so they
+ * slide up instead of sideways, and form controls get touch-sized hit areas.
+ */
+@media (max-width: 767px) {
+  .settings-drawer-enter-from,
+  .settings-drawer-leave-to,
+  .exif-drawer-enter-from,
+  .exif-drawer-leave-to {
+    transform: translateY(100%);
+  }
+
+  /* iOS Safari zooms the page when a focused input is under 16px */
+  input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  input[type="range"] {
+    height: 1.75rem;
+  }
+
+  /* Keep the sheet's last controls clear of the home indicator */
+  .sheet {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Hover-only affordances (e.g. thumbnail delete) are unreachable on touch */
+@media (hover: none) {
+  .touch-visible {
+    opacity: 1;
+  }
+}

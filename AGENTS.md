@@ -6,17 +6,21 @@ Fantastic Frame — a photo framing tool: add a border and an EXIF caption foote
 (camera, aperture, shutter, ISO, focal length, date) under photos. Templates are
 just saved configs; presets exist but everything is settable by hand.
 
-- Single export renders **client-side in the browser** via takumi-js WASM (photo
-  never leaves the device); falls back to the server render API if WASM fails.
-- Batch export uploads to the server, which renders with native takumi in worker
-  threads, zips results in memory, and drops the job after download or a 10-min
-  TTL. No disk, no DB, no accounts.
+- Single **and batch** export render **client-side in the browser** via
+  takumi-js WASM inside a Web Worker (photo never leaves the device); batch zips
+  in the browser with fflate. Only when the browser render throws does that one
+  photo fall back to `POST /api/render` (native takumi, memory only, no disk, no
+  DB, no accounts). The privacy policy at legal.itzdrli.cc (separate repo) and
+  the in-app privacy modal describe exactly this — keep them in sync if the
+  data flow changes.
+- No third-party requests at runtime: fonts are self-hosted, emoji come from the
+  loaded fonts (`emoji: "from-font"`), CSP is `default-src 'self'`.
 - Hosted at ff.itzdrli.cc; server in Germany (GDPR).
 
 ## Stack
 
 - Nuxt 4 / Vue 3 / Pinia / TypeScript
-- Tailwind v4 (Nord palette), fonts loaded via Google Fonts in `nuxt.config.ts`
+- Tailwind v4 (Nord palette), Google fonts self-hosted (see Fonts below)
 - Rendering: takumi-js (WASM in browser, native on server); `@takumi-rs` backend
 - EXIF parsed by exifr; zips via fflate
 - Package manager: **bun**; runtime: Bun (nitro preset `bun`)
@@ -47,33 +51,42 @@ Always run `bun run lint`, `bun run fmt:check`, `bun run test` and
   `TypeSettings`, `ExifPanel`, `ColorPicker`
 - `app/composables/`
   - `usePhotoStore.ts` — Pinia store: photo list, selection, per-photo template
-    overrides, crop state, export options
+    overrides, crop state, export options. Photos hold a `File` + object URL
+    (never base64); `removePhoto`/`clearAll` revoke the URLs.
+  - `useIsMobile.ts` — `<768px` flag; below it the settings/EXIF drawers are
+    in-flow bottom sheets (one open at a time, closed by default)
   - `useTemplate.ts` — `DEFAULT_TEMPLATE_CONFIG`, `PRESET_TEMPLATES` (classic,
     dark, minimal, film-style, card-style, nord), `getResolvedConfig()`
-  - `useImageRender.ts` — client WASM render, server-side fallback, single save,
-    `batchExport()` (server job + zip download)
+  - `useImageRender.ts` — render orchestration (worker → server fallback),
+    single save, `batchExport()` (browser zip, one photo at a time)
   - `useExifReader.ts` — exifr-based EXIF extraction
-- `app/types/index.ts` — app-only types (`Photo` with `dataUrl` + `thumbUrl`,
+- `app/utils/browserRender.ts` — `renderInBrowser()`: takumi WASM render shared
+  by the worker and the main-thread fallback; the photo goes in via takumi's
+  `images` option (no base64). `app/workers/render.worker.ts` +
+  `app/utils/renderWorker.ts` run it off the main thread.
+- `app/types/index.ts` — app-only types (`Photo` with `file` + `url` + `thumbUrl`,
   `RenderResponse`) plus re-exports of the shared types
 - `shared/types.ts` — canonical shared types (`TemplateConfig`, `ExifData`,
   `PhotoCrop`, `RenderPayload`, …). `app/types/index.ts` re-exports them so app
   code keeps importing from `~/types`.
 - `shared/validate.ts` — hand-rolled `validateTemplateConfig()` used by the
-  render/batch endpoints to reject malformed configs with a clear 400.
+  render endpoint to reject malformed configs with a clear 400. Also bounds
+  sizes/ratios and only allows `data:image/` logos (the renderer fetches any
+  http(s) image `src` itself → SSRF otherwise).
 - `shared/render.ts` — **the heart of the project**. `buildRenderTree()` builds
   the takumi render node tree from a config; shared verbatim between browser
   (WASM) and server (native). Types come from `shared/types.ts`. Contains
   `formatExif()`, `coverCropRect()` (cover crop/zoom geometry), and the
   footer/canvas layout math (`estimateFooterLayout`, `computeCanvasDims`,
   `layoutScaleFactor`) that the live preview also uses.
-- `server/api/render.post.ts` — single-image server render endpoint
-- `server/api/render/batch.post.ts`, `batch/status.get.ts`, `batch/download.get.ts`
-  — batch job lifecycle (create → poll status → download zip)
-- `server/utils/batchRender.ts` — in-memory job store: `createBatchJob`, `getJob`,
-  `releaseJob`, 10-min TTL purge (every access + 60s timer), `MAX_JOBS` cap
-- `shared/limits.ts` — size caps + `estimateBase64Bytes`, shared by the server
-  (enforcement) and the client (pre-flight batch warnings)
-- `shared/mapLimit.ts` — bounded-concurrency mapper (import + batch render)
+- `server/api/render.post.ts` — fallback render endpoint: rate limit + render
+  slots (`server/utils/guard.ts`), header-sniffed pixel caps
+  (`shared/imageSize.ts`), generic 500s
+- `shared/limits.ts` — byte/pixel caps + `estimateBase64Bytes` (server enforcement)
+- `shared/fonts.ts` / `shared/fontLoader.ts` — font list (single source of
+  truth), `knownFamiliesIn()`, and `loadExportFonts()` which builds takumi
+  `FontLoader`s (lazy, unicode-range sliced) from our own `/fonts/google/`
+- `shared/mapLimit.ts` — bounded-concurrency mapper (photo import)
 - `server/utils/limits.ts` — capped body reader (h3 has no body limit); the
   render endpoints reject oversized uploads with a clear 413
 - `scripts/postbuild.mjs` — overlays takumi-js / @takumi-rs over nitro's
@@ -95,7 +108,11 @@ Always run `bun run lint`, `bun run fmt:check`, `bun run test` and
   there — never declare a duplicate interface in a component/composable.
 - No comments unless they add value; the codebase uses them heavily for
   rationale, follow that style.
-- Fonts come from Google Fonts (see `nuxt.config.ts`) — new font families used
-  in templates must be added there.
+- Fonts: takumi does NOT auto-load named families — any family not registered
+  renders in the default font. Google families live in `GOOGLE_FONTS`
+  (`shared/fonts.ts`); `scripts/fetch-fonts.mjs` downloads them into
+  git-ignored `public/fonts/google/` (runs in `dev`/`build`/Docker). A new
+  template font must be added to that list; LXGW WenKai is committed under
+  `public/fonts/`.
 - The Dockerfile is multi-stage: it builds `.output/` in a build stage and
   copies it into a runtime-only image.

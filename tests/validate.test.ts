@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import { validateTemplateConfig } from "../shared/validate";
-import { isAllowedFontPath } from "../shared/fonts";
 import { estimateBase64Bytes } from "../shared/limits";
 
 const fullConfig = {
@@ -52,6 +51,31 @@ describe("validateTemplateConfig", () => {
     expect(validateTemplateConfig({ ...fullConfig, logoPosition: "top" }).valid).toBe(false);
   });
 
+  it("rejects remote logo URLs (the renderer would fetch them: SSRF)", () => {
+    for (const url of [
+      "http://169.254.169.254/latest/meta-data",
+      "https://example.com/logo.png",
+      "file:///etc/passwd",
+      "//evil.com/x.png",
+    ]) {
+      expect(validateTemplateConfig({ ...fullConfig, logoImageUrl: url }).valid).toBe(false);
+    }
+    expect(validateTemplateConfig({ ...fullConfig, logoImageUrl: "" }).valid).toBe(true);
+    expect(
+      validateTemplateConfig({ ...fullConfig, logoImageUrl: "data:image/svg+xml;base64,PHN2Zz4=" })
+        .valid,
+    ).toBe(true);
+  });
+
+  it("rejects absurd sizes and ratios that would blow up the canvas", () => {
+    expect(validateTemplateConfig({ ...fullConfig, paddingTop: 1e9 }).valid).toBe(false);
+    expect(validateTemplateConfig({ ...fullConfig, socialRatio: "1:99999" }).valid).toBe(false);
+    expect(validateTemplateConfig({ ...fullConfig, socialRatio: "1.5:1" }).valid).toBe(false);
+    expect(validateTemplateConfig({ ...fullConfig, fontFamily: "x".repeat(500) }).valid).toBe(
+      false,
+    );
+  });
+
   it("rejects non-object configs", () => {
     expect(validateTemplateConfig(null).valid).toBe(false);
     expect(validateTemplateConfig(undefined).valid).toBe(false);
@@ -68,23 +92,5 @@ describe("estimateBase64Bytes", () => {
 
   it("handles bare base64 without a data URL prefix", () => {
     expect(estimateBase64Bytes("AAAA")).toBe(3);
-  });
-});
-
-describe("isAllowedFontPath", () => {
-  it("accepts self-hosted font paths", () => {
-    expect(isAllowedFontPath("/fonts/LXGWWenKai-Regular.ttf")).toBe(true);
-    expect(isAllowedFontPath("/fonts/misans/regular/MiSans.woff2")).toBe(true);
-  });
-  it.each([
-    "http://169.254.169.254/x.ttf",
-    "//evil.com/fonts/a.ttf",
-    "/fonts/../etc/passwd.ttf",
-    "/other/a.ttf",
-    "fonts/a.ttf",
-    "/fonts/a.txt",
-    42,
-  ])("rejects %s", (p) => {
-    expect(isAllowedFontPath(p)).toBe(false);
   });
 });

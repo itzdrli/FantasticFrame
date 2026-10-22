@@ -18,13 +18,13 @@ function onZoomInput(e: Event) {
 <template>
   <!-- Crop + view toolbar -->
   <div
-    class="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 text-xs text-nord-6 bg-nord-0/85 backdrop-blur border border-nord-2 rounded-lg px-2 py-1.5 shadow-lg cursor-default whitespace-nowrap"
+    class="absolute bottom-2 md:bottom-3 left-1/2 -translate-x-1/2 max-w-[calc(100%-1rem)] overflow-x-auto flex items-center gap-1.5 text-xs text-nord-6 bg-nord-0/85 backdrop-blur border border-nord-2 rounded-lg px-2 py-1.5 shadow-lg cursor-default whitespace-nowrap"
     @pointerdown.stop
     @wheel.stop
     @dblclick.stop
   >
     <button
-      class="px-2.5 py-1 rounded border transition-colors"
+      class="px-2.5 py-1.5 md:py-1 shrink-0 rounded border transition-colors"
       :class="
         isCover
           ? 'bg-nord-8 text-nord-0 font-medium border-nord-8'
@@ -36,7 +36,7 @@ function onZoomInput(e: Event) {
       {{ $t("preview.fill") }}
     </button>
     <button
-      class="px-2.5 py-1 rounded border transition-colors"
+      class="px-2.5 py-1.5 md:py-1 shrink-0 rounded border transition-colors"
       :class="
         !isCover
           ? 'bg-nord-8 text-nord-0 font-medium border-nord-8'
@@ -50,7 +50,7 @@ function onZoomInput(e: Event) {
     <template v-if="isCover">
       <span class="w-px h-4 bg-nord-3 mx-1" />
       <button
-        class="w-6 h-6 flex items-center justify-center rounded border border-nord-3 bg-nord-1 hover:bg-nord-2 transition-colors"
+        class="w-8 h-8 md:w-6 md:h-6 flex items-center justify-center rounded border border-nord-3 bg-nord-1 hover:bg-nord-2 transition-colors"
         :title="$t('preview.zoomOut')"
         @click="emit('setZoom', cropScale - 0.25)"
       >
@@ -69,40 +69,40 @@ function onZoomInput(e: Event) {
       />
       <span class="text-[10px] text-nord-4">%</span>
       <button
-        class="w-6 h-6 flex items-center justify-center rounded border border-nord-3 bg-nord-1 hover:bg-nord-2 transition-colors"
+        class="w-8 h-8 md:w-6 md:h-6 flex items-center justify-center rounded border border-nord-3 bg-nord-1 hover:bg-nord-2 transition-colors"
         :title="$t('preview.zoomIn')"
         @click="emit('setZoom', cropScale + 0.25)"
       >
         +
       </button>
       <button
-        class="px-2.5 py-1 rounded border border-nord-3 bg-nord-1 hover:bg-nord-2 transition-colors"
+        class="px-2.5 py-1.5 md:py-1 shrink-0 rounded border border-nord-3 bg-nord-1 hover:bg-nord-2 transition-colors"
         :title="$t('preview.resetCrop')"
         @click="emit('resetCrop')"
       >
         {{ $t("preview.reset") }}
       </button>
     </template>
-    <span class="w-px h-4 bg-nord-3 mx-1" />
+    <span class="hidden md:block w-px h-4 bg-nord-3 mx-1" />
     <button
-      class="w-6 h-6 flex items-center justify-center rounded border border-nord-3 bg-nord-1 hover:bg-nord-2 transition-colors"
+      class="hidden md:flex w-6 h-6 items-center justify-center rounded border border-nord-3 bg-nord-1 hover:bg-nord-2 transition-colors"
       :title="$t('preview.viewZoomOut')"
       @click="emit('zoomView', 1 / 1.25)"
     >
       -
     </button>
-    <span class="w-12 text-center tabular-nums" :title="$t('preview.viewHint')">
+    <span class="hidden md:inline w-12 text-center tabular-nums" :title="$t('preview.viewHint')">
       {{ viewPercent }}%
     </span>
     <button
-      class="w-6 h-6 flex items-center justify-center rounded border border-nord-3 bg-nord-1 hover:bg-nord-2 transition-colors"
+      class="hidden md:flex w-6 h-6 items-center justify-center rounded border border-nord-3 bg-nord-1 hover:bg-nord-2 transition-colors"
       :title="$t('preview.viewZoomIn')"
       @click="emit('zoomView', 1.25)"
     >
       +
     </button>
     <button
-      class="px-2.5 py-1 rounded border border-nord-3 bg-nord-1 hover:bg-nord-2 transition-colors"
+      class="px-2.5 py-1.5 md:py-1 shrink-0 rounded border border-nord-3 bg-nord-1 hover:bg-nord-2 transition-colors"
       :title="$t('preview.fitViewTitle')"
       @click="emit('resetView')"
     >

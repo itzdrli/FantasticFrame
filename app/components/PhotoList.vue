@@ -65,7 +65,7 @@ const importPercent = computed(() => {
     <button
       @click="fileInput?.click()"
       :disabled="isImporting"
-      class="shrink-0 w-20 h-20 rounded-lg border-2 border-dashed border-nord-3 hover:border-nord-8 hover:bg-nord-2 transition-all flex flex-col items-center justify-center gap-1 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group"
+      class="shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-lg border-2 border-dashed border-nord-3 hover:border-nord-8 hover:bg-nord-2 transition-all flex flex-col items-center justify-center gap-1 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group"
       :title="$t('photoList.addPhoto')"
     >
       <template v-if="!isImporting">
@@ -125,7 +125,7 @@ const importPercent = computed(() => {
       <div
         v-for="photo in photoStore.photos"
         :key="photo.id"
-        class="relative group shrink-0 rounded-lg overflow-hidden cursor-pointer transition-all w-20 h-20 bg-nord-1 border border-nord-2"
+        class="relative group shrink-0 rounded-lg overflow-hidden cursor-pointer transition-all w-16 h-16 md:w-20 md:h-20 bg-nord-1 border border-nord-2"
         :class="{ 'ring-2 ring-nord-8 border-nord-8': photoStore.selectedId === photo.id }"
         @click="selectPhoto(photo.id)"
       >
@@ -134,7 +134,7 @@ const importPercent = computed(() => {
         <!-- Delete Button -->
         <button
           @click="removePhoto(photo.id, $event)"
-          class="absolute top-1 right-1 w-5 h-5 rounded-full bg-nord-11 text-nord-6 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs shadow-md z-10 hover:bg-red-500"
+          class="absolute top-0.5 right-0.5 w-6 h-6 md:top-1 md:right-1 md:w-5 md:h-5 rounded-full bg-nord-11 text-nord-6 opacity-0 touch-visible group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs shadow-md z-10 hover:bg-red-500"
         >
           &times;
         </button>

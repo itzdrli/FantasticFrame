@@ -1,9 +1,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
-import { createError } from "h3";
 import { render as takumiRender } from "takumi-js";
-import { isAllowedFontPath } from "../../shared/fonts";
+import { loadExportFonts } from "../../shared/fontLoader";
 
 /**
  * Server-side takumi render with a native-to-WASM backend fallback.
@@ -59,17 +58,19 @@ function probeBackend() {
 
 /**
  * Renders a takumi node tree — native when available, WASM otherwise.
- * `fonts` are extra font URLs (e.g. self-hosted faces); takumi fetches them
- * lazily and registers the family names read from the font files.
+ * Fonts are derived from the template's `fontFamily` and fetched from this
+ * server's own static files; emoji come from the loaded fonts, so a render
+ * never contacts a third-party host.
  */
 export async function renderServer(
   nodeTree: unknown,
   opts: { width: number; height: number; format: string; quality?: number },
-  fonts?: string[],
+  fontFamily?: string,
 ): Promise<Uint8Array> {
   const backend = await probeBackend();
   const options = backend === "wasm" ? ({ ...opts, module: getWasmBytes() } as any) : (opts as any);
-  if (fonts && fonts.length > 0) options.fonts = fonts;
+  options.emoji = "from-font";
+  options.fonts = await loadExportFonts(fontFamily, { origin: assetOrigin() });
   const buf = await takumiRender(nodeTree as any, options);
   return new Uint8Array(buf as unknown as ArrayBufferLike);
 }
@@ -82,21 +83,4 @@ export async function renderServer(
 function assetOrigin(): string {
   const port = process.env.NITRO_PORT || process.env.PORT || "3000";
   return process.env.FONT_ORIGIN || `http://127.0.0.1:${port}`;
-}
-
-/**
- * Validates client-supplied font paths and turns them into absolute URLs on
- * the server's own origin. Throws a 400 for anything but "/fonts/*" files.
- */
-export function resolveFontUrls(fonts: unknown): string[] {
-  if (fonts == null) return [];
-  if (!Array.isArray(fonts) || fonts.length > 8) {
-    throw createError({ statusCode: 400, message: "fonts must be an array of at most 8 paths" });
-  }
-  return fonts.map((p) => {
-    if (!isAllowedFontPath(p)) {
-      throw createError({ statusCode: 400, message: "fonts must be same-site /fonts/ paths" });
-    }
-    return `${assetOrigin()}${p}`;
-  });
 }

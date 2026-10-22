@@ -19,6 +19,7 @@ const {
   resetView,
   zoomViewBy,
   onViewWheel,
+  onViewPointerCapture,
   onViewPanStart,
   onViewPanMove,
   onViewPanEnd,
@@ -205,9 +206,13 @@ const footerStyle = computed(() => {
 <template>
   <div
     ref="viewportRef"
-    class="relative h-full w-full overflow-hidden select-none"
+    class="relative h-full w-full overflow-hidden select-none touch-none"
     :class="photo && templateConfig ? (viewDragging ? 'cursor-grabbing' : 'cursor-grab') : ''"
     @wheel="onViewWheel"
+    @pointerdown.capture="onViewPointerCapture"
+    @pointermove.capture="onViewPointerCapture"
+    @pointerup.capture="onViewPointerCapture"
+    @pointercancel.capture="onViewPointerCapture"
     @pointerdown="onViewPanStart"
     @pointermove="onViewPanMove"
     @pointerup="onViewPanEnd"
@@ -264,9 +269,9 @@ const footerStyle = computed(() => {
               @pointercancel="onPanEnd"
               @wheel="onWheel"
             >
-              <img :src="photo.dataUrl" :style="croppedImageStyle" draggable="false" alt="" />
+              <img :src="photo.url" :style="croppedImageStyle" draggable="false" alt="" />
             </div>
-            <img v-else :src="photo.dataUrl" :style="imageRenderStyle" />
+            <img v-else :src="photo.url" :style="imageRenderStyle" />
           </div>
 
           <!-- Footer -->

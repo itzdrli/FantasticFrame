@@ -77,6 +77,11 @@ export interface ExportOptions {
 
 /** Payload accepted by buildRenderTree / the render API */
 export interface RenderPayload {
+  /**
+   * Image source node `src`. The render API requires an image data URL; the
+   * browser renderer passes a placeholder key and supplies the bytes through
+   * takumi's `images` option instead, so no base64 copy of the photo is made.
+   */
   photoBase64: string;
   exifData?: ExifData;
   templateConfig: TemplateConfig;
@@ -84,11 +89,6 @@ export interface RenderPayload {
   photoWidth?: number;
   photoHeight?: number;
   crop?: Partial<PhotoCrop>;
-  /**
-   * Self-hosted font URLs (families outside takumi's Google catalog, e.g.
-   * LXGW WenKai). Relative paths are resolved to absolute by the server.
-   */
-  fonts?: string[];
 }
 
 /** A takumi node (container/text/image); its shape is owned by takumi-js */

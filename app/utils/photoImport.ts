@@ -32,16 +32,6 @@ export function isSupportedImage(file: File): boolean {
   return SUPPORTED_IMAGE_EXTENSIONS.includes(ext);
 }
 
-/** Reads a File as a base64 data URL. */
-export function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
 const THUMB_MAX_EDGE = 256;
 
 function makeThumb(img: HTMLImageElement, fallback: string): string {
@@ -69,7 +59,7 @@ function makeThumb(img: HTMLImageElement, fallback: string): string {
  * the import would hang forever.
  */
 function inspectImage(
-  dataUrl: string,
+  url: string,
   timeoutMs = 10_000,
 ): Promise<{ width: number; height: number; thumbUrl: string }> {
   return new Promise((resolve, reject) => {
@@ -83,28 +73,37 @@ function inspectImage(
       resolve({
         width: img.naturalWidth,
         height: img.naturalHeight,
-        thumbUrl: makeThumb(img, dataUrl),
+        thumbUrl: makeThumb(img, url),
       });
     };
     img.onerror = () => {
       clearTimeout(timer);
       reject(new Error("Image decode failed"));
     };
-    img.src = dataUrl;
+    img.src = url;
   });
 }
 
 /**
- * Builds a Photo from a file: EXIF parse and data-URL read run in parallel,
- * then the dimensions are probed from the decoded image.
+ * Builds a Photo from a file: the EXIF parse runs while the image is decoded
+ * for its dimensions and thumbnail. The file itself is only referenced (object
+ * URL), never copied into a string.
  */
 export async function createPhotoFromFile(
   file: File,
   readExif: (file: File) => Promise<ExifData>,
   style?: PhotoStyle,
 ): Promise<Photo> {
-  const [exif, dataUrl] = await Promise.all([readExif(file), fileToDataUrl(file)]);
-  const { width, height, thumbUrl } = await inspectImage(dataUrl);
+  const url = URL.createObjectURL(file);
+  let exif: ExifData;
+  let probed: Awaited<ReturnType<typeof inspectImage>>;
+  try {
+    [exif, probed] = await Promise.all([readExif(file), inspectImage(url)]);
+  } catch (err) {
+    URL.revokeObjectURL(url);
+    throw err;
+  }
+  const { width, height, thumbUrl } = probed;
   // Drop the raw exifr result before storing: it's never rendered (ExifPanel
   // uses formatExifForDisplay) and can be several KB per photo.
   const { raw: _raw, ...storedExif } = exif;
@@ -114,7 +113,8 @@ export async function createPhotoFromFile(
     fileName: file.name,
     fileSize: file.size,
     mimeType: file.type,
-    dataUrl,
+    file,
+    url,
     thumbUrl,
     width,
     height,

@@ -41,6 +41,23 @@ export default defineNuxtConfig({
 
   nitro: {
     preset: "bun",
+    // Everything the page loads is same-origin (fonts, WASM, workers, blob:
+    // previews), so the policy can be strict. 'unsafe-inline' is needed for
+    // Nuxt's inline payload/theme scripts; 'wasm-unsafe-eval' for takumi WASM.
+    routeRules: import.meta.dev
+      ? {}
+      : {
+          "/**": {
+            headers: {
+              "Content-Security-Policy":
+                "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
+              "X-Content-Type-Options": "nosniff",
+              "Referrer-Policy": "no-referrer",
+              "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+              "Strict-Transport-Security": "max-age=31536000",
+            },
+          },
+        },
     rollupConfig: {
       plugins: [
         {
@@ -57,6 +74,7 @@ export default defineNuxtConfig({
   },
   app: {
     head: {
+      viewport: "width=device-width, initial-scale=1, viewport-fit=cover",
       // Apply the saved theme before first paint so the drawer/UI never
       // flashes the default Nord palette. Kept in sync with usePreferences.
       script: [
@@ -67,17 +85,11 @@ export default defineNuxtConfig({
       ],
       link: [
         {
-          rel: "preconnect",
-          href: "https://fonts.googleapis.com",
-        },
-        {
-          rel: "preconnect",
-          href: "https://fonts.gstatic.com",
-          crossorigin: "",
-        },
-        {
+          // Google families are self-hosted: scripts/fetch-fonts.mjs downloads
+          // them into public/fonts/google at build time, so visitors never
+          // contact Google (see the privacy policy).
           rel: "stylesheet",
-          href: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;700&family=DM+Sans:wght@400;700&family=IBM+Plex+Mono:wght@400;700&family=IBM+Plex+Sans:wght@400;700&family=IBM+Plex+Serif:wght@400;700&family=Inter:wght@400;700&family=JetBrains+Mono:wght@400;700&family=Lora:wght@400;700&family=Noto+Sans+SC:wght@400;700&family=Noto+Serif+SC:wght@400;700&family=Outfit:wght@400;700&family=Playfair+Display:wght@400;700&family=Roboto:wght@400;700&family=Source+Sans+3:wght@400;700&family=Space+Grotesk:wght@400;700&family=ZCOOL+KuaiLe&family=ZCOOL+QingKe+HuangYou&family=ZCOOL+XiaoWei&display=swap",
+          href: "/fonts/google/fonts.css",
         },
         {
           // MiSans — sliced web font for the UI's Chinese text (unicode-range

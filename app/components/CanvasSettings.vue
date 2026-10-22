@@ -33,8 +33,11 @@ const customW = ref<number | null>(null);
 const customH = ref<number | null>(null);
 
 const applyCustomRatio = () => {
-  if (customW.value && customH.value && customW.value > 0 && customH.value > 0) {
-    socialRatio.value = `${customW.value}:${customH.value}`;
+  // Whole numbers 1–99: the export API only accepts ratios like "4:5"
+  const w = Math.round(customW.value ?? 0);
+  const h = Math.round(customH.value ?? 0);
+  if (w > 0 && h > 0) {
+    socialRatio.value = `${Math.min(99, w)}:${Math.min(99, h)}`;
   }
 };
 

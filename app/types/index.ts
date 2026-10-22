@@ -25,9 +25,11 @@ export interface Photo {
   fileName: string;
   fileSize: number;
   mimeType: string;
-  /** Original image Base64 Data URL */
-  dataUrl: string;
-  /** JPEG thumb for the filmstrip (~256px); full `dataUrl` is for preview/export */
+  /** The original file. Kept as a Blob (not base64) so 50 photos don't cost 50 big strings */
+  file: Blob;
+  /** Object URL of `file` for the preview; revoked when the photo is removed */
+  url: string;
+  /** JPEG thumb for the filmstrip (~256px) */
   thumbUrl: string;
   width: number;
   height: number;

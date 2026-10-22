@@ -17,9 +17,9 @@
     "exportPartial": "{ok} succeeded / {fail} failed",
     "privacyModal": {
       "title": "Privacy Notice",
-      "p1": "By default, your photos are processed entirely in your browser. Single export is rendered locally via WASM and never leaves your device.",
-      "p2": "Batch export sends photos to our server for rendering. They are kept only in server memory, never written to disk, never stored in a database. Tasks auto-expire after 10 minutes and memory is released immediately after download.",
-      "p3": "We do not collect accounts, cookies, ads, or any tracking data. No copies of your photos are retained. Server location: Germany, EU (GDPR).",
+      "p1": "Your photos are processed entirely in your browser. Single and batch exports are rendered locally via WASM and never leave your device.",
+      "p2": "Only if your browser cannot render a photo does that one photo go to our server as a fallback. It is kept in server memory for the duration of the request, never written to disk or a database, and discarded right after.",
+      "p3": "No accounts, cookies, ads or tracking, and no third-party requests: fonts are self-hosted. Your theme and language are saved in your browser only. Server location: Germany, EU (GDPR).",
       "fullPolicy": "View Full Policy"
     }
   },

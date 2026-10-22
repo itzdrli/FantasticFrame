@@ -14,6 +14,7 @@ export const usePreviewViewport = (
   // whole canvas on top of that fit. Margins keep the fitted canvas off the
   // edges and clear of the floating toolbar at the bottom.
   const FIT_MARGIN = 32;
+  const FIT_MARGIN_COMPACT = 12;
   const TOOLBAR_SPACE = 56;
   const VIEW_ZOOM_MIN = 0.1;
   const VIEW_ZOOM_MAX = 20;
@@ -52,8 +53,10 @@ export const usePreviewViewport = (
     if (!w || !h) return 1;
     const vw = viewportSize.value.w || 1100;
     const vh = viewportSize.value.h || 760;
-    const availW = Math.max(50, vw - FIT_MARGIN * 2);
-    const availH = Math.max(50, vh - FIT_MARGIN * 2 - TOOLBAR_SPACE);
+    // Phones have no room to spare: the sheet already shrank the viewport
+    const margin = vw < 640 ? FIT_MARGIN_COMPACT : FIT_MARGIN;
+    const availW = Math.max(50, vw - margin * 2);
+    const availH = Math.max(50, vh - margin * 2 - TOOLBAR_SPACE);
     return Math.min(availW / w, availH / h, 1);
   });
 
@@ -109,11 +112,66 @@ export const usePreviewViewport = (
     );
   }
 
+  // Two-finger pinch/pan. Handled in the CAPTURE phase so it still works when
+  // the first finger landed on the photo (which captures its pointer for the
+  // cover-crop drag): while a pinch is live, moves are swallowed here and the
+  // crop drag never sees them.
+  const touches = new Map<number, { x: number; y: number }>();
+  let pinch: { dist: number; mx: number; my: number } | null = null;
+  // After a pinch, the remaining finger must not resume a stale drag
+  let swallowUntilLift = false;
+
+  const touchPair = () => {
+    const [a, b] = [...touches.values()];
+    return {
+      dist: Math.hypot(a!.x - b!.x, a!.y - b!.y),
+      mx: (a!.x + b!.x) / 2,
+      my: (a!.y + b!.y) / 2,
+    };
+  };
+
+  function onViewPointerCapture(e: PointerEvent) {
+    if (e.pointerType !== "touch" || !hasPhoto.value || !viewportRef.value) return;
+    const rect = viewportRef.value.getBoundingClientRect();
+    const local = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+
+    if (e.type === "pointerdown") {
+      touches.set(e.pointerId, local);
+      if (touches.size === 2) {
+        viewDragging.value = false;
+        pinch = touchPair();
+        swallowUntilLift = true;
+      }
+    } else if (e.type === "pointermove" && touches.has(e.pointerId)) {
+      touches.set(e.pointerId, local);
+      if (pinch && touches.size === 2) {
+        const next = touchPair();
+        const c = canvasCenter();
+        const k =
+          clamp((viewZoom.value * next.dist) / pinch.dist, VIEW_ZOOM_MIN, VIEW_ZOOM_MAX) /
+          viewZoom.value;
+        // Zoom about the gesture midpoint, then follow the midpoint's drift
+        viewPan.value = {
+          x: viewPan.value.x + (pinch.mx - c.x) * (1 - k) + (next.mx - pinch.mx),
+          y: viewPan.value.y + (pinch.my - c.y) * (1 - k) + (next.my - pinch.my),
+        };
+        viewZoom.value = viewZoom.value * k;
+        pinch = next;
+      }
+    } else if (e.type === "pointerup" || e.type === "pointercancel") {
+      touches.delete(e.pointerId);
+      if (touches.size < 2) pinch = null;
+      if (touches.size === 0) swallowUntilLift = false;
+    }
+
+    if (e.type === "pointermove" && (pinch || swallowUntilLift)) e.stopPropagation();
+  }
+
   const viewDragging = ref(false);
   const viewDragStart = { x: 0, y: 0, px: 0, py: 0 };
 
   function onViewPanStart(e: PointerEvent) {
-    if (!hasPhoto.value || (e.button !== 0 && e.button !== 1)) return;
+    if (!hasPhoto.value || pinch || (e.button !== 0 && e.button !== 1)) return;
     e.preventDefault();
     viewDragging.value = true;
     viewDragStart.x = e.clientX;
@@ -124,7 +182,7 @@ export const usePreviewViewport = (
   }
 
   function onViewPanMove(e: PointerEvent) {
-    if (!viewDragging.value) return;
+    if (!viewDragging.value || pinch) return;
     viewPan.value = {
       x: viewDragStart.px + (e.clientX - viewDragStart.x),
       y: viewDragStart.py + (e.clientY - viewDragStart.y),
@@ -158,6 +216,7 @@ export const usePreviewViewport = (
     resetView,
     zoomViewBy,
     onViewWheel,
+    onViewPointerCapture,
     onViewPanStart,
     onViewPanMove,
     onViewPanEnd,

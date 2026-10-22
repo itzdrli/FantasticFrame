@@ -2,6 +2,7 @@
 import { usePhotoStore } from "~/composables/usePhotoStore";
 import { useImageRender } from "~/composables/useImageRender";
 import { getResolvedConfig } from "~/composables/useTemplate";
+import { useIsMobile } from "~/composables/useIsMobile";
 
 useHead({
   title: "FantasticFrame",
@@ -20,19 +21,27 @@ const {
   batchProgress,
 } = useImageRender();
 
-// Drawers stay hidden until the first photo is uploaded
+// Drawers stay hidden until the first photo is uploaded. On phones they are
+// bottom sheets that share the screen with the preview, so only one is open at
+// a time and neither opens by itself (it would hide the photo being edited).
 const showSettings = ref(false);
 const showExif = ref(false);
+const isMobile = useIsMobile();
 
 watch(
   () => photoStore.hasPhotos,
   (hasPhotos) => {
-    if (hasPhotos) {
-      showSettings.value = true;
-      showExif.value = true;
-    }
+    if (!hasPhotos) return;
+    showSettings.value = !isMobile.value;
+    showExif.value = !isMobile.value;
   },
 );
+watch(showSettings, (open) => {
+  if (open && isMobile.value) showExif.value = false;
+});
+watch(showExif, (open) => {
+  if (open && isMobile.value) showSettings.value = false;
+});
 
 // ── Privacy modal ───────────────────────────────────────────────────────────
 const showPrivacyModal = ref(false);
@@ -70,7 +79,7 @@ async function handleExport() {
   if (!photo) return;
   const templateConfig = getResolvedConfig(photo.templateId, photo.templateOverrides);
   const res = await renderImage({
-    photoBase64: photo.dataUrl,
+    photo: photo.file,
     exifData: photo.exif,
     templateConfig,
     photoWidth: photo.width,
@@ -89,8 +98,8 @@ async function handleBatchExport() {
   showBatchResultToast.value = false;
 
   const items = photoStore.photos.map((photo) => ({
-    payload: {
-      photoBase64: photo.dataUrl,
+    input: {
+      photo: photo.file,
       exifData: photo.exif,
       templateConfig: getResolvedConfig(photo.templateId, photo.templateOverrides),
       photoWidth: photo.width,
@@ -129,59 +138,20 @@ const batchExportDisabled = computed(
 </script>
 
 <template>
-  <div class="h-screen w-screen flex flex-col overflow-hidden bg-nord-0 text-nord-4">
+  <div class="h-dvh w-full flex flex-col overflow-hidden bg-nord-0 text-nord-4">
     <!-- Top Nav -->
     <header
-      class="h-16 shrink-0 flex items-center justify-between px-6 bg-nord-1 border-b-2 border-nord-3"
+      class="h-12 md:h-16 shrink-0 flex items-center justify-between gap-2 px-3 md:px-6 bg-nord-1 border-b-2 border-nord-3"
     >
-      <div class="flex items-center gap-3">
-        <div class="text-xl font-semibold text-nord-6 tracking-tight">Fantastic Frame</div>
-        <button
-          @click="showSettings = !showSettings"
-          class="px-3 py-1.5 text-xs rounded shadow transition-colors flex items-center gap-1.5"
-          :class="
-            showSettings
-              ? 'bg-nord-8 text-nord-0 font-medium'
-              : 'bg-nord-2 text-nord-4 hover:bg-nord-3'
-          "
-        >
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-            />
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-            />
-          </svg>
-          {{ $t("app.settings") }}
-        </button>
-        <button
-          @click="showExif = !showExif"
-          class="px-3 py-1.5 text-xs rounded shadow transition-colors flex items-center gap-1.5"
-          :class="
-            showExif ? 'bg-nord-8 text-nord-0 font-medium' : 'bg-nord-2 text-nord-4 hover:bg-nord-3'
-          "
-        >
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 17h6m-6-4h6m-6-4h6M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"
-            />
-          </svg>
-          {{ $t("app.exif") }}
-        </button>
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="text-base md:text-xl font-semibold text-nord-6 tracking-tight truncate">
+          Fantastic Frame
+        </div>
+        <PanelTabs v-model:settings="showSettings" v-model:exif="showExif" class="hidden md:flex" />
       </div>
 
       <!-- Top-right export area -->
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2 shrink-0">
         <!-- Appearance: theme + language (app-level prefs, not per-photo) -->
         <AppearanceMenu />
 
@@ -190,7 +160,7 @@ const batchExportDisabled = computed(
           href="https://github.com/itzdrli/FantasticFrame"
           target="_blank"
           rel="noopener noreferrer"
-          class="p-2 bg-nord-2 text-nord-4 rounded shadow hover:bg-nord-3 hover:text-nord-6 transition-colors flex items-center justify-center"
+          class="hidden sm:flex p-2 bg-nord-2 text-nord-4 rounded shadow hover:bg-nord-3 hover:text-nord-6 transition-colors items-center justify-center"
           title="View on GitHub"
         >
           <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -202,12 +172,13 @@ const batchExportDisabled = computed(
           </svg>
         </a>
 
-        <!-- Batch export button -->
+        <!-- Batch export button (icon-only on phones; the count/progress is in the title) -->
         <button
           @click="handleBatchExport"
           :disabled="batchExportDisabled"
-          class="px-4 py-2 bg-nord-3 text-nord-6 font-medium rounded shadow hover:bg-nord-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 text-sm"
+          class="px-2.5 md:px-4 py-2 bg-nord-3 text-nord-6 font-medium rounded shadow hover:bg-nord-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 text-sm"
           :title="$t('app.exportAll', { n: photoStore.photos.length })"
+          :aria-label="$t('app.exportAll', { n: photoStore.photos.length })"
         >
           <svg
             v-if="!isBatchExporting"
@@ -238,17 +209,21 @@ const batchExportDisabled = computed(
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
             />
           </svg>
-          <span v-if="!isBatchExporting">{{
-            $t("app.exportAll", { n: photoStore.photos.length })
-          }}</span>
-          <span v-else>{{ $t("app.exporting", { pct: batchPercent }) }}</span>
+          <span v-if="isBatchExporting" class="md:hidden tabular-nums">{{ batchPercent }}%</span>
+          <span class="hidden md:inline">
+            {{
+              isBatchExporting
+                ? $t("app.exporting", { pct: batchPercent })
+                : $t("app.exportAll", { n: photoStore.photos.length })
+            }}
+          </span>
         </button>
 
         <!-- Single export button -->
         <button
           @click="handleExport"
           :disabled="exportButtonDisabled"
-          class="px-4 py-2 bg-nord-8 text-nord-0 font-medium rounded shadow hover:bg-nord-9 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          class="px-3 md:px-4 py-2 bg-nord-8 text-nord-0 font-medium rounded shadow hover:bg-nord-9 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
         >
           <span v-if="isRendering && !isBatchExporting">{{ $t("app.exportingSingle") }}</span>
           <span v-else>{{ $t("app.export") }}</span>
@@ -270,7 +245,7 @@ const batchExportDisabled = computed(
     <Transition name="toast">
       <div
         v-if="error"
-        class="fixed top-32 right-6 z-50 px-4 py-3 rounded-xl shadow-2xl text-sm font-medium flex items-center gap-3 border bg-nord-2 border-nord-11/60 text-nord-11"
+        class="fixed top-14 md:top-32 left-3 right-3 md:left-auto md:right-6 z-50 px-4 py-3 rounded-xl shadow-2xl text-sm font-medium flex items-center gap-3 border bg-nord-2 border-nord-11/60 text-nord-11"
         role="alert"
       >
         <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -281,7 +256,7 @@ const batchExportDisabled = computed(
             d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
           />
         </svg>
-        <span class="max-w-xs">{{ error }}</span>
+        <span class="md:max-w-xs min-w-0 break-words">{{ error }}</span>
         <button
           @click="error = null"
           class="ml-1 w-6 h-6 shrink-0 flex items-center justify-center rounded hover:bg-nord-11/20 transition-colors"
@@ -303,7 +278,7 @@ const batchExportDisabled = computed(
     <Transition name="toast">
       <div
         v-if="showBatchResultToast && batchResult"
-        class="fixed top-20 right-6 z-50 px-4 py-3 rounded-xl shadow-2xl text-sm font-medium flex items-center gap-3 border"
+        class="fixed top-14 md:top-20 left-3 right-3 md:left-auto md:right-6 z-50 px-4 py-3 rounded-xl shadow-2xl text-sm font-medium flex items-center gap-3 border"
         :class="
           batchResult.failed === 0
             ? 'bg-nord-2 border-nord-14/60 text-nord-14'
@@ -342,12 +317,12 @@ const batchExportDisabled = computed(
     </Transition>
 
     <!-- Main Content -->
-    <div class="flex-1 flex overflow-hidden">
+    <div class="flex-1 min-h-0 flex flex-col md:flex-row overflow-hidden">
       <!-- Left: Preview & Photo Strip -->
-      <main class="flex-1 flex flex-col relative overflow-hidden bg-nord-0">
+      <main class="flex-1 min-h-0 flex flex-col relative overflow-hidden bg-nord-0">
         <!-- Preview Area -->
         <div
-          class="flex-1 relative overflow-hidden flex items-center justify-center p-8 bg-[repeating-conic-gradient(var(--color-nord-1)_0_25%,var(--color-nord-0)_0_50%)] bg-[length:24px_24px]"
+          class="flex-1 min-h-0 relative overflow-hidden flex items-center justify-center p-3 md:p-8 bg-[repeating-conic-gradient(var(--color-nord-1)_0_25%,var(--color-nord-0)_0_50%)] bg-[length:24px_24px]"
         >
           <!-- PreviewPanel is its own pan/zoom viewport: it fills the area and
                fits the canvas to the measured size, so large photos never overflow -->
@@ -380,9 +355,17 @@ const batchExportDisabled = computed(
           </div>
         </div>
 
+        <!-- Phone-only panel switcher: sits between the preview and the sheet -->
+        <PanelTabs
+          v-if="photoStore.hasPhotos"
+          v-model:settings="showSettings"
+          v-model:exif="showExif"
+          class="md:hidden shrink-0 justify-center py-1.5 bg-nord-1 border-t-2 border-nord-3"
+        />
+
         <!-- Photo Strip Bottom -->
         <div
-          class="h-32 shrink-0 border-t-2 border-nord-3 bg-nord-1 flex items-center px-4 overflow-x-auto"
+          class="h-24 md:h-32 shrink-0 border-t-2 border-nord-3 bg-nord-1 flex items-center px-3 md:px-4 overflow-x-auto"
         >
           <PhotoList />
         </div>
@@ -392,13 +375,15 @@ const batchExportDisabled = computed(
       <Transition name="exif-drawer">
         <aside
           v-if="showExif"
-          class="fixed top-16 left-0 z-40 w-[380px] max-h-[calc(100vh-4rem)] bg-nord-1 border-r-2 border-b-2 border-nord-3 shadow-2xl flex flex-col rounded-br-xl overflow-hidden"
+          class="sheet shrink-0 h-[42dvh] w-full border-t-2 md:h-auto md:fixed md:top-16 md:left-0 md:z-40 md:w-[380px] md:max-h-[calc(100dvh-4rem)] bg-nord-1 border-nord-3 md:border-t-0 md:border-r-2 md:border-b-2 md:shadow-2xl flex flex-col md:rounded-br-xl overflow-y-auto md:overflow-hidden"
         >
-          <div class="p-4 flex items-center justify-between border-b border-nord-2 shrink-0">
+          <div
+            class="px-4 py-2 md:py-4 flex items-center justify-between border-b border-nord-2 shrink-0 sticky top-0 z-10 bg-nord-1 md:static"
+          >
             <span class="text-sm font-semibold text-nord-6">{{ $t("app.exifInfo") }}</span>
             <button
               @click="showExif = false"
-              class="w-7 h-7 flex items-center justify-center rounded hover:bg-nord-3 text-nord-4 hover:text-nord-6 transition-colors"
+              class="w-9 h-9 md:w-7 md:h-7 flex items-center justify-center rounded hover:bg-nord-3 text-nord-4 hover:text-nord-6 transition-colors"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -410,7 +395,7 @@ const batchExportDisabled = computed(
               </svg>
             </button>
           </div>
-          <div class="overflow-y-auto p-4">
+          <div class="md:overflow-y-auto p-4">
             <ExifPanel />
           </div>
         </aside>
@@ -420,13 +405,15 @@ const batchExportDisabled = computed(
       <Transition name="settings-drawer">
         <aside
           v-if="showSettings"
-          class="fixed top-16 right-0 bottom-0 w-[400px] z-40 bg-nord-1 border-l-2 border-nord-3 shadow-2xl flex flex-col"
+          class="sheet shrink-0 h-[42dvh] w-full border-t-2 md:h-auto md:fixed md:top-16 md:right-0 md:bottom-0 md:w-[400px] md:z-40 bg-nord-1 border-nord-3 md:border-t-0 md:border-l-2 md:shadow-2xl flex flex-col overflow-y-auto md:overflow-visible"
         >
-          <div class="p-4 flex items-center justify-between border-b border-nord-2 shrink-0">
+          <div
+            class="px-4 py-2 md:py-4 flex items-center justify-between border-b border-nord-2 shrink-0 sticky top-0 z-10 bg-nord-1 md:static"
+          >
             <span class="text-sm font-semibold text-nord-6">{{ $t("app.settings") }}</span>
             <button
               @click="showSettings = false"
-              class="w-7 h-7 flex items-center justify-center rounded hover:bg-nord-3 text-nord-4 hover:text-nord-6 transition-colors"
+              class="w-9 h-9 md:w-7 md:h-7 flex items-center justify-center rounded hover:bg-nord-3 text-nord-4 hover:text-nord-6 transition-colors"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -439,7 +426,7 @@ const batchExportDisabled = computed(
             </button>
           </div>
           <StyleSyncBar v-if="photoStore.count > 1" />
-          <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-6">
+          <div class="md:flex-1 md:overflow-y-auto p-4 flex flex-col gap-6">
             <section>
               <h3 class="text-sm font-semibold text-nord-6 uppercase tracking-wider mb-3">
                 {{ $t("template.sectionTitle") }}

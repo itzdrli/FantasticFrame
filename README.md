@@ -5,11 +5,11 @@ length, date, whichever you want to show — under your photos. A few templates
 ship built-in; each one is just a saved config, so anything you see in a preset
 can also be set by hand.
 
-Single export runs entirely in your browser through WASM, so the photo never
-leaves your device. Batch export does upload (the server renders), but it keeps
-the bytes in memory only, never writes to disk, never hits a database, and
-drops the job the moment you've downloaded the zip — or after ten minutes if
-you walk away. No accounts, no cookies, no analytics.
+Rendering — single and batch (zip) — runs entirely in your browser through
+WASM in a Web Worker, so photos never leave your device. Only if the browser
+can't render a photo does that one photo fall back to the server, which works in
+memory only and writes nothing to disk. Fonts are self-hosted (no Google Fonts
+request). No accounts, no cookies, no analytics.
 
 Hosted at [ff.itzdrli.cc](https://ff.itzdrli.cc). Full policy at
 [legal.itzdrli.cc](https://legal.itzdrli.cc); the server sits in Germany, GDPR.
@@ -24,10 +24,15 @@ docker compose up -d --build   # serves on :3000
 
 Without Docker: `bun install && bun run build && bun .output/server/index.mjs`.
 
+The Google font families are downloaded once by `scripts/fetch-fonts.mjs` into
+`public/fonts/google/` (git-ignored); `bun run dev` and `bun run build` run it
+automatically, or run `bun run fonts` yourself. Needs network access at build
+time only.
+
 Drop the Traefik labels in `docker-compose.yml` if you don't run a reverse
 proxy.
 
 ## Stack
 
 Nuxt 4 / Vue 3 / Pinia. Tailwind v4 on the Nord palette. Rendering via
-takumi-js (WASM in the browser, native on the server). EXIF parsed by exifr.
+takumi-js (WASM in the browser, native on the server fallback). EXIF parsed by exifr.

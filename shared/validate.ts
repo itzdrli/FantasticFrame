@@ -32,6 +32,12 @@ const NUMERIC_FIELDS = [
 
 const BOOLEAN_FIELDS = ["showLogo"] as const;
 
+const MAX_STRING_LEN = 200;
+/** Generous bound on any layout number (px at the 1080 base, or a percentage) */
+const MAX_LAYOUT_VALUE = 5000;
+const MAX_LOGO_DATA_URL_CHARS = 3 * 1024 * 1024;
+const SOCIAL_RATIO_RE = /^\d{1,2}:\d{1,2}$/;
+
 export type ValidationResult = { valid: true } | { valid: false; errors: string[] };
 
 export function validateTemplateConfig(value: unknown): ValidationResult {
@@ -45,11 +51,28 @@ export function validateTemplateConfig(value: unknown): ValidationResult {
     const v = cfg[f];
     if (v === undefined) continue;
     if (typeof v !== "string") errors.push(`${f} must be a string`);
+    else if (f !== "logoImageUrl" && v.length > MAX_STRING_LEN) {
+      errors.push(`${f} must be at most ${MAX_STRING_LEN} characters`);
+    }
   }
   for (const f of NUMERIC_FIELDS) {
     const v = cfg[f];
     if (v === undefined) continue;
     if (typeof v !== "number" || !Number.isFinite(v)) errors.push(`${f} must be a finite number`);
+    else if (Math.abs(v) > MAX_LAYOUT_VALUE) errors.push(`${f} is out of range`);
+  }
+
+  // The renderer fetches any http(s) image src itself, so a remote logo URL
+  // would let a caller make the server request arbitrary addresses (SSRF).
+  // The app only ever produces data URLs (uploaded / pasted logos).
+  const logo = cfg.logoImageUrl;
+  if (typeof logo === "string" && logo !== "") {
+    if (!logo.startsWith("data:image/")) errors.push("logoImageUrl must be an image data URL");
+    else if (logo.length > MAX_LOGO_DATA_URL_CHARS) errors.push("logoImageUrl is too large");
+  }
+  const ratio = cfg.socialRatio;
+  if (typeof ratio === "string" && ratio !== "" && !SOCIAL_RATIO_RE.test(ratio)) {
+    errors.push("socialRatio must look like 4:5");
   }
   for (const f of BOOLEAN_FIELDS) {
     const v = cfg[f];
@@ -67,8 +90,8 @@ export function validateTemplateConfig(value: unknown): ValidationResult {
 
   const vf = cfg.visibleFields;
   if (vf !== undefined) {
-    if (!Array.isArray(vf) || vf.some((f) => typeof f !== "string")) {
-      errors.push("visibleFields must be an array of strings");
+    if (!Array.isArray(vf) || vf.length > 20 || vf.some((f) => typeof f !== "string")) {
+      errors.push("visibleFields must be an array of at most 20 strings");
     }
   }
 

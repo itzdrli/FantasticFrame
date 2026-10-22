@@ -68,12 +68,21 @@ export const usePhotoStore = defineStore("photos", () => {
     }
   }
 
+  /** Frees the object URL(s) a photo holds so its bytes can be garbage-collected */
+  function releasePhoto(photo: Photo) {
+    URL.revokeObjectURL(photo.url);
+    if (photo.thumbUrl !== photo.url && photo.thumbUrl.startsWith("blob:")) {
+      URL.revokeObjectURL(photo.thumbUrl);
+    }
+  }
+
   /** Removes a photo */
   function removePhoto(id: string) {
     const index = photos.value.findIndex((p) => p.id === id);
     if (index === -1) return;
 
-    photos.value.splice(index, 1);
+    const [removed] = photos.value.splice(index, 1);
+    if (removed) releasePhoto(removed);
 
     // If the removed photo was selected, select a neighboring photo
     if (selectedId.value === id) {
@@ -88,6 +97,7 @@ export const usePhotoStore = defineStore("photos", () => {
 
   /** Clears all photos */
   function clearAll() {
+    photos.value.forEach(releasePhoto);
     photos.value = [];
     selectedId.value = null;
   }
