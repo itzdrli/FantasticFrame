@@ -16,13 +16,13 @@ Hosted at [ff.itzdrli.cc](https://ff.itzdrli.cc). Full policy at
 
 ## Self-host
 
-Build on the host, not in Docker — the Dockerfile is runtime-only:
+The Dockerfile is multi-stage (build, then a runtime-only image):
 
 ```bash
-bun install
-bun run build          # produces .output/
-docker compose up -d   # serves on :3000
+docker compose up -d --build   # serves on :3000
 ```
+
+Without Docker: `bun install && bun run build && bun .output/server/index.mjs`.
 
 Drop the Traefik labels in `docker-compose.yml` if you don't run a reverse
 proxy.

@@ -33,7 +33,7 @@ bun run typecheck    # nuxt typecheck (vue-tsc over app/server/shared)
 bun run lint         # oxlint .
 bun run fmt          # oxfmt
 bun run fmt:check    # oxfmt --check
-docker compose up -d # runtime-only deployment, serves .output/ on :3000
+docker compose up -d --build # multi-stage image build, serves on :3000
 ```
 
 Always run `bun run lint`, `bun run fmt:check`, `bun run test` and
@@ -97,5 +97,5 @@ Always run `bun run lint`, `bun run fmt:check`, `bun run test` and
   rationale, follow that style.
 - Fonts come from Google Fonts (see `nuxt.config.ts`) — new font families used
   in templates must be added there.
-- The docker-compose/Dockerfile is runtime-only: build on the host, mount
-  `.output/` into the image.
+- The Dockerfile is multi-stage: it builds `.output/` in a build stage and
+  copies it into a runtime-only image.

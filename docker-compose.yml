@@ -3,8 +3,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      # Requires `bun run build` on the host first — see Dockerfile for why
-      # the build happens outside Docker on this host
     container_name: fantasticframe
     restart: unless-stopped
     environment:
