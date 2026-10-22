@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { validateTemplateConfig } from "../shared/validate";
+import { isAllowedFontPath } from "../shared/fonts";
 import { estimateBase64Bytes } from "../shared/limits";
 
 const fullConfig = {
@@ -67,5 +68,23 @@ describe("estimateBase64Bytes", () => {
 
   it("handles bare base64 without a data URL prefix", () => {
     expect(estimateBase64Bytes("AAAA")).toBe(3);
+  });
+});
+
+describe("isAllowedFontPath", () => {
+  it("accepts self-hosted font paths", () => {
+    expect(isAllowedFontPath("/fonts/LXGWWenKai-Regular.ttf")).toBe(true);
+    expect(isAllowedFontPath("/fonts/misans/regular/MiSans.woff2")).toBe(true);
+  });
+  it.each([
+    "http://169.254.169.254/x.ttf",
+    "//evil.com/fonts/a.ttf",
+    "/fonts/../etc/passwd.ttf",
+    "/other/a.ttf",
+    "fonts/a.ttf",
+    "/fonts/a.txt",
+    42,
+  ])("rejects %s", (p) => {
+    expect(isAllowedFontPath(p)).toBe(false);
   });
 });

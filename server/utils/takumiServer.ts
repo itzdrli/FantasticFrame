@@ -1,7 +1,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
+import { createError } from "h3";
 import { render as takumiRender } from "takumi-js";
+import { isAllowedFontPath } from "../../shared/fonts";
 
 /**
  * Server-side takumi render with a native-to-WASM backend fallback.
@@ -72,14 +74,29 @@ export async function renderServer(
   return new Uint8Array(buf as unknown as ArrayBufferLike);
 }
 
-/** Builds the absolute URL for a local asset path ("/fonts/x.ttf") from request headers. */
-export function absolutizeAssetUrl(
-  path: string,
-  headers: Record<string, string | undefined>,
-): string {
-  if (/^https?:\/\//i.test(path)) return path;
-  if (!path.startsWith("/")) path = `/${path}`;
-  const proto = headers["x-forwarded-proto"]?.split(",")[0]?.trim() || "http";
-  const host = headers["x-forwarded-host"]?.split(",")[0]?.trim() || headers["host"] || "localhost";
-  return `${proto}://${host}${path}`;
+/**
+ * Origin the server uses to fetch its own static assets. Fixed (never derived
+ * from request headers, which are client-controlled); override with
+ * FONT_ORIGIN when the app cannot reach itself on loopback.
+ */
+function assetOrigin(): string {
+  const port = process.env.NITRO_PORT || process.env.PORT || "3000";
+  return process.env.FONT_ORIGIN || `http://127.0.0.1:${port}`;
+}
+
+/**
+ * Validates client-supplied font paths and turns them into absolute URLs on
+ * the server's own origin. Throws a 400 for anything but "/fonts/*" files.
+ */
+export function resolveFontUrls(fonts: unknown): string[] {
+  if (fonts == null) return [];
+  if (!Array.isArray(fonts) || fonts.length > 8) {
+    throw createError({ statusCode: 400, message: "fonts must be an array of at most 8 paths" });
+  }
+  return fonts.map((p) => {
+    if (!isAllowedFontPath(p)) {
+      throw createError({ statusCode: 400, message: "fonts must be same-site /fonts/ paths" });
+    }
+    return `${assetOrigin()}${p}`;
+  });
 }

@@ -1,5 +1,5 @@
-import { defineEventHandler, createError, getRequestHeaders } from "h3";
-import { renderServer, absolutizeAssetUrl } from "../utils/takumiServer";
+import { defineEventHandler, createError } from "h3";
+import { renderServer, resolveFontUrls } from "../utils/takumiServer";
 import { buildRenderTree } from "../../shared/render";
 import type { RenderPayload } from "../../shared/types";
 import { validateTemplateConfig } from "../../shared/validate";
@@ -36,15 +36,13 @@ export default defineEventHandler(async (event) => {
     });
   }
 
+  const fonts = resolveFontUrls(body?.fonts);
+
   try {
     // body was validated above; cast through unknown because readJsonBodyCapped
     // returns a plain record
     const { nodeTree, width, height, format, quality } = buildRenderTree(
       body as unknown as RenderPayload,
-    );
-    const headers = getRequestHeaders(event);
-    const fonts = ((body?.fonts as string[] | undefined) ?? []).map((p) =>
-      absolutizeAssetUrl(p, headers),
     );
     const imageBuffer = await renderServer(nodeTree, { width, height, format, quality }, fonts);
 
@@ -59,10 +57,10 @@ export default defineEventHandler(async (event) => {
       width,
       height,
     };
-  } catch (error: any) {
+  } catch (error) {
     throw createError({
       statusCode: 500,
-      message: error.message || "Render failed",
+      message: (error instanceof Error && error.message) || "Render failed",
     });
   }
 });
