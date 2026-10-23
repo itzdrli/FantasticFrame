@@ -30,7 +30,7 @@ const currentShort = computed(() => (localeCode.value === "zh-CN" ? "中文" : "
 
     <div class="flex w-60 flex-col gap-3 p-3">
       <div class="flex flex-col gap-1.5">
-        <span class="text-[10px] font-semibold tracking-[0.12em] text-nord-5 uppercase">
+        <span class="text-[12px] font-bold tracking-[0.12em] text-nord-5 uppercase">
           {{ $t("appearance.theme") }}
         </span>
         <div class="grid grid-cols-2 gap-1.5">
@@ -53,14 +53,14 @@ const currentShort = computed(() => (localeCode.value === "zh-CN" ? "中文" : "
                 :style="{ backgroundColor: hex }"
               />
             </span>
-            <span class="truncate text-[11px] text-nord-6">{{ $t(t.labelKey) }}</span>
+            <span class="truncate text-[13px] text-nord-6">{{ $t(t.labelKey) }}</span>
           </button>
         </div>
-        <p class="text-[10px] text-nord-4/60">{{ $t("appearance.themeHint") }}</p>
+        <p class="text-[12px] text-nord-4/60">{{ $t("appearance.themeHint") }}</p>
       </div>
 
       <div class="flex flex-col gap-1.5">
-        <span class="text-[10px] font-semibold tracking-[0.12em] text-nord-5 uppercase">
+        <span class="text-[12px] font-bold tracking-[0.12em] text-nord-5 uppercase">
           {{ $t("appearance.language") }}
         </span>
         <SegmentedControl v-model="localeModel" :items="localeItems" />

@@ -72,7 +72,7 @@ function onUpdate(value: string | null) {
 
 <template>
   <!-- Sized by a wrapper: Naive's own (unlayered) width rule beats Tailwind's layers -->
-  <div class="w-28">
+  <div class="w-32">
     <NColorPicker
       :value="color"
       :swatches="PRESET_COLORS"
@@ -83,7 +83,7 @@ function onUpdate(value: string | null) {
       @update:value="onUpdate"
     >
       <template #label="value">
-        <span class="font-mono text-[10px] uppercase">{{ value }}</span>
+        <span class="font-mono text-[12px] uppercase">{{ value }}</span>
       </template>
     </NColorPicker>
   </div>

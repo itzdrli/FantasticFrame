@@ -30,12 +30,12 @@ function onFileChange(e: Event) {
           :aria-label="$t('photoList.addPhoto')"
           @click="fileInput?.click()"
         >
-          <span v-if="isImporting" class="text-[10px] tabular-nums">
+          <span v-if="isImporting" class="text-[12px] tabular-nums">
             {{ importProgress.current }}/{{ importProgress.total }}
           </span>
           <template v-else>
             <NIcon :size="20"><Plus /></NIcon>
-            <span class="text-[10px]">{{ $t("photoList.add") }}</span>
+            <span class="text-[12px]">{{ $t("photoList.add") }}</span>
           </template>
         </button>
       </template>

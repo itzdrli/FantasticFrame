@@ -104,16 +104,6 @@ export default defineNuxtConfig({
           rel: "stylesheet",
           href: "/fonts/google/fonts.css",
         },
-        {
-          // MiSans — sliced web font for the UI's Chinese text (unicode-range
-          // chunks load on demand, so only the used slices download).
-          rel: "stylesheet",
-          href: "/fonts/misans/regular/misans-regular.css",
-        },
-        {
-          rel: "stylesheet",
-          href: "/fonts/misans/semibold/misans-semibold.css",
-        },
       ],
     },
   },

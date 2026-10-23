@@ -131,7 +131,7 @@ watch(
         class="min-w-0 flex-1"
       >
         <NTab v-for="id in phoneIds" :key="id" :name="id">
-          <span class="flex flex-col items-center gap-0.5 text-[10px]">
+          <span class="flex flex-col items-center gap-0.5 text-[12px]">
             <NIcon :size="16"><component :is="icons[id]" /></NIcon>
             {{ title(id) }}
           </span>
@@ -152,13 +152,13 @@ watch(
     </div>
 
     <!-- Desktop: Edit / Info -->
-    <div v-else class="shrink-0 border-b border-nord-3 px-2 py-1.5">
+    <div v-else class="shrink-0 border-b border-nord-3 px-3 py-2">
       <SegmentedControl v-model="desktopTab" :items="desktopItems" />
     </div>
 
     <div v-show="!props.mobile || !collapsed" class="min-h-0 flex-1 overflow-y-auto">
       <!-- Phone: only the active section -->
-      <div v-if="props.mobile" class="px-3 py-2">
+      <div v-if="props.mobile" class="px-4 py-3">
         <component :is="bodies[phoneTab as SectionId]" />
       </div>
 
@@ -199,7 +199,7 @@ watch(
         </template>
       </template>
 
-      <div v-else class="px-3 py-2"><ExifPanel /></div>
+      <div v-else class="px-4 py-3"><ExifPanel /></div>
     </div>
   </div>
 </template>

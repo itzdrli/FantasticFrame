@@ -72,10 +72,10 @@ function onScrubEnd() {
 </script>
 
 <template>
-  <div class="group/param flex flex-col py-0.5">
-    <div class="flex h-5 items-center justify-between gap-2">
+  <div class="group/param flex flex-col py-1">
+    <div class="flex h-7 items-center justify-between gap-2">
       <span
-        class="min-w-0 flex-1 cursor-ew-resize touch-none truncate select-none text-[11px] transition-colors"
+        class="min-w-0 flex-1 cursor-ew-resize touch-none truncate select-none text-[13px] transition-colors"
         :class="changed ? 'text-nord-6' : 'text-nord-4'"
         @pointerdown="onScrubStart"
         @pointermove="onScrubMove"
@@ -107,10 +107,10 @@ function onScrubEnd() {
           :input-props="valueInputProps"
           :theme-overrides="valueOverrides"
           :aria-label="label"
-          class="w-12"
+          class="w-16"
           @update:value="onInput"
         />
-        <span v-if="suffix" class="w-4 text-[10px] text-nord-4/60">{{ suffix }}</span>
+        <span v-if="suffix" class="w-5 text-[12px] text-nord-4/60">{{ suffix }}</span>
       </div>
     </div>
     <div @dblclick="reset">
@@ -125,7 +125,7 @@ function onScrubEnd() {
         @update:value="onInput"
       >
         <template #thumb>
-          <div class="h-3 w-[3px] bg-nord-6 transition-colors hover:bg-nord-8" />
+          <div class="h-4 w-1 bg-nord-6 transition-colors hover:bg-nord-8" />
         </template>
       </NSlider>
     </div>

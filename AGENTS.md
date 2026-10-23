@@ -61,7 +61,7 @@ Always run `bun run lint`, `bun run fmt:check`, `bun run test` and
   `PreviewPanel`/`PreviewToolbar`, `PhotoUploader`, `PhotoList`, `AppearanceMenu`
 - `app/app.vue` — `NConfigProvider` (theme, overrides, locale) + `NMessageProvider`
 - `app/utils/themes.ts` — palettes per theme + `naiveThemeOverrides()` (editor
-  density: 22px `tiny` controls, 12px type, 2px corners; every colour token
+  density: 28px `tiny` controls, 13px type, 2px corners; every colour token
   mapped onto the nord-* roles)
 - `app/plugins/naive-ui.server.ts` — collects Naive's SSR styles into `<head>`
 - `app/composables/`

@@ -27,7 +27,7 @@ const hint = computed(() =>
 <template>
   <div class="flex flex-col gap-1">
     <FieldRow :label="$t('export.format')">
-      <div class="w-40"><SegmentedControl v-model="formatModel" :items="formatItems" /></div>
+      <div class="w-48"><SegmentedControl v-model="formatModel" :items="formatItems" /></div>
     </FieldRow>
     <ParamSlider
       v-if="exportFormat !== 'png'"
@@ -37,6 +37,6 @@ const hint = computed(() =>
       :max="100"
       suffix="%"
     />
-    <p class="text-[10px] leading-snug text-nord-4/60">{{ hint }}</p>
+    <p class="text-[12px] leading-snug text-nord-4/60">{{ hint }}</p>
   </div>
 </template>

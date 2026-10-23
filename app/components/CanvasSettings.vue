@@ -102,7 +102,7 @@ function invertSocialRatio() {
       </NButton>
     </template>
 
-    <p class="font-mono text-[10px] text-nord-4/60">
+    <p class="font-mono text-[12px] text-nord-4/60">
       {{ canvasMode === "social" ? socialDimsText : $t("border.followOriginal") }}
     </p>
   </div>

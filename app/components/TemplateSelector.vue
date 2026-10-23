@@ -60,7 +60,7 @@ const selectTemplate = (templateId: string) => {
         </div>
       </div>
       <span
-        class="truncate text-center text-[10px]"
+        class="truncate text-center text-[12px]"
         :class="selectedPhoto?.templateId === tpl.id ? 'text-nord-6' : 'text-nord-4'"
       >
         {{ tpl.name }}

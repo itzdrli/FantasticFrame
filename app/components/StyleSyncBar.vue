@@ -42,12 +42,12 @@ onUnmounted(() => {
         :aria-label="$t('sync.batchSync')"
       />
     </FieldRow>
-    <p class="text-[10px] leading-snug text-nord-4/60">
+    <p class="text-[12px] leading-snug text-nord-4/60">
       {{ photoStore.syncStyle ? $t("sync.liveOn") : $t("sync.liveOff") }}
     </p>
 
     <div class="flex items-center justify-between">
-      <span class="text-[11px] text-nord-4">{{ $t("sync.scope") }}</span>
+      <span class="text-[13px] text-nord-4">{{ $t("sync.scope") }}</span>
       <NButton text type="primary" size="tiny" @click="toggleAll">
         {{ isAllSelected ? $t("sync.clearAll") : $t("sync.selectAll") }}
       </NButton>
@@ -76,6 +76,6 @@ onUnmounted(() => {
       </template>
       {{ appliedFlash ? $t("sync.applied") : $t("sync.applyToAll", { n: otherPhotosCount }) }}
     </NButton>
-    <p class="text-center text-[10px] text-nord-4/60">{{ $t("sync.cropNote") }}</p>
+    <p class="text-center text-[12px] text-nord-4/60">{{ $t("sync.cropNote") }}</p>
   </div>
 </template>

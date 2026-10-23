@@ -32,13 +32,13 @@ function onBeforeUpload({ file }: { file: UploadFileInfo }) {
       v-if="isImporting"
       class="flex min-h-40 flex-col justify-center gap-3 border border-nord-3 bg-nord-1 p-5"
     >
-      <p class="font-medium text-nord-6">
+      <p class="font-normal text-nord-6">
         {{
           $t("uploader.importing", { current: importProgress.current, total: importProgress.total })
         }}
       </p>
       <NProgress type="line" :percentage="importPercent" :show-indicator="false" :height="4" />
-      <p class="text-[11px] text-nord-4">{{ $t("uploader.pleaseWait") }}</p>
+      <p class="text-[13px] text-nord-4">{{ $t("uploader.pleaseWait") }}</p>
     </div>
 
     <NUpload
@@ -52,8 +52,8 @@ function onBeforeUpload({ file }: { file: UploadFileInfo }) {
       <NUploadDragger>
         <div class="flex min-h-32 flex-col items-center justify-center gap-2">
           <NIcon :size="28" class="text-nord-4"><Aperture /></NIcon>
-          <p class="font-medium text-nord-6">{{ $t("uploader.dragHint") }}</p>
-          <p class="text-[11px] text-nord-4">{{ $t("uploader.supports") }}</p>
+          <p class="font-normal text-nord-6">{{ $t("uploader.dragHint") }}</p>
+          <p class="text-[13px] text-nord-4">{{ $t("uploader.supports") }}</p>
         </div>
       </NUploadDragger>
     </NUpload>

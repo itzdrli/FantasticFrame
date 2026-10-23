@@ -184,13 +184,13 @@ function onSvgPaste(e: ClipboardEvent) {
 <template>
   <div class="flex flex-col gap-2">
     <FieldRow :label="$t('border.position')">
-      <div class="w-40"><SegmentedControl v-model="positionModel" :items="positionItems" /></div>
+      <div class="w-48"><SegmentedControl v-model="positionModel" :items="positionItems" /></div>
     </FieldRow>
-    <p v-if="!showLogo" class="text-[10px] text-nord-4/60">{{ $t("border.logoHiddenHint") }}</p>
+    <p v-if="!showLogo" class="text-[12px] text-nord-4/60">{{ $t("border.logoHiddenHint") }}</p>
 
     <template v-if="showLogo">
       <div class="flex flex-col gap-2">
-        <span class="text-[11px] text-nord-4">{{ $t("border.logoImage") }}</span>
+        <span class="text-[13px] text-nord-4">{{ $t("border.logoImage") }}</span>
 
         <div
           v-if="logoImageUrl"
@@ -243,7 +243,7 @@ function onSvgPaste(e: ClipboardEvent) {
                 {{ $t("border.cancel") }}
               </NButton>
             </div>
-            <p v-if="svgError" class="text-[10px] text-nord-11">{{ svgError }}</p>
+            <p v-if="svgError" class="text-[12px] text-nord-11">{{ svgError }}</p>
           </div>
         </template>
         <input
@@ -286,7 +286,7 @@ function onSvgPaste(e: ClipboardEvent) {
       </div>
 
       <div class="flex flex-col gap-1">
-        <span class="text-[11px] text-nord-4">{{ $t("border.logoText") }}</span>
+        <span class="text-[13px] text-nord-4">{{ $t("border.logoText") }}</span>
         <NInput
           v-model:value="logoText"
           :placeholder="$t('border.logoTextPlaceholder')"

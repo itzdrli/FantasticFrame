@@ -34,9 +34,11 @@
   --color-nord-14: #7cc08a;
   --color-nord-15: #b393d6;
 
-  /* Default Nord font family — Latin from Inter, CJK from MiSans (self-hosted
-     sliced web font, see nuxt.config links) instead of the OS default. */
-  --font-sans: "Inter", "MiSans", system-ui, sans-serif;
+  /* UI font — Latin from IBM Plex Sans, CJK from Noto Sans SC. Both are
+     template fonts already self-hosted by scripts/fetch-fonts.mjs, which only
+     ships weights 400 and 700, so the UI sticks to normal and bold. Keep in
+     sync with the Naive fontFamily in app/utils/themes.ts. */
+  --font-sans: "IBM Plex Sans", "Noto Sans SC", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
@@ -144,7 +146,7 @@
 
 body {
   @apply bg-nord-0 text-nord-5 font-sans antialiased;
-  font-size: 12px;
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
 

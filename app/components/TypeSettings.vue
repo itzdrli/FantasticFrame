@@ -132,7 +132,7 @@ function renderFontLabel(option: SelectOption) {
 <template>
   <div v-if="resolvedConfig" class="flex flex-col gap-1">
     <FieldRow :label="$t('typography.fontFamily')">
-      <div class="w-40">
+      <div class="w-48">
         <NSelect
           v-model:value="fontFamily"
           :options="fontOptions"
@@ -168,12 +168,12 @@ function renderFontLabel(option: SelectOption) {
     />
 
     <div class="mt-2 flex flex-col gap-1.5">
-      <span class="text-[11px] text-nord-4">{{ $t("typography.layout") }}</span>
+      <span class="text-[13px] text-nord-4">{{ $t("typography.layout") }}</span>
       <SegmentedControl v-model="layoutModel" :items="layoutItems" />
     </div>
 
     <div class="mt-2 flex flex-col gap-1.5">
-      <span class="text-[11px] text-nord-4">{{ $t("typography.visibleFields") }}</span>
+      <span class="text-[13px] text-nord-4">{{ $t("typography.visibleFields") }}</span>
       <div class="grid grid-cols-2 gap-x-2 gap-y-1.5">
         <NCheckbox
           v-for="field in availableFields"

@@ -99,11 +99,11 @@ const batchExportDisabled = computed(
 <template>
   <div class="flex h-dvh w-full flex-col overflow-hidden bg-nord-0 text-nord-5">
     <header
-      class="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-nord-3 bg-nord-1 px-3"
+      class="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-nord-3 bg-nord-1 px-3"
     >
       <div class="flex min-w-0 items-center gap-2">
         <NIcon :size="16" class="shrink-0 text-nord-8"><Frame /></NIcon>
-        <span class="truncate text-[11px] font-semibold tracking-[0.16em] text-nord-6 uppercase">
+        <span class="truncate text-[13px] font-bold tracking-[0.16em] text-nord-6 uppercase">
           Fantastic Frame
         </span>
       </div>
@@ -189,7 +189,7 @@ const batchExportDisabled = computed(
           <div v-else class="absolute inset-0 flex items-center justify-center p-4">
             <div class="flex w-full max-w-md flex-col gap-3">
               <div class="flex flex-col gap-1">
-                <h2 class="text-sm font-semibold text-nord-6">{{ $t("app.emptyTitle") }}</h2>
+                <h2 class="text-sm font-bold text-nord-6">{{ $t("app.emptyTitle") }}</h2>
                 <p class="text-nord-4">{{ $t("app.emptyDesc") }}</p>
               </div>
               <PhotoUploader />
@@ -214,7 +214,7 @@ const batchExportDisabled = computed(
 
       <aside
         v-if="photoStore.hasPhotos"
-        class="shrink-0 border-t border-nord-3 bg-nord-1 max-md:pb-[env(safe-area-inset-bottom)] md:w-[300px] md:border-t-0 md:border-l"
+        class="shrink-0 border-t border-nord-3 bg-nord-1 max-md:pb-[env(safe-area-inset-bottom)] md:w-[360px] xl:w-[400px] 2xl:w-[440px] md:border-t-0 md:border-l"
         :class="isMobile && !panelCollapsed ? 'h-[42dvh]' : ''"
       >
         <SettingsPanel v-model:collapsed="panelCollapsed" :mobile="isMobile" />
@@ -230,7 +230,7 @@ const batchExportDisabled = computed(
         class="mx-4 max-w-lg"
         @close="showPrivacyModal = false"
       >
-        <div class="flex flex-col gap-3 text-[12px] leading-relaxed text-nord-5">
+        <div class="flex flex-col gap-3 text-[14px] leading-relaxed text-nord-5">
           <p class="text-nord-4">{{ $t("app.privacyModal.p1") }}</p>
           <p>{{ $t("app.privacyModal.p2") }}</p>
           <p>{{ $t("app.privacyModal.p3") }}</p>

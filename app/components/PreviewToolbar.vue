@@ -76,7 +76,7 @@ function onZoomInput(n: number | null) {
         aria-label="Zoom percent"
         @update:value="onZoomInput"
       />
-      <span class="text-[10px] text-nord-4/60">%</span>
+      <span class="text-[12px] text-nord-4/60">%</span>
       <NButton
         size="tiny"
         :aria-label="$t('preview.zoomIn')"
@@ -111,7 +111,7 @@ function onZoomInput(n: number | null) {
       </NButton>
       <NTooltip :delay="500">
         <template #trigger>
-          <span class="w-10 text-center font-mono text-[11px] text-nord-4">
+          <span class="w-10 text-center font-mono text-[13px] text-nord-4">
             {{ props.viewPercent }}%
           </span>
         </template>
