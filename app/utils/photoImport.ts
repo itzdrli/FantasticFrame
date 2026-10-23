@@ -35,7 +35,8 @@ export function isSupportedImage(file: File): boolean {
 
 const THUMB_MAX_EDGE = 256;
 
-function makeThumb(img: HTMLImageElement, fallback: string): string {
+/** Filmstrip thumbnail plus the photo's average colour, from one small draw */
+function makeThumb(img: HTMLImageElement, fallback: string): { thumbUrl: string; tone?: string } {
   const scale = Math.min(1, THUMB_MAX_EDGE / Math.max(img.naturalWidth, img.naturalHeight));
   const w = Math.max(1, Math.round(img.naturalWidth * scale));
   const h = Math.max(1, Math.round(img.naturalHeight * scale));
@@ -43,13 +44,31 @@ function makeThumb(img: HTMLImageElement, fallback: string): string {
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext("2d");
-  if (!ctx) return fallback;
+  if (!ctx) return { thumbUrl: fallback };
   ctx.drawImage(img, 0, 0, w, h);
   try {
-    return canvas.toDataURL("image/jpeg", 0.7);
+    return { thumbUrl: canvas.toDataURL("image/jpeg", 0.7), tone: averageColor(ctx, w, h) };
   } catch {
-    return fallback;
+    return { thumbUrl: fallback };
   }
+}
+
+function averageColor(ctx: CanvasRenderingContext2D, w: number, h: number): string {
+  const { data } = ctx.getImageData(0, 0, w, h);
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    r += data[i]!;
+    g += data[i + 1]!;
+    b += data[i + 2]!;
+  }
+  const n = data.length / 4;
+  const hex = (v: number) =>
+    Math.round(v / n)
+      .toString(16)
+      .padStart(2, "0");
+  return `#${hex(r)}${hex(g)}${hex(b)}`;
 }
 
 /**
@@ -62,7 +81,7 @@ function makeThumb(img: HTMLImageElement, fallback: string): string {
 function inspectImage(
   url: string,
   timeoutMs = 10_000,
-): Promise<{ width: number; height: number; thumbUrl: string }> {
+): Promise<{ width: number; height: number; thumbUrl: string; tone?: string }> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const timer = setTimeout(() => {
@@ -71,11 +90,7 @@ function inspectImage(
     }, timeoutMs);
     img.onload = () => {
       clearTimeout(timer);
-      resolve({
-        width: img.naturalWidth,
-        height: img.naturalHeight,
-        thumbUrl: makeThumb(img, url),
-      });
+      resolve({ width: img.naturalWidth, height: img.naturalHeight, ...makeThumb(img, url) });
     };
     img.onerror = () => {
       clearTimeout(timer);
@@ -104,7 +119,7 @@ export async function createPhotoFromFile(
     URL.revokeObjectURL(url);
     throw err;
   }
-  const { width, height, thumbUrl } = probed;
+  const { width, height, thumbUrl, tone } = probed;
   // Drop the raw exifr result before storing: it's never rendered (ExifPanel
   // uses formatExifForDisplay) and can be several KB per photo.
   const { raw: _raw, ...storedExif } = exif;
@@ -117,6 +132,7 @@ export async function createPhotoFromFile(
     file,
     url,
     thumbUrl,
+    tone,
     width,
     height,
     exif: storedExif,

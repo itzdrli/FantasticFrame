@@ -44,6 +44,7 @@ async function handleExport() {
     photoWidth: photo.width,
     photoHeight: photo.height,
     crop: photo.crop,
+    photoTone: photo.tone,
   });
   if (res) saveImage(res.bytes, res.mimeType, photo.fileName);
 }
@@ -63,6 +64,7 @@ async function handleBatchExport() {
       photoWidth: photo.width,
       photoHeight: photo.height,
       crop: photo.crop,
+      photoTone: photo.tone,
     },
     originalFilename: photo.fileName,
   }));

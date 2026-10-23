@@ -118,6 +118,11 @@ export interface RenderPayload {
   photoWidth?: number;
   photoHeight?: number;
   crop?: Partial<PhotoCrop>;
+  /**
+   * Average colour of the photo (#rrggbb). Under a blurred background it fills
+   * the canvas, so the blur's soft edges fade into the photo's own tone.
+   */
+  photoTone?: string;
 }
 
 /** A takumi node (container/text/image); its shape is owned by takumi-js */

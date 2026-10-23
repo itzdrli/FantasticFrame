@@ -60,6 +60,7 @@ const preview = computed(() => {
       photoWidth: p.width,
       photoHeight: p.height,
       crop: p.crop,
+      photoTone: p.tone,
     },
     { scale: treeScale.value },
   );

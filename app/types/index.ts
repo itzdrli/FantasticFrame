@@ -32,6 +32,8 @@ export interface Photo {
   url: string;
   /** JPEG thumb for the filmstrip (~256px) */
   thumbUrl: string;
+  /** Average colour (#rrggbb), the base under a blurred background */
+  tone?: string;
   width: number;
   height: number;
   exif: ExifData;

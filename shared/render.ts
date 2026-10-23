@@ -237,6 +237,16 @@ export interface FooterLayout {
 
 const LINE_HEIGHT = 1.4;
 
+/**
+ * Scale of everything in the caption band. The band spans the canvas width,
+ * so it is sized by the width — not by the long edge like the borders.
+ * Otherwise a portrait photo gets a caption a third too big for its width:
+ * the split bar's right block swelled past the middle and its logo sat
+ * "almost but not quite" centred. Landscape is unchanged (width = long edge).
+ */
+export const captionScale = (scaleFactor: number, canvasW: number) =>
+  Math.min(scaleFactor, canvasW / 1080);
+
 /** Font sizes of the split caption's primary and secondary rows */
 const splitFontSizes = (cfg: TemplateConfig, scaleFactor: number) => ({
   main: Math.round((cfg.fontSize ?? 14) * scaleFactor),
@@ -246,11 +256,12 @@ const splitFontSizes = (cfg: TemplateConfig, scaleFactor: number) => ({
 /** Footer content + total height — shared by buildRenderTree and the preview. */
 export function estimateFooterLayout(input: FooterLayoutInput): FooterLayout {
   const { cfg, scaleFactor, canvasW, exifEntries } = input;
+  const cs = captionScale(scaleFactor, canvasW);
   const exifValues = exifEntries.map((e) => e.value);
   const modelFontSizeBase = cfg.modelFontSize ?? 24;
-  const modelFontSize = Math.round(modelFontSizeBase * scaleFactor);
-  const fontSize = Math.round((cfg.fontSize ?? 14) * scaleFactor);
-  const tracking = (cfg.letterSpacing ?? 0) * scaleFactor;
+  const modelFontSize = Math.round(modelFontSizeBase * cs);
+  const fontSize = Math.round((cfg.fontSize ?? 14) * cs);
+  const tracking = (cfg.letterSpacing ?? 0) * cs;
   const logoTxt = cfg.logoText || (input.makeFallback || "").toUpperCase();
   const hasLogo = cfg.showLogo !== false && (!!cfg.logoImageUrl || !!logoTxt);
   const hasExif = exifValues.length > 0;
@@ -263,18 +274,14 @@ export function estimateFooterLayout(input: FooterLayoutInput): FooterLayout {
   );
   const footerInnerW = Math.max(1, canvasW - footerPaddingX * 2);
 
-  const { width: logoImageW, height: logoImageH } = computeLogoImageSize(
-    cfg,
-    scaleFactor,
-    footerInnerW,
-  );
+  const { width: logoImageW, height: logoImageH } = computeLogoImageSize(cfg, cs, footerInnerW);
   const logoBlockH = hasLogo ? Math.max(logoLineH, cfg.logoImageUrl ? logoImageH : 0) : 0;
 
   let footerContentH = 0;
   if (cfg.captionStyle === "split") {
     const rows = splitCaption(exifEntries);
-    const fs = splitFontSizes(cfg, scaleFactor);
-    const rowGap = Math.round(4 * scaleFactor);
+    const fs = splitFontSizes(cfg, cs);
+    const rowGap = Math.round(4 * cs);
     const colH = (main: string[], sub: string[]) => {
       const mainH = main.length ? Math.ceil(fs.main * LINE_HEIGHT) : 0;
       const subH = sub.length ? Math.ceil(fs.sub * LINE_HEIGHT) : 0;
@@ -292,13 +299,13 @@ export function estimateFooterLayout(input: FooterLayoutInput): FooterLayout {
     } else if (cfg.infoLayout === "grid") {
       exifLines = Math.ceil(exifValues.length / 2);
     } else if (hasExif) {
-      const rowGap = Math.round(10 * scaleFactor);
+      const rowGap = Math.round(10 * cs);
       const logoW = cfg.logoImageUrl
         ? logoImageW
         : Math.ceil(logoTxt.length * (modelFontSize * 0.7 + tracking));
       const availExifW =
         hasLogo && cfg.logoPosition !== "center"
-          ? Math.max(1, footerInnerW - logoW - Math.round(16 * scaleFactor))
+          ? Math.max(1, footerInnerW - logoW - Math.round(16 * cs))
           : footerInnerW;
       let curW = 0;
       for (const t of exifValues) {
@@ -312,20 +319,20 @@ export function estimateFooterLayout(input: FooterLayoutInput): FooterLayout {
       }
     }
 
-    const gridGapV = Math.round(4 * scaleFactor);
-    const rowGap = Math.round((cfg.infoLayout === "list" ? 4 : 10) * scaleFactor);
+    const gridGapV = Math.round(4 * cs);
+    const rowGap = Math.round((cfg.infoLayout === "list" ? 4 : 10) * cs);
     const exifBlockH = hasExif
       ? exifLines * exifLineH +
         Math.max(0, exifLines - 1) * (cfg.infoLayout === "grid" ? gridGapV : rowGap)
       : 0;
 
     if (hasLogo && hasExif && cfg.logoPosition === "center") {
-      footerContentH = logoBlockH + Math.round(12 * scaleFactor) + exifBlockH;
+      footerContentH = logoBlockH + Math.round(12 * cs) + exifBlockH;
     } else {
       footerContentH = Math.max(logoBlockH, exifBlockH);
     }
   }
-  const footerH = hasLogo || hasExif ? Math.round(40 * scaleFactor) + footerContentH : 0;
+  const footerH = hasLogo || hasExif ? Math.round(40 * cs) + footerContentH : 0;
 
   return {
     footerContentH,
@@ -544,23 +551,26 @@ export const buildRenderTree = (
   const { canvasW: canvasWidth, canvasH: canvasHeight, scaleFactor, footer } = geo;
   const { hasLogo, hasExif, logoTxt, logoImageW, logoImageH, footerPaddingX } = footer;
   const px = (v: number) => Math.round(v * scaleFactor);
+  // Caption-band sizes (see captionScale)
+  const cs = captionScale(scaleFactor, canvasWidth);
+  const cpx = (v: number) => Math.round(v * cs);
 
   const bgColor = cfg.backgroundColor || "#ffffff";
   const borderRadius = px(cfg.borderRadius ?? 0);
 
   const fontFamily = cfg.fontFamily || "Inter, sans-serif";
-  const fontSize = px(cfg.fontSize ?? 14);
+  const fontSize = cpx(cfg.fontSize ?? 14);
   const fontColor = cfg.fontColor || "#000000";
   const secondaryColor = cfg.secondaryColor || fontColor;
-  const modelFontSize = px(cfg.modelFontSize ?? 24);
-  const tracking = cfg.letterSpacing ? px(cfg.letterSpacing) : 0;
+  const modelFontSize = cpx(cfg.modelFontSize ?? 24);
+  const tracking = cfg.letterSpacing ? cpx(cfg.letterSpacing) : 0;
   const trackingStyle = tracking ? { letterSpacing: tracking } : {};
   const logoPosition = cfg.logoPosition || "center";
   const logoImageUrl: string = cfg.logoImageUrl || "";
   const infoLayout = cfg.infoLayout || "horizontal";
 
-  const gridGapV = px(4);
-  const rowGap = px(infoLayout === "list" ? 4 : 10);
+  const gridGapV = cpx(4);
+  const rowGap = cpx(infoLayout === "list" ? 4 : 10);
 
   const pAspect = photoWidth / photoHeight;
   const crop = payload.crop;
@@ -570,13 +580,19 @@ export const buildRenderTree = (
 
   const children: RenderNode[] = [];
 
-  // Frosted background: the photo itself, blurred and darkened. Takumi clips
-  // a filter to the canvas before blurring, so a lone blurred layer fades to
-  // the page colour at the edges; sharper copies underneath fill that fringe.
+  // Frosted background: the photo itself, blurred and darkened. Takumi (and
+  // the browser) blur a layer only within the canvas, so its edges fade to
+  // transparent. The canvas underneath is filled with the photo's average
+  // tone and a lighter blur sits between, so the fade reads as a soft
+  // vignette instead of showing the page colour (or, worse, a sharp copy).
+  const photoTone =
+    cfg.backgroundMode === "blur" && /^#[0-9a-f]{6}$/i.test(payload.photoTone ?? "")
+      ? payload.photoTone
+      : undefined;
   if (cfg.backgroundMode === "blur") {
     const blur = px(cfg.backgroundBlur ?? 40);
     const dim = Math.min(90, Math.max(0, cfg.backgroundDim ?? 20));
-    for (const radius of [0, Math.round(blur / 3), blur]) {
+    for (const radius of [Math.round(blur / 3), blur]) {
       children.push({
         type: "image",
         src: photoBase64,
@@ -723,8 +739,8 @@ export const buildRenderTree = (
         flex: 1,
         display: "flex",
         alignItems: "center",
-        paddingTop: px(20),
-        paddingBottom: px(20),
+        paddingTop: cpx(20),
+        paddingBottom: cpx(20),
         paddingLeft: footerPaddingX,
         paddingRight: footerPaddingX,
         width: "100%",
@@ -762,7 +778,7 @@ export const buildRenderTree = (
           gridTemplateColumns: "repeat(2, auto)",
           justifyContent: "center",
           alignItems: "center",
-          gap: `${gridGapV}px ${px(14)}px`,
+          gap: `${gridGapV}px ${cpx(14)}px`,
         },
         children: exifTexts.map(mkExifText),
       };
@@ -791,7 +807,7 @@ export const buildRenderTree = (
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: `${px(12)}px`,
+            gap: `${cpx(12)}px`,
             flex: 1,
           },
           children: [logoNode, exifNode],
@@ -817,8 +833,8 @@ export const buildRenderTree = (
 
   function buildSplitCaption(): RenderNode[] {
     const rows = splitCaption(entries);
-    const fs = splitFontSizes(cfg, scaleFactor);
-    const itemGap = px(10);
+    const fs = splitFontSizes(cfg, cs);
+    const itemGap = cpx(10);
     const mkRow = (items: string[], main: boolean): RenderNode => ({
       type: "container",
       tagName: "div",
@@ -839,7 +855,7 @@ export const buildRenderTree = (
         display: "flex",
         flexDirection: "column" as const,
         alignItems: align,
-        gap: `${px(4)}px`,
+        gap: `${cpx(4)}px`,
       },
       children: [
         ...(main.length ? [mkRow(main, true)] : []),
@@ -858,7 +874,7 @@ export const buildRenderTree = (
         type: "container",
         tagName: "div",
         style: {
-          width: Math.max(1, px(1.5)),
+          width: Math.max(1, cpx(1.5)),
           height: Math.max(mainH + subH, Math.round(modelFontSize * 1.1)),
           backgroundColor: secondaryColor,
           opacity: 0.6,
@@ -873,7 +889,7 @@ export const buildRenderTree = (
       {
         type: "container",
         tagName: "div",
-        style: { display: "flex", flexDirection: "row", alignItems: "center", gap: `${px(14)}px` },
+        style: { display: "flex", flexDirection: "row", alignItems: "center", gap: `${cpx(14)}px` },
         children: right,
       },
     ];
@@ -899,7 +915,7 @@ export const buildRenderTree = (
       children: [
         mkText(edgeText, {
           fontSize: Math.min(
-            px(Math.max(10, (cfg.fontSize ?? 14) * 0.85)),
+            cpx(Math.max(10, (cfg.fontSize ?? 14) * 0.85)),
             Math.round(geo.paddingTop * 0.5),
           ),
           color: secondaryColor,
@@ -919,7 +935,7 @@ export const buildRenderTree = (
       flexDirection: "column",
       width: canvasWidth,
       height: canvasHeight,
-      backgroundColor: bgColor,
+      backgroundColor: photoTone ?? bgColor,
       overflow: "hidden",
       lineHeight: 1.2,
     },

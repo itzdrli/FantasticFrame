@@ -102,9 +102,12 @@ Always run `bun run lint`, `bun run fmt:check`, `bun run test` and
   layout math (`computeFrameGeometry`, `estimateFooterLayout`,
   `computeCanvasDims`, `layoutScaleFactor`). `buildRenderTree(payload,
 { scale })` builds the preview at on-screen size; the footer is estimated at
-  full size and scaled so the preview never drifts from the export. Template
-  effects: blurred-photo background (stacked sharp→blurred layers, since
-  takumi clips a filter before blurring), photo shadow, `captionStyle`
+  full size and scaled so the preview never drifts from the export. The
+  caption band scales by canvas width (`captionScale`), borders by the long
+  edge. Template effects: blurred-photo background (two blur layers over the
+  photo's average tone, `RenderPayload.photoTone`, computed at import —
+  takumi blurs within the canvas so edges fade; never put a sharp copy
+  underneath, it shows through the corners), photo shadow, `captionStyle`
   "split" (watermark bar, fields slotted by `splitCaption()`), secondary
   colour, letter spacing, DSEG7 date stamp, film edge text.
 - `server/api/render.post.ts` — fallback render endpoint: rate limit + render

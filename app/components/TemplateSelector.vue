@@ -32,6 +32,7 @@ const groups = computed(() => {
         templateConfig: cfg,
         photoWidth: p.width,
         photoHeight: p.height,
+        photoTone: p.tone,
       },
       { scale },
     );

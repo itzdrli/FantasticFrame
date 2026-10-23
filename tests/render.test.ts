@@ -350,16 +350,48 @@ describe("template effects", () => {
     });
   });
 
-  it("blur background stacks sharp-to-blurred copies of the photo behind the content", () => {
-    const { nodeTree } = buildRenderTree({
-      photoBase64: "p",
-      templateConfig: { ...baseCfg, backgroundMode: "blur", backgroundBlur: 60, backgroundDim: 30 },
-      photoWidth: 1080,
-      photoHeight: 1080,
-    });
-    const layers = nodeTree.children.filter((c: any) => c.type === "image");
-    expect(layers.map((l: any) => l.style.filter)).toEqual([undefined, "blur(20px)", "blur(60px)"]);
-    expect(nodeTree.children[3].style.backgroundColor).toBe("rgba(0, 0, 0, 0.3)");
+  it("blur background: blurred copies over the photo's own tone, never a sharp copy", () => {
+    const build = (photoTone?: string) =>
+      buildRenderTree({
+        photoBase64: "p",
+        templateConfig: {
+          ...baseCfg,
+          backgroundMode: "blur",
+          backgroundBlur: 60,
+          backgroundDim: 30,
+        },
+        photoWidth: 1080,
+        photoHeight: 1080,
+        photoTone,
+      }).nodeTree;
+    const tree = build("#123456");
+    const layers = tree.children.filter((c: any) => c.type === "image");
+    // regression: an unblurred base layer showed through the blur's faded corners
+    expect(layers.map((l: any) => l.style.filter)).toEqual(["blur(20px)", "blur(60px)"]);
+    expect(tree.children[2].style.backgroundColor).toBe("rgba(0, 0, 0, 0.3)");
+    expect(tree.style.backgroundColor).toBe("#123456");
+    // a tone that is not a plain hex colour is ignored (it reaches CSS on the server)
+    expect(build("red; x").style.backgroundColor).toBe(baseCfg.backgroundColor);
+  });
+
+  it("portrait captions are sized by the canvas width, landscape ones unchanged", () => {
+    const cfg = { ...baseCfg, captionStyle: "split" as const, visibleFields: ["model", "iso"] };
+    const textSize = (w: number, h: number) => {
+      const { nodeTree } = buildRenderTree({
+        photoBase64: "p",
+        exifData: exif,
+        templateConfig: cfg,
+        photoWidth: w,
+        photoHeight: h,
+      });
+      const find = (n: any): any =>
+        n.type === "text" && n.text === "X-T5" ? n : (n.children ?? []).map(find).find(Boolean);
+      return find(nodeTree).style.fontSize;
+    };
+    // landscape: width is the long edge → same as the border scale (4000/1080)
+    expect(textSize(4000, 3000)).toBe(Math.round(cfg.fontSize * (4000 / 1080)));
+    // portrait: follows the 3000px width, not the 4000px height
+    expect(textSize(3000, 4000)).toBe(Math.round(cfg.fontSize * (3000 / 1080)));
   });
 
   it("date stamp sits inside the photo frame in the seven-segment face", () => {
