@@ -1,5 +1,3 @@
-import tailwindcss from "@tailwindcss/vite";
-
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
@@ -11,14 +9,29 @@ export default defineNuxtConfig({
   css: ["~/assets/css/main.css"],
 
   vite: {
-    plugins: [tailwindcss()],
     server: {
       // Allow access via Tailscale MagicDNS: short hostname "s" and *.ts.net FQDNs
       allowedHosts: ["s", ".ts.net"],
     },
   },
 
-  modules: ["@pinia/nuxt", "@nuxtjs/i18n"],
+  modules: ["@nuxt/ui", "@pinia/nuxt", "@nuxtjs/i18n"],
+
+  ui: {
+    // Both modules phone home by default: @nuxt/fonts fetches Google/Bunny
+    // fonts and @nuxt/color-mode owns the <html> class. Fonts are self-hosted
+    // (scripts/fetch-fonts.mjs) and the theme is ours (usePreferences).
+    fonts: false,
+    colorMode: false,
+  },
+
+  icon: {
+    // Icons used in templates are scanned into the client bundle; anything
+    // dynamic comes from our own server, never from api.iconify.design.
+    clientBundle: { scan: true },
+    serverBundle: "local",
+    fallbackToApi: false,
+  },
 
   i18n: {
     // Single-page app: no URL prefixes. The locale is picked by
@@ -39,33 +52,37 @@ export default defineNuxtConfig({
     ],
   },
 
-  nitro: {
-    preset: "bun",
-    // Everything the page loads is same-origin (fonts, WASM, workers, blob:
-    // previews), so the policy can be strict. 'unsafe-inline' is needed for
-    // Nuxt's inline payload/theme scripts; 'wasm-unsafe-eval' for takumi WASM.
-    routeRules: import.meta.dev
-      ? {}
-      : {
-          "/**": {
-            headers: {
-              "Content-Security-Policy":
-                "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
-              "X-Content-Type-Options": "nosniff",
-              "Referrer-Policy": "no-referrer",
-              "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
-              "Strict-Transport-Security": "max-age=31536000",
-            },
+  // Production-only: the dev server needs eval/websockets for HMR.
+  // Everything the page loads is same-origin (fonts, WASM, workers, blob:
+  // previews), so the policy can be strict. 'unsafe-inline' is needed for
+  // Nuxt's inline payload/theme scripts; 'wasm-unsafe-eval' for takumi WASM.
+  $production: {
+    nitro: {
+      routeRules: {
+        "/**": {
+          headers: {
+            "Content-Security-Policy":
+              "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
+            "X-Content-Type-Options": "nosniff",
+            "Referrer-Policy": "no-referrer",
+            "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+            "Strict-Transport-Security": "max-age=31536000",
           },
         },
+      },
+    },
+  },
+
+  nitro: {
+    preset: "bun",
     rollupConfig: {
       plugins: [
         {
           name: "react-optional-stub",
-          resolveId(id) {
+          resolveId(id: string) {
             if (id === "react") return "\0react-optional-stub";
           },
-          load(id) {
+          load(id: string) {
             if (id === "\0react-optional-stub") return "export default {};";
           },
         },

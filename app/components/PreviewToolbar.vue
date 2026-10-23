@@ -1,5 +1,5 @@
 <script setup lang="ts">
-defineProps<{ isCover: boolean; cropScale: number; viewPercent: number }>();
+const props = defineProps<{ isCover: boolean; cropScale: number; viewPercent: number }>();
 
 const emit = defineEmits<{
   setFitMode: [mode: "contain" | "cover"];
@@ -9,104 +9,107 @@ const emit = defineEmits<{
   resetView: [];
 }>();
 
-function onZoomInput(e: Event) {
-  const n = Number((e.target as HTMLInputElement).value);
-  if (Number.isFinite(n)) emit("setZoom", n / 100);
+function onZoomInput(n: number | null | undefined) {
+  if (typeof n === "number" && Number.isFinite(n)) emit("setZoom", n / 100);
 }
 </script>
 
 <template>
-  <!-- Crop + view toolbar -->
+  <!-- Crop + view toolbar; swallows pointer events so it never pans the workspace -->
   <div
-    class="absolute bottom-2 md:bottom-3 left-1/2 -translate-x-1/2 max-w-[calc(100%-1rem)] overflow-x-auto flex items-center gap-1.5 text-xs text-nord-6 bg-nord-0/85 backdrop-blur border border-nord-2 rounded-lg px-2 py-1.5 shadow-lg cursor-default whitespace-nowrap"
+    class="absolute bottom-2 left-1/2 flex max-w-[calc(100%-1rem)] -translate-x-1/2 cursor-default items-center gap-1 overflow-x-auto border border-default bg-default/95 px-1.5 py-1 whitespace-nowrap backdrop-blur-sm md:bottom-3"
     @pointerdown.stop
     @wheel.stop
     @dblclick.stop
   >
-    <button
-      class="px-2.5 py-1.5 md:py-1 shrink-0 rounded border transition-colors"
-      :class="
-        isCover
-          ? 'bg-nord-8 text-nord-0 font-medium border-nord-8'
-          : 'bg-nord-1 border-nord-3 hover:bg-nord-2'
-      "
-      :title="$t('preview.fillTitle')"
-      @click="emit('setFitMode', 'cover')"
-    >
-      {{ $t("preview.fill") }}
-    </button>
-    <button
-      class="px-2.5 py-1.5 md:py-1 shrink-0 rounded border transition-colors"
-      :class="
-        !isCover
-          ? 'bg-nord-8 text-nord-0 font-medium border-nord-8'
-          : 'bg-nord-1 border-nord-3 hover:bg-nord-2'
-      "
-      :title="$t('preview.fitTitle')"
-      @click="emit('setFitMode', 'contain')"
-    >
-      {{ $t("preview.fit") }}
-    </button>
-    <template v-if="isCover">
-      <span class="w-px h-4 bg-nord-3 mx-1" />
-      <button
-        class="w-8 h-8 md:w-6 md:h-6 flex items-center justify-center rounded border border-nord-3 bg-nord-1 hover:bg-nord-2 transition-colors"
-        :title="$t('preview.zoomOut')"
-        @click="emit('setZoom', cropScale - 0.25)"
-      >
-        -
-      </button>
-      <input
-        type="number"
-        min="100"
-        max="500"
-        step="1"
-        :value="Math.round(cropScale * 100)"
-        class="w-12 bg-nord-1 border border-nord-3 rounded px-1 py-0.5 text-xs text-nord-6 text-center tabular-nums focus:border-nord-8 focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-        aria-label="Zoom percent"
-        @change="onZoomInput"
-        @focus="($event.target as HTMLInputElement).select()"
+    <UFieldGroup>
+      <UTooltip :text="$t('preview.fillTitle')">
+        <UButton
+          :label="$t('preview.fill')"
+          :color="props.isCover ? 'primary' : 'neutral'"
+          :variant="props.isCover ? 'soft' : 'outline'"
+          @click="emit('setFitMode', 'cover')"
+        />
+      </UTooltip>
+      <UTooltip :text="$t('preview.fitTitle')">
+        <UButton
+          :label="$t('preview.fit')"
+          :color="!props.isCover ? 'primary' : 'neutral'"
+          :variant="!props.isCover ? 'soft' : 'outline'"
+          @click="emit('setFitMode', 'contain')"
+        />
+      </UTooltip>
+    </UFieldGroup>
+
+    <template v-if="props.isCover">
+      <USeparator orientation="vertical" class="mx-0.5 h-4" />
+      <UButton
+        icon="i-lucide-minus"
+        color="neutral"
+        variant="outline"
+        :aria-label="$t('preview.zoomOut')"
+        @click="emit('setZoom', props.cropScale - 0.25)"
       />
-      <span class="text-[10px] text-nord-4">%</span>
-      <button
-        class="w-8 h-8 md:w-6 md:h-6 flex items-center justify-center rounded border border-nord-3 bg-nord-1 hover:bg-nord-2 transition-colors"
-        :title="$t('preview.zoomIn')"
-        @click="emit('setZoom', cropScale + 0.25)"
-      >
-        +
-      </button>
-      <button
-        class="px-2.5 py-1.5 md:py-1 shrink-0 rounded border border-nord-3 bg-nord-1 hover:bg-nord-2 transition-colors"
-        :title="$t('preview.resetCrop')"
-        @click="emit('resetCrop')"
-      >
-        {{ $t("preview.reset") }}
-      </button>
+      <UInputNumber
+        :model-value="Math.round(props.cropScale * 100)"
+        :min="100"
+        :max="500"
+        :increment="false"
+        :decrement="false"
+        variant="subtle"
+        class="w-14"
+        :ui="{ base: 'text-center font-mono' }"
+        aria-label="Zoom percent"
+        @update:model-value="onZoomInput"
+      />
+      <span class="text-[10px] text-dimmed">%</span>
+      <UButton
+        icon="i-lucide-plus"
+        color="neutral"
+        variant="outline"
+        :aria-label="$t('preview.zoomIn')"
+        @click="emit('setZoom', props.cropScale + 0.25)"
+      />
+      <UTooltip :text="$t('preview.resetCrop')">
+        <UButton
+          :label="$t('preview.reset')"
+          color="neutral"
+          variant="ghost"
+          @click="emit('resetCrop')"
+        />
+      </UTooltip>
     </template>
-    <span class="hidden md:block w-px h-4 bg-nord-3 mx-1" />
-    <button
-      class="hidden md:flex w-6 h-6 items-center justify-center rounded border border-nord-3 bg-nord-1 hover:bg-nord-2 transition-colors"
-      :title="$t('preview.viewZoomOut')"
+
+    <USeparator orientation="vertical" class="mx-0.5 hidden h-4 md:block" />
+    <UButton
+      icon="i-lucide-zoom-out"
+      color="neutral"
+      variant="outline"
+      class="hidden md:inline-flex"
+      :aria-label="$t('preview.viewZoomOut')"
       @click="emit('zoomView', 1 / 1.25)"
-    >
-      -
-    </button>
-    <span class="hidden md:inline w-12 text-center tabular-nums" :title="$t('preview.viewHint')">
-      {{ viewPercent }}%
-    </span>
-    <button
-      class="hidden md:flex w-6 h-6 items-center justify-center rounded border border-nord-3 bg-nord-1 hover:bg-nord-2 transition-colors"
-      :title="$t('preview.viewZoomIn')"
+    />
+    <UTooltip :text="$t('preview.viewHint')">
+      <span class="hidden w-10 text-center font-mono text-[11px] text-muted md:inline">
+        {{ props.viewPercent }}%
+      </span>
+    </UTooltip>
+    <UButton
+      icon="i-lucide-zoom-in"
+      color="neutral"
+      variant="outline"
+      class="hidden md:inline-flex"
+      :aria-label="$t('preview.viewZoomIn')"
       @click="emit('zoomView', 1.25)"
-    >
-      +
-    </button>
-    <button
-      class="px-2.5 py-1.5 md:py-1 shrink-0 rounded border border-nord-3 bg-nord-1 hover:bg-nord-2 transition-colors"
-      :title="$t('preview.fitViewTitle')"
-      @click="emit('resetView')"
-    >
-      {{ $t("preview.fitView") }}
-    </button>
+    />
+    <UTooltip :text="$t('preview.fitViewTitle')">
+      <UButton
+        icon="i-lucide-scan"
+        :label="$t('preview.fitView')"
+        color="neutral"
+        variant="ghost"
+        @click="emit('resetView')"
+      />
+    </UTooltip>
   </div>
 </template>

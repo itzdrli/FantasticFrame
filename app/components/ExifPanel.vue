@@ -28,11 +28,22 @@ const entries = computed(() => {
 </script>
 
 <template>
-  <div v-if="entries.length" class="grid grid-cols-2 gap-x-4 gap-y-3">
-    <div v-for="[key, val] in entries" :key="key" class="flex flex-col min-w-0">
-      <span class="text-nord-4 text-xs">{{ fieldLabels[key] ? t(fieldLabels[key]) : key }}</span>
-      <span class="text-nord-6 text-sm font-medium truncate" :title="String(val)">{{ val }}</span>
+  <dl v-if="entries.length" class="flex flex-col">
+    <div
+      v-for="[key, val] in entries"
+      :key="key"
+      class="flex items-baseline justify-between gap-3 border-b border-default/60 py-1.5 last:border-0"
+    >
+      <dt class="shrink-0 text-[11px] text-muted">
+        {{ fieldLabels[key] ? t(fieldLabels[key]) : key }}
+      </dt>
+      <dd
+        class="min-w-0 truncate text-right font-mono text-[11px] text-highlighted"
+        :title="String(val)"
+      >
+        {{ val }}
+      </dd>
     </div>
-  </div>
-  <div v-else class="text-nord-4/60 text-xs text-center py-8">{{ $t("exif.noData") }}</div>
+  </dl>
+  <p v-else class="py-8 text-center text-muted">{{ $t("exif.noData") }}</p>
 </template>

@@ -9,7 +9,7 @@ import { computed } from "vue";
  * theme before first paint; this composable owns it from then on.
  */
 
-export type ThemeId = "nord" | "frost" | "sand" | "dusk";
+export type ThemeId = "graphite" | "nord" | "frost" | "sand" | "dusk";
 
 export interface ThemeMeta {
   id: ThemeId;
@@ -20,6 +20,11 @@ export interface ThemeMeta {
 }
 
 export const THEME_LIST: ThemeMeta[] = [
+  {
+    id: "graphite",
+    labelKey: "appearance.themes.graphite",
+    swatches: ["#1b1b1b", "#262626", "#5aa2ee", "#ececec"],
+  },
   {
     id: "nord",
     labelKey: "appearance.themes.nord",
@@ -53,10 +58,10 @@ export type LocaleCode = (typeof SUPPORTED_LOCALES)[number];
  * one source of truth. Seeded from `<html data-theme>` on the client: the
  * pre-paint inline script (nuxt.config) already applied the saved theme there
  * before this module runs, so the UI indicator matches what is rendered
- * without re-reading localStorage. Server markup always starts at the nord
+ * without re-reading localStorage. Server markup always starts at the graphite
  * default (the theme menu is client-only, so no hydration concern).
  */
-const themeId = ref<ThemeId>(import.meta.client ? (readAppliedTheme() ?? "nord") : "nord");
+const themeId = ref<ThemeId>(import.meta.client ? (readAppliedTheme() ?? "graphite") : "graphite");
 
 function readAppliedTheme(): ThemeId | null {
   const applied = document.documentElement.dataset.theme;

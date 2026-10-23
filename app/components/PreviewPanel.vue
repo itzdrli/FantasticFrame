@@ -222,7 +222,7 @@ const footerStyle = computed(() => {
     <!-- Empty State -->
     <div
       v-if="!photo || !templateConfig"
-      class="flex items-center justify-center h-full w-full text-nord-4 bg-nord-1 rounded-lg border border-nord-2 border-dashed shadow-md"
+      class="flex h-full w-full items-center justify-center text-muted"
     >
       <div class="flex flex-col items-center justify-center p-8 text-center gap-4">
         <svg
@@ -235,7 +235,7 @@ const footerStyle = computed(() => {
           stroke-width="2"
           stroke-linecap="round"
           stroke-linejoin="round"
-          class="text-nord-3 w-16 h-16"
+          class="size-16 text-dimmed"
         >
           <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
           <circle cx="9" cy="9" r="2" />
@@ -248,7 +248,7 @@ const footerStyle = computed(() => {
     <template v-else>
       <!-- Canvas Wrapper (positioned by workspace pan/zoom) -->
       <div :style="canvasPositionStyle">
-        <div :style="canvasStyle" class="shadow-2xl">
+        <div :style="canvasStyle" class="shadow-[0_4px_28px_rgba(0,0,0,0.5)]">
           <div
             class="flex-1 w-full flex items-center justify-center"
             :style="{

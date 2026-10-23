@@ -1,16 +1,11 @@
 <script setup lang="ts">
-import { TwitterPicker } from "vue-color";
+import { computed, ref, watch } from "vue";
 
 const model = defineModel<string>({ default: "#000000" });
 
-const open = ref(false);
-const root = ref<HTMLElement | null>(null);
-
-// Expanded preset palette, ordered by lightness then hue (dark → light
-// neutrals first, then a red → orange → yellow → green → teal → blue →
-// purple rainbow) so the swatch grid reads top-to-bottom as one progression.
+// Neutrals first (dark → light) then a hue progression, so the grid reads as
+// one ramp. Picking a swatch is the common case for caption/background colours.
 const PRESET_COLORS = [
-  // Neutrals, dark → light
   "#000000",
   "#18181B",
   "#1A1A1A",
@@ -28,43 +23,36 @@ const PRESET_COLORS = [
   "#EFEDEC",
   "#F5F5F3",
   "#FFFFFF",
-  // Reds & pinks
   "#EB144C",
   "#EF4444",
   "#BF616A",
   "#F78DA7",
   "#EC4899",
-  // Oranges & browns
   "#FF6900",
   "#F97316",
   "#D08770",
   "#C9A66B",
   "#8B7355",
-  // Yellows & creams
   "#FCB900",
   "#EAB308",
   "#EBCB8B",
   "#D9C7A3",
   "#D4C5A0",
   "#E5D5B7",
-  // Greens & mint
   "#84CC16",
   "#22C55E",
   "#A3BE8C",
   "#00D084",
   "#7BDCB5",
-  // Teals & cyans
   "#14B8A6",
   "#8FBCBB",
   "#06B6D4",
   "#8ED1FC",
-  // Blues
   "#0693E3",
   "#3B82F6",
   "#88C0D0",
   "#81A1C1",
   "#5E81AC",
-  // Purples
   "#6366F1",
   "#8B5CF6",
   "#9900EF",
@@ -72,98 +60,66 @@ const PRESET_COLORS = [
   "#B48EAD",
 ];
 
-function onDocPointerDown(e: PointerEvent) {
-  if (!open.value || !root.value) return;
-  if (!root.value.contains(e.target as Node)) open.value = false;
-}
+const HEX_RE = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i;
 
-function onKeydown(e: KeyboardEvent) {
-  if (e.key === "Escape") open.value = false;
-}
+const color = computed(() => model.value || "#000000");
 
-onMounted(() => {
-  document.addEventListener("pointerdown", onDocPointerDown, true);
-  document.addEventListener("keydown", onKeydown);
-});
+const hexDraft = ref(color.value);
+watch(color, (c) => (hexDraft.value = c));
 
-onUnmounted(() => {
-  document.removeEventListener("pointerdown", onDocPointerDown, true);
-  document.removeEventListener("keydown", onKeydown);
-});
-
-const displayColor = computed(() => model.value || "#000000");
-
-function onPick(val: string | { hex?: string } | unknown) {
-  // vue-color preserves the input format; with a hex string model it emits hex.
-  if (typeof val === "string") {
-    model.value = val;
+function commitHex() {
+  const m = HEX_RE.exec(hexDraft.value.trim());
+  if (!m) {
+    hexDraft.value = color.value;
     return;
   }
-  if (val && typeof val === "object" && "hex" in val && typeof (val as any).hex === "string") {
-    model.value = (val as { hex: string }).hex;
-  }
+  let hex = m[1]!;
+  if (hex.length === 3) hex = [...hex].map((c) => c + c).join("");
+  model.value = `#${hex.toUpperCase()}`;
 }
 </script>
 
 <template>
-  <div ref="root" class="relative inline-flex">
+  <UPopover :content="{ side: 'left', align: 'start', sideOffset: 8 }">
     <button
       type="button"
-      @click="open = !open"
-      class="w-8 h-8 rounded cursor-pointer border border-nord-3 bg-nord-1 p-0.5 shrink-0"
-      :title="displayColor"
-      :aria-expanded="open"
-      aria-haspopup="dialog"
+      class="flex h-6 items-center gap-1.5 border border-default bg-muted pr-1.5 pl-0.5 outline-none hover:border-accented focus-visible:border-primary"
+      :aria-label="color"
     >
-      <span
-        class="block w-full h-full rounded-sm border border-nord-3/40"
-        :style="{ backgroundColor: displayColor }"
-      />
+      <span class="size-4 border border-black/30" :style="{ backgroundColor: color }" />
+      <span class="font-mono text-[10px] text-muted uppercase">{{ color }}</span>
     </button>
 
-    <div
-      v-if="open"
-      class="ff-color-picker absolute z-50 top-full right-0 mt-2"
-      role="dialog"
-      aria-label="Color picker"
-    >
-      <TwitterPicker
-        :model-value="displayColor"
-        :preset-colors="PRESET_COLORS"
-        triangle="hide"
-        :width="280"
-        @update:model-value="onPick"
-      />
-    </div>
-  </div>
+    <template #content>
+      <div class="flex w-56 flex-col gap-2 p-2.5">
+        <UColorPicker
+          :model-value="color"
+          size="sm"
+          class="w-full"
+          @update:model-value="model = $event ?? color"
+        />
+        <UInput
+          v-model="hexDraft"
+          size="xs"
+          variant="subtle"
+          maxlength="7"
+          :ui="{ base: 'font-mono uppercase' }"
+          @blur="commitHex"
+          @keydown.enter.prevent="commitHex"
+        />
+        <div class="grid grid-cols-8 gap-1">
+          <button
+            v-for="c in PRESET_COLORS"
+            :key="c"
+            type="button"
+            class="aspect-square border outline-none focus-visible:ring-1 focus-visible:ring-primary"
+            :class="c.toLowerCase() === color.toLowerCase() ? 'border-primary' : 'border-black/30'"
+            :style="{ backgroundColor: c }"
+            :aria-label="c"
+            @click="model = c"
+          />
+        </div>
+      </div>
+    </template>
+  </UPopover>
 </template>
-
-<style scoped>
-.ff-color-picker {
-  --vc-body-bg: #3b4252;
-  --vc-picker-bg: #3b4252;
-  --vc-twitter-input-bg: #2e3440;
-  --vc-twitter-input-border: #4c566a;
-  --vc-twitter-input-color: #eceff4;
-  --vc-twitter-hash-bg: #434c5e;
-  --vc-twitter-hash-color: #d8dee9;
-  --vc-input-bg: #2e3440;
-  --vc-input-text: #eceff4;
-  --vc-input-border: #4c566a;
-}
-
-.ff-color-picker :deep(.vc-twitter-picker) {
-  box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.45),
-    0 0 0 1px #4c566a;
-}
-
-/* Give every swatch a visible edge — light colors (white, cream, #ECEFF4…)
-   would otherwise blend into the picker background. The selected color keeps
-   its glow via the inline box-shadow from the component; the border sits
-   underneath it. */
-.ff-color-picker :deep(.swatch) {
-  border: 1px solid rgba(216, 222, 233, 0.35);
-  box-sizing: border-box;
-}
-</style>

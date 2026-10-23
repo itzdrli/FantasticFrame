@@ -34,5 +34,6 @@ proxy.
 
 ## Stack
 
-Nuxt 4 / Vue 3 / Pinia. Tailwind v4 on the Nord palette. Rendering via
+Nuxt 4 / Vue 3 / Pinia. Nuxt UI v4 on Tailwind v4, with a Lightroom-style
+neutral "Graphite" default theme (Nord, Frost, Sand and Dusk are selectable). Rendering via
 takumi-js (WASM in the browser, native on the server fallback). EXIF parsed by exifr.

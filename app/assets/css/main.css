@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "vue-color/style.css";
+@import "@nuxt/ui";
 
 /*
  * Self-hosted fonts (LXGW WenKai is not on Google Fonts).
@@ -15,6 +15,34 @@
 }
 
 @theme {
+  /* Default "Graphite" — neutral grey like a photo editor, so the photo's
+     colour is the only colour on screen. The names stay nord-* (they are
+     luminance roles, not hues); see the alternate palettes below. */
+  --color-nord-0: #1b1b1b;
+  --color-nord-1: #262626;
+  --color-nord-2: #303030;
+  --color-nord-3: #444444;
+  --color-nord-4: #a1a1a1;
+  --color-nord-5: #c4c4c4;
+  --color-nord-6: #ececec;
+  --color-nord-7: #8cb8e8;
+  --color-nord-8: #5aa2ee;
+  --color-nord-9: #4a88d0;
+  --color-nord-10: #3b6fb0;
+  --color-nord-11: #e0645c;
+  --color-nord-12: #e08a4f;
+  --color-nord-13: #d9bb62;
+  --color-nord-14: #7cc08a;
+  --color-nord-15: #b393d6;
+
+  /* Default Nord font family — Latin from Inter, CJK from MiSans (self-hosted
+     sliced web font, see nuxt.config links) instead of the OS default. */
+  --font-sans: "Inter", "MiSans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+/* Nord — the original blue-grey palette */
+:root[data-theme="nord"] {
   --color-nord-0: #2e3440;
   --color-nord-1: #3b4252;
   --color-nord-2: #434c5e;
@@ -31,10 +59,6 @@
   --color-nord-13: #ebcb8b;
   --color-nord-14: #a3be8c;
   --color-nord-15: #b48ead;
-
-  /* Default Nord font family — Latin from Inter, CJK from MiSans (self-hosted
-     sliced web font, see nuxt.config links) instead of the OS default. */
-  --font-sans: "Inter", "MiSans", system-ui, sans-serif;
 }
 
 /*
@@ -106,7 +130,10 @@
   --color-nord-15: #c09be0;
 }
 
-/* Make the checkerboard behind the preview follow the theme */
+/* Native controls (scrollbars, date pickers) follow the theme */
+:root {
+  color-scheme: dark;
+}
 :root[data-theme="frost"],
 :root[data-theme="sand"] {
   color-scheme: light;
@@ -115,119 +142,63 @@
   color-scheme: dark;
 }
 
+/*
+ * Nuxt UI semantic tokens, mapped onto the nord-* luminance roles so every
+ * theme (including the light ones) re-skins the component library for free.
+ * Declared unlayered, so they beat Nuxt UI's @layer theme defaults.
+ */
+:root {
+  /* Square-ish, editor-like: rounded-md resolves to ~3px */
+  --ui-radius: 0.125rem;
+
+  --ui-bg: var(--color-nord-1);
+  --ui-bg-muted: var(--color-nord-0);
+  --ui-bg-elevated: var(--color-nord-2);
+  --ui-bg-accented: var(--color-nord-3);
+  --ui-bg-inverted: var(--color-nord-6);
+  --ui-text-dimmed: color-mix(in oklab, var(--color-nord-4) 60%, transparent);
+  --ui-text-muted: var(--color-nord-4);
+  --ui-text-toned: var(--color-nord-5);
+  --ui-text: var(--color-nord-5);
+  --ui-text-highlighted: var(--color-nord-6);
+  --ui-text-inverted: var(--color-nord-0);
+  --ui-border: var(--color-nord-3);
+  --ui-border-muted: var(--color-nord-2);
+  --ui-border-accented: var(--color-nord-4);
+  --ui-border-inverted: var(--color-nord-6);
+
+  --ui-primary: var(--color-nord-8);
+  --ui-secondary: var(--color-nord-9);
+  --ui-info: var(--color-nord-9);
+  --ui-success: var(--color-nord-14);
+  --ui-warning: var(--color-nord-13);
+  --ui-error: var(--color-nord-11);
+}
+
 body {
-  @apply bg-nord-0 text-nord-4 font-sans;
+  @apply bg-nord-0 text-nord-5 font-sans antialiased;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
 
-/* Settings drawer transition */
-.settings-drawer-enter-active,
-.settings-drawer-leave-active {
-  transition:
-    transform 0.25s ease,
-    opacity 0.25s ease;
-}
-.settings-drawer-enter-from,
-.settings-drawer-leave-to {
-  transform: translateX(100%);
-  opacity: 0;
-}
-
-/* EXIF drawer transition (slides in from the left) */
-.exif-drawer-enter-active,
-.exif-drawer-leave-active {
-  transition:
-    transform 0.25s ease,
-    opacity 0.25s ease;
-}
-.exif-drawer-enter-from,
-.exif-drawer-leave-to {
-  transform: translateX(-100%);
-  opacity: 0;
-}
-
-/* Batch progress bar slides down from the top */
-.slide-down-enter-active,
-.slide-down-leave-active {
-  transition:
-    max-height 0.2s ease,
-    opacity 0.2s ease;
-  overflow: hidden;
-}
-.slide-down-enter-from,
-.slide-down-leave-to {
-  max-height: 0;
-  opacity: 0;
-}
-.slide-down-enter-to,
-.slide-down-leave-from {
-  max-height: 4px;
-  opacity: 1;
-}
-
-/* Batch export result toast */
-.toast-enter-active,
-.toast-leave-active {
-  transition:
-    transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
-    opacity 0.3s ease;
-}
-.toast-enter-from,
-.toast-leave-to {
-  transform: translateX(120%);
-  opacity: 0;
-}
-
-/* Privacy modal — backdrop fade, dialog scale+fade */
-.modal-enter-active,
-.modal-leave-active {
-  transition: opacity 0.2s ease;
-}
-.modal-enter-active .modal-dialog,
-.modal-leave-active .modal-dialog {
-  transition:
-    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
-    opacity 0.2s ease;
-}
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
-}
-.modal-enter-from .modal-dialog,
-.modal-leave-to .modal-dialog {
-  transform: scale(0.95);
-  opacity: 0;
+/* Native number steppers fight the flat look */
+input[type="number"] {
+  appearance: textfield;
 }
 
 /*
- * Phones: the drawers are in-flow bottom sheets (see index.vue), so they
- * slide up instead of sideways, and form controls get touch-sized hit areas.
+ * Phones: form controls must be 16px or iOS Safari zooms the page on focus,
+ * and hover-only affordances (e.g. the filmstrip delete button) are
+ * unreachable on touch.
  */
 @media (max-width: 767px) {
-  .settings-drawer-enter-from,
-  .settings-drawer-leave-to,
-  .exif-drawer-enter-from,
-  .exif-drawer-leave-to {
-    transform: translateY(100%);
-  }
-
-  /* iOS Safari zooms the page when a focused input is under 16px */
   input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
   select,
   textarea {
     font-size: 16px;
   }
-
-  input[type="range"] {
-    height: 1.75rem;
-  }
-
-  /* Keep the sheet's last controls clear of the home indicator */
-  .sheet {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
 }
 
-/* Hover-only affordances (e.g. thumbnail delete) are unreachable on touch */
 @media (hover: none) {
   .touch-visible {
     opacity: 1;

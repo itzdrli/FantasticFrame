@@ -44,8 +44,9 @@ const blobToDataUrl = (blob: Blob): Promise<string> =>
 export const useImageRender = () => {
   const isRendering = ref(false);
   const error = ref<string | null>(null);
-  const exportFormat = ref<ExportOptions["format"]>("jpeg");
-  const exportQuality = ref<number>(90);
+  // Shared (useState): the Export settings section edits what this composable renders with
+  const exportFormat = useState<ExportOptions["format"]>("ff:export-format", () => "jpeg");
+  const exportQuality = useState<number>("ff:export-quality", () => 90);
   const batchProgress = ref<BatchExportProgress | null>(null);
 
   /**

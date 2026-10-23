@@ -1,147 +1,86 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { usePhotoStore } from "~/composables/usePhotoStore";
-import { useExifReader } from "~/composables/useExifReader";
-import { importImageFiles } from "~/utils/photoImport";
-import { clonePhotoStyle } from "~/utils/photoStyle";
+import { usePhotoImport } from "~/composables/usePhotoImport";
 
 const photoStore = usePhotoStore();
-const { readExif } = useExifReader();
+const { isImporting, importProgress, skippedFiles, importFiles } = usePhotoImport();
 
 const fileInput = ref<HTMLInputElement | null>(null);
-const isImporting = ref(false);
-const importProgress = ref({ current: 0, total: 0 });
-const skippedFiles = ref<{ name: string; reason: string }[]>([]);
 
-const selectPhoto = (id: string) => {
-  photoStore.selectPhoto(id);
-};
-
-const removePhoto = (id: string, event: Event) => {
-  event.stopPropagation();
-  photoStore.removePhoto(id);
-};
-
-async function handleFiles(files: FileList | File[]) {
-  const imageFiles = Array.from(files).filter((f) => f.type.startsWith("image/"));
-  if (imageFiles.length === 0) return;
-
-  isImporting.value = true;
-  importProgress.value = { current: 0, total: imageFiles.length };
-
-  const style = clonePhotoStyle(photoStore.selectedPhoto);
-  const result = await importImageFiles(
-    imageFiles,
-    readExif,
-    (photo) => photoStore.addPhoto(photo),
-    (done) => {
-      importProgress.value.current = done;
-    },
-    3,
-    style,
-  );
-  skippedFiles.value = result.skipped;
-
-  isImporting.value = false;
-}
-
-const onFileChange = (e: Event) => {
+function onFileChange(e: Event) {
   const target = e.target as HTMLInputElement;
   if (target.files) {
-    handleFiles(target.files);
+    void importFiles(target.files);
     target.value = "";
   }
-};
-
-const importPercent = computed(() => {
-  if (!isImporting.value || importProgress.value.total === 0) return 0;
-  return Math.round((importProgress.value.current / importProgress.value.total) * 100);
-});
+}
 </script>
 
 <template>
-  <div class="w-full flex items-center gap-2 h-full">
-    <!-- Add photo button -->
-    <button
-      @click="fileInput?.click()"
-      :disabled="isImporting"
-      class="shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-lg border-2 border-dashed border-nord-3 hover:border-nord-8 hover:bg-nord-2 transition-all flex flex-col items-center justify-center gap-1 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group"
-      :title="$t('photoList.addPhoto')"
-    >
-      <template v-if="!isImporting">
-        <svg
-          class="w-6 h-6 text-nord-3 group-hover:text-nord-8 transition-colors"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M12 4v16m8-8H4"
-          />
-        </svg>
-        <span class="text-[10px] text-nord-3 group-hover:text-nord-8 transition-colors">{{
-          $t("photoList.add")
-        }}</span>
-      </template>
-      <template v-else>
-        <!-- Import progress -->
-        <div class="flex flex-col items-center justify-center gap-1">
-          <svg class="w-5 h-5 animate-spin text-nord-8" fill="none" viewBox="0 0 24 24">
-            <circle
-              class="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              stroke-width="4"
-            />
-            <path
-              class="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-            />
-          </svg>
-          <span class="text-[10px] text-nord-8"
+  <div class="flex h-full w-full items-center gap-2">
+    <UTooltip :text="$t('photoList.addPhoto')">
+      <UButton
+        color="neutral"
+        variant="outline"
+        :loading="isImporting"
+        :disabled="isImporting"
+        class="size-14 shrink-0 flex-col justify-center border-dashed md:size-[4.5rem]"
+        :aria-label="$t('photoList.addPhoto')"
+        @click="fileInput?.click()"
+      >
+        <template v-if="isImporting">
+          <span class="text-[10px] tabular-nums"
             >{{ importProgress.current }}/{{ importProgress.total }}</span
           >
-        </div>
-      </template>
-    </button>
-    <span
-      v-if="skippedFiles.length"
-      class="shrink-0 text-[10px] text-nord-11 bg-nord-11/10 border border-nord-11/30 rounded px-2 py-1"
-      :title="skippedFiles.map((f) => f.name).join('\n')"
-    >
-      {{ $t("photoList.skipped", { n: skippedFiles.length }) }}
-    </span>
+        </template>
+        <template v-else>
+          <UIcon name="i-lucide-plus" class="size-5" />
+          <span class="text-[10px]">{{ $t("photoList.add") }}</span>
+        </template>
+      </UButton>
+    </UTooltip>
 
-    <!-- Photo list -->
-    <div
-      class="flex-1 overflow-x-auto flex gap-3 py-2 scrollbar-thin scrollbar-thumb-nord-2 scrollbar-track-nord-0"
-    >
+    <UBadge
+      v-if="skippedFiles.length"
+      color="error"
+      variant="subtle"
+      class="shrink-0"
+      :title="skippedFiles.map((f) => f.name).join('\n')"
+      :label="$t('photoList.skipped', { n: skippedFiles.length })"
+    />
+
+    <div class="flex min-w-0 flex-1 gap-1.5 overflow-x-auto py-1.5">
       <div
         v-for="photo in photoStore.photos"
         :key="photo.id"
-        class="relative group shrink-0 rounded-lg overflow-hidden cursor-pointer transition-all w-16 h-16 md:w-20 md:h-20 bg-nord-1 border border-nord-2"
-        :class="{ 'ring-2 ring-nord-8 border-nord-8': photoStore.selectedId === photo.id }"
-        @click="selectPhoto(photo.id)"
+        class="group relative size-14 shrink-0 cursor-pointer overflow-hidden border bg-muted md:size-[4.5rem]"
+        :class="
+          photoStore.selectedId === photo.id
+            ? 'border-primary outline outline-1 outline-primary'
+            : 'border-default hover:border-accented'
+        "
+        role="button"
+        tabindex="0"
+        :aria-label="photo.fileName"
+        :aria-pressed="photoStore.selectedId === photo.id"
+        @click="photoStore.selectPhoto(photo.id)"
+        @keydown.enter.prevent="photoStore.selectPhoto(photo.id)"
+        @keydown.space.prevent="photoStore.selectPhoto(photo.id)"
       >
-        <img :src="photo.thumbUrl" alt="" class="w-full h-full object-cover" />
+        <img :src="photo.thumbUrl" alt="" class="size-full object-cover" />
 
-        <!-- Delete Button -->
-        <button
-          @click="removePhoto(photo.id, $event)"
-          class="absolute top-0.5 right-0.5 w-6 h-6 md:top-1 md:right-1 md:w-5 md:h-5 rounded-full bg-nord-11 text-nord-6 opacity-0 touch-visible group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs shadow-md z-10 hover:bg-red-500"
-        >
-          &times;
-        </button>
+        <UButton
+          icon="i-lucide-x"
+          color="neutral"
+          variant="solid"
+          class="touch-visible absolute top-0.5 right-0.5 p-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+          :aria-label="$t('border.remove')"
+          @click.stop="photoStore.removePhoto(photo.id)"
+        />
 
-        <!-- Filename Overlay -->
         <div
-          class="absolute bottom-0 left-0 right-0 bg-nord-0/80 backdrop-blur-sm text-nord-6 text-[10px] px-1 py-0.5 truncate text-center"
+          class="absolute inset-x-0 bottom-0 truncate bg-black/65 px-1 py-px text-center text-[9px] text-white"
         >
           {{ photo.fileName }}
         </div>
@@ -149,15 +88,15 @@ const importPercent = computed(() => {
 
       <div
         v-if="photoStore.photos.length === 0"
-        class="flex items-center justify-center text-nord-4 text-sm min-w-[160px]"
+        class="flex min-w-40 items-center justify-center text-muted"
       >
         {{ $t("photoList.empty") }}
       </div>
     </div>
 
     <input
-      type="file"
       ref="fileInput"
+      type="file"
       class="hidden"
       multiple
       accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif"

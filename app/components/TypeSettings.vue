@@ -1,29 +1,16 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { usePhotoStore } from "~/composables/usePhotoStore";
-import { getResolvedConfig } from "~/composables/useTemplate";
-import type { TemplateConfig, ExifFieldKey } from "~/types";
+import type { SelectMenuItem } from "@nuxt/ui";
+import type { ExifFieldKey } from "~/types";
 
-const photoStore = usePhotoStore();
+const { t } = useI18n();
+const { overrides, resolvedConfig, defaults, update } = useSelectedTemplate();
 
-const selectedPhoto = computed(() => photoStore.selectedPhoto);
-const templateId = computed(() => selectedPhoto.value?.templateId || "classic");
-const overrides = computed(() => selectedPhoto.value?.templateOverrides || {});
-const resolvedConfig = computed(() =>
-  selectedPhoto.value ? getResolvedConfig(templateId.value, overrides.value) : null,
-);
-
-// Image logos ignore `modelFontSize` — the Scale % slider in BorderSettings
-// drives the size instead. Hide the "Logo Text Size" row to avoid confusion.
+// Image logos ignore `modelFontSize` — the Scale % slider in the Logo section
+// drives the size instead. Hide the "Logo Size" row to avoid confusion.
 const hasImageLogo = computed(
   () => !!(overrides.value.logoImageUrl ?? resolvedConfig.value?.logoImageUrl),
 );
-
-const update = <K extends keyof TemplateConfig>(key: K, value: TemplateConfig[K]) => {
-  if (selectedPhoto.value) {
-    photoStore.updatePhotoOverrides(selectedPhoto.value.id, { [key]: value });
-  }
-};
 
 const fontFamily = computed({
   get: () => overrides.value.fontFamily ?? resolvedConfig.value?.fontFamily ?? "Inter, sans-serif",
@@ -116,116 +103,95 @@ const fontGroups: { label: string; fonts: { label: string; value: string }[] }[]
   },
 ];
 
-const layoutOptions: { label: string; value: "horizontal" | "list" | "grid" }[] = [
-  { label: "typography.layoutHorizontal", value: "horizontal" },
-  { label: "typography.layoutList", value: "list" },
-  { label: "typography.layoutGrid", value: "grid" },
-];
+const currentFontLabel = computed(
+  () => fontGroups.flatMap((g) => g.fonts).find((f) => f.value === fontFamily.value)?.label ?? "",
+);
+
+const layoutItems = computed(() => [
+  { label: t("typography.layoutHorizontal"), value: "horizontal" },
+  { label: t("typography.layoutList"), value: "list" },
+  { label: t("typography.layoutGrid"), value: "grid" },
+]);
+const layoutModel = computed({
+  get: () => infoLayout.value as string,
+  set: (v: string) => (infoLayout.value = v as "horizontal" | "list" | "grid"),
+});
+
+// USelectMenu takes grouped items as an array of arrays, each opening with a label row
+const fontItems = computed<SelectMenuItem[][]>(() =>
+  fontGroups.map((g) => [
+    { type: "label" as const, label: t(g.label) },
+    ...g.fonts.map((f) => ({ label: f.label, value: f.value })),
+  ]),
+);
 </script>
 
 <template>
-  <div v-if="resolvedConfig" class="flex flex-col gap-5 text-sm text-nord-4">
-    <!-- Typography -->
-    <div class="flex flex-col gap-3">
-      <!-- Font selection -->
-      <div class="flex items-center justify-between gap-2">
-        <span class="text-xs text-nord-4 shrink-0">{{ $t("typography.fontFamily") }}</span>
-        <div class="flex items-center gap-2 min-w-0 flex-1 justify-end">
-          <!-- Live preview of the current selection, drawn in its own face -->
-          <span
-            class="w-7 h-6 shrink-0 flex items-center justify-center rounded border border-nord-3/70 bg-nord-2 text-[13px] leading-none text-nord-6 overflow-hidden"
-            :style="{ fontFamily: fontFamily }"
-            aria-hidden="true"
-          >
-            Ag
+  <div v-if="resolvedConfig" class="flex flex-col gap-1">
+    <FieldRow :label="$t('typography.fontFamily')">
+      <USelectMenu
+        v-model="fontFamily"
+        :items="fontItems"
+        value-key="value"
+        variant="subtle"
+        :search-input="false"
+        class="w-40"
+        :ui="{ content: 'min-w-48' }"
+      >
+        <template #default>
+          <span class="truncate" :style="{ fontFamily }">{{ currentFontLabel }}</span>
+        </template>
+        <template #item-label="{ item }">
+          <span :style="{ fontFamily: (item as { value: string }).value }">
+            {{ (item as { label: string }).label }}
           </span>
-          <select
-            v-model="fontFamily"
-            class="min-w-0 w-32 bg-nord-2 border border-nord-3 rounded-lg px-2 py-1.5 text-nord-6 text-xs focus:border-nord-8 focus:outline-none transition-colors"
-          >
-            <optgroup v-for="group in fontGroups" :key="group.label" :label="$t(group.label)">
-              <option v-for="f in group.fonts" :key="f.value" :value="f.value">
-                {{ f.label }}
-              </option>
-            </optgroup>
-          </select>
-        </div>
-      </div>
+        </template>
+      </USelectMenu>
+    </FieldRow>
 
-      <!-- Color -->
-      <div class="flex items-center justify-between">
-        <span class="text-xs text-nord-4">{{ $t("typography.fontColor") }}</span>
-        <ColorPicker v-model="fontColor" />
-      </div>
+    <FieldRow :label="$t('typography.fontColor')">
+      <ColorPicker v-model="fontColor" />
+    </FieldRow>
 
-      <SliderField
-        v-model="fontSize"
-        :label="$t('typography.paramSize')"
-        :min="10"
-        :max="36"
-        suffix="px"
-      />
+    <ParamSlider
+      v-model="fontSize"
+      :label="$t('typography.paramSize')"
+      :min="10"
+      :max="36"
+      suffix="px"
+      :default-value="defaults?.fontSize"
+    />
 
-      <!-- Logo font size (text logos only — image logos are sized by Scale % in BorderSettings) -->
-      <SliderField
-        v-if="!hasImageLogo"
-        v-model="modelFontSize"
-        :label="$t('typography.logoSize')"
-        :min="14"
-        :max="48"
-        suffix="px"
-      />
+    <!-- Text logos only — image logos are sized by Scale % in the Logo section -->
+    <ParamSlider
+      v-if="!hasImageLogo"
+      v-model="modelFontSize"
+      :label="$t('typography.logoSize')"
+      :min="14"
+      :max="48"
+      suffix="px"
+      :default-value="defaults?.modelFontSize"
+    />
+
+    <div class="mt-2 flex flex-col gap-1.5">
+      <span class="text-[11px] text-muted">{{ $t("typography.layout") }}</span>
+      <SegmentedControl v-model="layoutModel" :items="layoutItems" />
     </div>
 
-    <!-- Layout -->
-    <div class="flex flex-col gap-3">
-      <span class="text-nord-5 font-medium border-b border-nord-2 pb-1">{{
-        $t("typography.layout")
-      }}</span>
-
-      <div class="grid grid-cols-3 gap-2">
-        <button
-          v-for="opt in layoutOptions"
-          :key="opt.value"
-          @click="infoLayout = opt.value"
-          class="flex items-center justify-center p-2.5 rounded-lg border transition-all text-center"
-          :class="
-            infoLayout === opt.value
-              ? 'border-nord-8 bg-nord-8/10 text-nord-8'
-              : 'border-nord-3 bg-nord-2 text-nord-4 hover:border-nord-9 hover:text-nord-9'
-          "
-        >
-          <span class="text-xs font-medium">{{ $t(opt.label) }}</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- Visible fields -->
-    <div class="flex flex-col gap-2">
-      <span class="text-nord-5 font-medium border-b border-nord-2 pb-1">{{
-        $t("typography.visibleFields")
-      }}</span>
-      <div class="grid grid-cols-2 gap-1.5">
-        <label
+    <div class="mt-2 flex flex-col gap-1.5">
+      <span class="text-[11px] text-muted">{{ $t("typography.visibleFields") }}</span>
+      <div class="grid grid-cols-2 gap-x-2 gap-y-1.5">
+        <UCheckbox
           v-for="field in availableFields"
           :key="field.value"
-          class="flex items-center gap-2 cursor-pointer px-2 py-1.5 rounded-lg transition-colors"
-          :class="
-            visibleFields.includes(field.value)
-              ? 'bg-nord-8/10 text-nord-8'
-              : 'text-nord-4 hover:bg-nord-2'
-          "
-        >
-          <input
-            type="checkbox"
-            :checked="visibleFields.includes(field.value)"
-            @change="toggleField(field.value)"
-            class="accent-nord-8 w-3.5 h-3.5 rounded"
-          />
-          <span class="text-xs">{{ $t(field.label) }}</span>
-        </label>
+          :model-value="visibleFields.includes(field.value)"
+          :label="$t(field.label)"
+          size="xs"
+          :ui="{ label: 'text-[11px] font-normal text-toned' }"
+          @update:model-value="toggleField(field.value)"
+        />
       </div>
     </div>
   </div>
-  <div v-else class="text-nord-4 text-sm text-center py-8">{{ $t("border.selectPhotoFirst") }}</div>
+  <p v-else class="py-6 text-center text-muted">{{ $t("border.selectPhotoFirst") }}</p>
 </template>

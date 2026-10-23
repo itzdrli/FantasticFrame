@@ -28,38 +28,43 @@ const selectTemplate = (templateId: string) => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
-    <h3 class="text-nord-6 text-sm font-medium">{{ $t("template.selectTemplate") }}</h3>
-    <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
-      <button
-        v-for="tpl in resolvedTemplates"
-        :key="tpl.id"
-        @click="selectTemplate(tpl.id)"
-        class="flex flex-col items-center gap-2 rounded-lg p-2 transition-all duration-200 bg-nord-1 border border-nord-2 hover:border-nord-3 focus:outline-none"
-        :class="{ 'ring-2 ring-nord-8 border-nord-8': selectedPhoto?.templateId === tpl.id }"
+  <div class="grid grid-cols-3 gap-1.5">
+    <button
+      v-for="tpl in resolvedTemplates"
+      :key="tpl.id"
+      type="button"
+      class="flex flex-col gap-1 border p-1 text-left outline-none transition-colors focus-visible:border-primary"
+      :class="
+        selectedPhoto?.templateId === tpl.id
+          ? 'border-primary bg-primary/10'
+          : 'border-default hover:border-accented'
+      "
+      :aria-pressed="selectedPhoto?.templateId === tpl.id"
+      @click="selectTemplate(tpl.id)"
+    >
+      <div
+        class="relative flex aspect-[4/3] w-full flex-col overflow-hidden"
+        :style="{
+          backgroundColor: tpl.config.backgroundColor,
+          borderRadius: `${Math.min(tpl.config.borderRadius / 4, 6)}px`,
+        }"
       >
+        <div class="m-1 flex-1 bg-black/25" />
         <div
-          class="w-full aspect-[4/3] rounded shadow-inner flex flex-col justify-between overflow-hidden relative"
-          :style="{
-            backgroundColor: tpl.config.backgroundColor,
-            borderRadius: `${tpl.config.borderRadius}px`,
-          }"
+          class="flex h-3 items-center justify-around pb-0.5 text-[6px] font-bold"
+          :style="{ color: tpl.config.fontColor, fontFamily: tpl.config.fontFamily }"
         >
-          <div class="flex-1 m-1 bg-nord-3 rounded-sm opacity-50"></div>
-          <div
-            class="flex justify-around items-center h-4 pb-1 text-[8px] font-bold"
-            :style="{
-              color: tpl.config.fontColor,
-              fontFamily: tpl.config.fontFamily,
-            }"
-          >
-            <span>A</span>
-            <span>B</span>
-            <span>C</span>
-          </div>
+          <span>A</span>
+          <span>B</span>
+          <span>C</span>
         </div>
-        <span class="text-xs text-nord-4">{{ tpl.name }}</span>
-      </button>
-    </div>
+      </div>
+      <span
+        class="truncate text-center text-[10px]"
+        :class="selectedPhoto?.templateId === tpl.id ? 'text-highlighted' : 'text-muted'"
+      >
+        {{ tpl.name }}
+      </span>
+    </button>
   </div>
 </template>

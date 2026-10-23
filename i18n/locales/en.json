@@ -155,6 +155,7 @@
     "theme": "Theme",
     "language": "Language",
     "themes": {
+      "graphite": "Graphite",
       "nord": "Nord",
       "frost": "Frost",
       "sand": "Sand",
@@ -169,5 +170,21 @@
     "pngLossless": "PNG is lossless, no quality setting needed",
     "webpHint": "Browser-side WebP is lossless; the quality slider only applies to the server render",
     "jpegHint": "JPEG is lossy; higher quality means larger files"
+  },
+  "panel": {
+    "presets": "Presets",
+    "canvas": "Canvas",
+    "frame": "Frame",
+    "type": "Caption",
+    "logo": "Logo",
+    "export": "Export",
+    "info": "Info",
+    "sync": "Sync",
+    "edit": "Edit",
+    "resetValue": "Reset to template value",
+    "resetSection": "Reset section",
+    "collapse": "Collapse panel",
+    "dropTitle": "Drop photos to begin",
+    "dropHint": "or click to browse"
   }
 }

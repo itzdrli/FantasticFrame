@@ -20,7 +20,13 @@ just saved configs; presets exist but everything is settable by hand.
 ## Stack
 
 - Nuxt 4 / Vue 3 / Pinia / TypeScript
-- Tailwind v4 (Nord palette), Google fonts self-hosted (see Fonts below)
+- Nuxt UI v4 (`@nuxt/ui`, Reka UI) on Tailwind v4 — Nuxt UI registers the
+  Tailwind vite plugin itself, do not add `@tailwindcss/vite`. Google fonts
+  self-hosted (see Fonts below)
+- Keep `nuxt`, `vue` and `vue-router` versions aligned with what `@nuxt/ui`
+  needs: a nested duplicate (`node_modules/nuxt/node_modules/vue`) silently
+  drops `$t` and the nitro config types and floods `typecheck` with errors.
+  If that happens, delete the nested dir and `bun install`.
 - Rendering: takumi-js (WASM in browser, native on server); `@takumi-rs` backend
 - EXIF parsed by exifr; zips via fflate
 - Package manager: **bun**; runtime: Bun (nitro preset `bun`)
@@ -46,9 +52,15 @@ Always run `bun run lint`, `bun run fmt:check`, `bun run test` and
 ## Project structure
 
 - `app/pages/index.vue` — single-page app shell
-- `app/components/` — Vue components: `PreviewPanel`,
-  `PhotoUploader`, `PhotoList`, `TemplateSelector`, `BorderSettings`,
-  `TypeSettings`, `ExifPanel`, `ColorPicker`
+- `app/components/` — Vue components. Right panel (Lightroom-style):
+  `SettingsPanel` (collapsible `PanelSection`s on desktop; icon tab bar +
+  collapsible bottom sheet on phones) hosting `TemplateSelector`,
+  `CanvasSettings`, `BorderSettings` (frame), `TypeSettings` (caption),
+  `LogoSettings`, `ExportSettings`, `StyleSyncBar`, `ExifPanel`. Building
+  blocks: `ParamSlider` (label scrub, double-click reset, changed highlight,
+  editable value), `FieldRow`, `SegmentedControl`, `ColorPicker`. Elsewhere:
+  `PreviewPanel`/`PreviewToolbar`, `PhotoUploader`, `PhotoList`, `AppearanceMenu`
+- `app/app.config.ts` — Nuxt UI density/shape overrides (xs sizes, square corners)
 - `app/composables/`
   - `usePhotoStore.ts` — Pinia store: photo list, selection, per-photo template
     overrides, crop state, export options. Photos hold a `File` + object URL
@@ -106,6 +118,17 @@ Always run `bun run lint`, `bun run fmt:check`, `bun run test` and
 - Canonical types live in `shared/types.ts` (shared verbatim by browser WASM,
   server, and app); `app/types/index.ts` re-exports them. Add new shared types
   there — never declare a duplicate interface in a component/composable.
+- UI: use Nuxt UI components (`UButton`, `USlider`, `UInputNumber`, `UTabs`,
+  `UPopover`, `UModal`, `useToast`, …), not hand-rolled controls. Colours are
+  the `nord-*` luminance roles (0 page … 6 strong text, 8 accent, 11 danger);
+  `main.css` maps them onto Nuxt UI's `--ui-*` tokens, so all themes
+  (graphite default, nord, frost, sand, dusk) re-skin the library via
+  `<html data-theme>`. `ui.colorMode` and `ui.fonts` are disabled on purpose
+  (own theme system; `@nuxt/fonts` would fetch from Google). Icons are
+  `i-lucide-*`, bundled at build (`icon.clientBundle.scan`,
+  `fallbackToApi: false`) — never from api.iconify.design. Utilities like
+  `bg-highlighted` do not exist: only text has `highlighted`/`toned`; use
+  `bg-inverted`, `bg-accented`, `bg-nord-N`.
 - No comments unless they add value; the codebase uses them heavily for
   rationale, follow that style.
 - Fonts: takumi does NOT auto-load named families — any family not registered

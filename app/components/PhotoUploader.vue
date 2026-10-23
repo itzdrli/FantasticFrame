@@ -1,147 +1,63 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { usePhotoStore } from "~/composables/usePhotoStore";
-import { useExifReader } from "~/composables/useExifReader";
-import { importImageFiles } from "~/utils/photoImport";
-import { clonePhotoStyle } from "~/utils/photoStyle";
+import { usePhotoImport } from "~/composables/usePhotoImport";
 
-const photoStore = usePhotoStore();
-const { readExif } = useExifReader();
-const isDragging = ref(false);
-const isImporting = ref(false);
-const importProgress = ref({ current: 0, total: 0 });
-const fileInput = ref<HTMLInputElement | null>(null);
+const { isImporting, importProgress, importPercent, skippedFiles, importFiles } = usePhotoImport();
 
-const skippedFiles = ref<{ name: string; reason: string }[]>([]);
+const ACCEPT = ".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif";
 
-async function handleFiles(files: FileList | File[]) {
-  if (isImporting.value) return;
-  const imageFiles = Array.from(files).filter((f) => f.type.startsWith("image/"));
-  if (imageFiles.length === 0) return;
-
-  isImporting.value = true;
-  importProgress.value = { current: 0, total: imageFiles.length };
-  try {
-    const style = clonePhotoStyle(photoStore.selectedPhoto);
-    const result = await importImageFiles(
-      files,
-      readExif,
-      (photo) => photoStore.addPhoto(photo),
-      (done) => {
-        importProgress.value.current = done;
-      },
-      3,
-      style,
-    );
-    skippedFiles.value = result.skipped;
-    // clear the notice once a new selection is dropped
-    if (result.skipped.length > 0) {
-      setTimeout(() => (skippedFiles.value = []), 6000);
-    }
-  } finally {
-    isImporting.value = false;
-  }
+// UFileUpload is a controlled field: hand the files to the importer, then clear it
+const files = ref<File[] | null>(null);
+function onFiles(value: File[] | null | undefined) {
+  if (value?.length) void importFiles(value);
+  files.value = null;
 }
-
-const onDragOver = (e: DragEvent) => {
-  e.preventDefault();
-  isDragging.value = true;
-};
-
-const onDragLeave = (e: DragEvent) => {
-  e.preventDefault();
-  isDragging.value = false;
-};
-
-const onDrop = (e: DragEvent) => {
-  e.preventDefault();
-  isDragging.value = false;
-  if (e.dataTransfer?.files) {
-    handleFiles(e.dataTransfer.files);
-  }
-};
-
-const onFileChange = (e: Event) => {
-  const target = e.target as HTMLInputElement;
-  if (target.files) {
-    handleFiles(target.files);
-    target.value = ""; // reset input
-  }
-};
 </script>
 
 <template>
-  <div
-    class="relative w-full p-8 rounded-xl border-2 border-dashed transition-all duration-300 flex flex-col items-center justify-center cursor-pointer bg-nord-1"
-    :class="
-      isDragging
-        ? 'border-nord-8 bg-nord-2/50'
-        : 'border-nord-3 hover:border-nord-9 hover:bg-nord-2'
-    "
-    @dragover="onDragOver"
-    @dragleave="onDragLeave"
-    @drop="onDrop"
-    @click="fileInput?.click()"
-  >
-    <template v-if="isImporting">
-      <svg class="w-12 h-12 text-nord-8 mb-4 animate-spin" fill="none" viewBox="0 0 24 24">
-        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-        <path
-          class="opacity-75"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-        />
-      </svg>
-      <p class="text-nord-6 font-medium mb-2">
+  <div class="flex flex-col gap-2">
+    <div
+      v-if="isImporting"
+      class="flex min-h-40 flex-col justify-center gap-3 border border-default bg-default p-5"
+    >
+      <p class="font-medium text-highlighted">
         {{
           $t("uploader.importing", { current: importProgress.current, total: importProgress.total })
         }}
       </p>
-      <p class="text-nord-4 text-xs">{{ $t("uploader.pleaseWait") }}</p>
-    </template>
-    <template v-else>
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        class="w-12 h-12 text-nord-8 mb-4 opacity-80"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        stroke-width="1.5"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"
-        />
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z"
-        />
-      </svg>
-      <p class="text-nord-6 font-medium mb-2">{{ $t("uploader.dragHint") }}</p>
-      <p class="text-nord-4 text-xs">{{ $t("uploader.supports") }}</p>
-    </template>
-    <p
+      <UProgress :model-value="importPercent" size="xs" />
+      <p class="text-[11px] text-muted">{{ $t("uploader.pleaseWait") }}</p>
+    </div>
+
+    <UFileUpload
+      v-else
+      v-model="files"
+      multiple
+      :accept="ACCEPT"
+      :preview="false"
+      icon="i-lucide-aperture"
+      :label="$t('uploader.dragHint')"
+      :description="$t('uploader.supports')"
+      variant="area"
+      color="neutral"
+      class="w-full"
+      :ui="{ base: 'min-h-40 rounded-[3px] border-dashed bg-default' }"
+      @update:model-value="onFiles"
+    />
+
+    <UAlert
       v-if="skippedFiles.length"
-      class="mt-2 text-[11px] text-nord-11 bg-nord-11/10 border border-nord-11/30 rounded-lg px-3 py-1.5 max-w-full"
-    >
-      {{
+      color="error"
+      variant="subtle"
+      icon="i-lucide-triangle-alert"
+      :description="
         skippedFiles.length > 1
-          ? $t("uploader.skippedPlural", {
+          ? $t('uploader.skippedPlural', {
               n: skippedFiles.length,
               reason: skippedFiles[0]?.reason,
             })
-          : $t("uploader.skipped", { n: skippedFiles.length, reason: skippedFiles[0]?.reason })
-      }}
-    </p>
-    <input
-      type="file"
-      ref="fileInput"
-      class="hidden"
-      multiple
-      accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif"
-      @change="onFileChange"
+          : $t('uploader.skipped', { n: skippedFiles.length, reason: skippedFiles[0]?.reason })
+      "
     />
   </div>
 </template>

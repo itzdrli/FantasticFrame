@@ -18,6 +18,11 @@ export const useSelectedTemplate = () => {
     selectedPhoto.value ? getResolvedConfig(templateId.value, overrides.value) : null,
   );
 
+  /** The untouched template: what a reset returns each value to */
+  const defaults = computed(() =>
+    selectedPhoto.value ? getResolvedConfig(templateId.value) : null,
+  );
+
   const update = <K extends keyof TemplateConfig>(key: K, value: TemplateConfig[K]) => {
     if (selectedPhoto.value) {
       photoStore.updatePhotoOverrides(selectedPhoto.value.id, { [key]: value });
@@ -29,5 +34,5 @@ export const useSelectedTemplate = () => {
     if (selectedPhoto.value) photoStore.updatePhotoOverrides(selectedPhoto.value.id, patch);
   };
 
-  return { selectedPhoto, overrides, resolvedConfig, update, updateMany };
+  return { selectedPhoto, overrides, resolvedConfig, defaults, update, updateMany };
 };
