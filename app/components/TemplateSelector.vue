@@ -33,11 +33,11 @@ const selectTemplate = (templateId: string) => {
       v-for="tpl in resolvedTemplates"
       :key="tpl.id"
       type="button"
-      class="flex flex-col gap-1 border p-1 text-left outline-none transition-colors focus-visible:border-primary"
+      class="flex flex-col gap-1 border p-1 text-left outline-none transition-colors focus-visible:border-nord-8"
       :class="
         selectedPhoto?.templateId === tpl.id
-          ? 'border-primary bg-primary/10'
-          : 'border-default hover:border-accented'
+          ? 'border-nord-8 bg-nord-8/10'
+          : 'border-nord-3 hover:border-nord-4'
       "
       :aria-pressed="selectedPhoto?.templateId === tpl.id"
       @click="selectTemplate(tpl.id)"
@@ -61,7 +61,7 @@ const selectTemplate = (templateId: string) => {
       </div>
       <span
         class="truncate text-center text-[10px]"
-        :class="selectedPhoto?.templateId === tpl.id ? 'text-highlighted' : 'text-muted'"
+        :class="selectedPhoto?.templateId === tpl.id ? 'text-nord-6' : 'text-nord-4'"
       >
         {{ tpl.name }}
       </span>

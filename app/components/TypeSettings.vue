@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed } from "vue";
-import type { SelectMenuItem } from "@nuxt/ui";
+import { computed, h } from "vue";
+import { NCheckbox, NSelect, type SelectGroupOption, type SelectOption } from "naive-ui";
 import type { ExifFieldKey } from "~/types";
 
 const { t } = useI18n();
@@ -103,10 +103,6 @@ const fontGroups: { label: string; fonts: { label: string; value: string }[] }[]
   },
 ];
 
-const currentFontLabel = computed(
-  () => fontGroups.flatMap((g) => g.fonts).find((f) => f.value === fontFamily.value)?.label ?? "",
-);
-
 const layoutItems = computed(() => [
   { label: t("typography.layoutHorizontal"), value: "horizontal" },
   { label: t("typography.layoutList"), value: "list" },
@@ -117,36 +113,34 @@ const layoutModel = computed({
   set: (v: string) => (infoLayout.value = v as "horizontal" | "list" | "grid"),
 });
 
-// USelectMenu takes grouped items as an array of arrays, each opening with a label row
-const fontItems = computed<SelectMenuItem[][]>(() =>
-  fontGroups.map((g) => [
-    { type: "label" as const, label: t(g.label) },
-    ...g.fonts.map((f) => ({ label: f.label, value: f.value })),
-  ]),
+const fontOptions = computed<SelectGroupOption[]>(() =>
+  fontGroups.map((g) => ({
+    type: "group" as const,
+    key: g.label,
+    label: t(g.label),
+    children: g.fonts.map((f) => ({ label: f.label, value: f.value })),
+  })),
 );
+
+// Each font previews itself, in the menu and in the closed select
+function renderFontLabel(option: SelectOption) {
+  if (option.type === "group") return option.label as string;
+  return h("span", { style: { fontFamily: option.value as string } }, option.label as string);
+}
 </script>
 
 <template>
   <div v-if="resolvedConfig" class="flex flex-col gap-1">
     <FieldRow :label="$t('typography.fontFamily')">
-      <USelectMenu
-        v-model="fontFamily"
-        :items="fontItems"
-        value-key="value"
-        variant="subtle"
-        :search-input="false"
-        class="w-40"
-        :ui="{ content: 'min-w-48' }"
-      >
-        <template #default>
-          <span class="truncate" :style="{ fontFamily }">{{ currentFontLabel }}</span>
-        </template>
-        <template #item-label="{ item }">
-          <span :style="{ fontFamily: (item as { value: string }).value }">
-            {{ (item as { label: string }).label }}
-          </span>
-        </template>
-      </USelectMenu>
+      <div class="w-40">
+        <NSelect
+          v-model:value="fontFamily"
+          :options="fontOptions"
+          :render-label="renderFontLabel"
+          :consistent-menu-width="false"
+          size="tiny"
+        />
+      </div>
     </FieldRow>
 
     <FieldRow :label="$t('typography.fontColor')">
@@ -174,24 +168,23 @@ const fontItems = computed<SelectMenuItem[][]>(() =>
     />
 
     <div class="mt-2 flex flex-col gap-1.5">
-      <span class="text-[11px] text-muted">{{ $t("typography.layout") }}</span>
+      <span class="text-[11px] text-nord-4">{{ $t("typography.layout") }}</span>
       <SegmentedControl v-model="layoutModel" :items="layoutItems" />
     </div>
 
     <div class="mt-2 flex flex-col gap-1.5">
-      <span class="text-[11px] text-muted">{{ $t("typography.visibleFields") }}</span>
+      <span class="text-[11px] text-nord-4">{{ $t("typography.visibleFields") }}</span>
       <div class="grid grid-cols-2 gap-x-2 gap-y-1.5">
-        <UCheckbox
+        <NCheckbox
           v-for="field in availableFields"
           :key="field.value"
-          :model-value="visibleFields.includes(field.value)"
+          :checked="visibleFields.includes(field.value)"
           :label="$t(field.label)"
-          size="xs"
-          :ui="{ label: 'text-[11px] font-normal text-toned' }"
-          @update:model-value="toggleField(field.value)"
+          size="small"
+          @update:checked="toggleField(field.value)"
         />
       </div>
     </div>
   </div>
-  <p v-else class="py-6 text-center text-muted">{{ $t("border.selectPhotoFirst") }}</p>
+  <p v-else class="py-6 text-center text-nord-4">{{ $t("border.selectPhotoFirst") }}</p>
 </template>

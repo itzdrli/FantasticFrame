@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "@nuxt/ui";
 
 /*
  * Self-hosted fonts (LXGW WenKai is not on Google Fonts).
@@ -67,7 +66,8 @@
  * from muted to strong, 8/9 = primary accent, 11 = danger, 12..15 = accents),
  * so components need zero changes. Set via <html data-theme="…">; utilities
  * reference var(--color-nord-*) at runtime, so overriding the variables here
- * re-themes the whole UI.
+ * re-themes the whole UI. Naive UI cannot read CSS variables, so the same
+ * palettes live in app/utils/themes.ts (tests/themes.test.ts keeps them equal).
  */
 
 /* Frost — light, cool, cyan-on-light accent */
@@ -140,39 +140,6 @@
 }
 :root[data-theme="dusk"] {
   color-scheme: dark;
-}
-
-/*
- * Nuxt UI semantic tokens, mapped onto the nord-* luminance roles so every
- * theme (including the light ones) re-skins the component library for free.
- * Declared unlayered, so they beat Nuxt UI's @layer theme defaults.
- */
-:root {
-  /* Square-ish, editor-like: rounded-md resolves to ~3px */
-  --ui-radius: 0.125rem;
-
-  --ui-bg: var(--color-nord-1);
-  --ui-bg-muted: var(--color-nord-0);
-  --ui-bg-elevated: var(--color-nord-2);
-  --ui-bg-accented: var(--color-nord-3);
-  --ui-bg-inverted: var(--color-nord-6);
-  --ui-text-dimmed: color-mix(in oklab, var(--color-nord-4) 60%, transparent);
-  --ui-text-muted: var(--color-nord-4);
-  --ui-text-toned: var(--color-nord-5);
-  --ui-text: var(--color-nord-5);
-  --ui-text-highlighted: var(--color-nord-6);
-  --ui-text-inverted: var(--color-nord-0);
-  --ui-border: var(--color-nord-3);
-  --ui-border-muted: var(--color-nord-2);
-  --ui-border-accented: var(--color-nord-4);
-  --ui-border-inverted: var(--color-nord-6);
-
-  --ui-primary: var(--color-nord-8);
-  --ui-secondary: var(--color-nord-9);
-  --ui-info: var(--color-nord-9);
-  --ui-success: var(--color-nord-14);
-  --ui-warning: var(--color-nord-13);
-  --ui-error: var(--color-nord-11);
 }
 
 body {

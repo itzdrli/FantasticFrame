@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref } from "vue";
+import { NButton, NCheckbox, NIcon, NSwitch } from "naive-ui";
+import { Check, Copy } from "@lucide/vue";
 import { usePhotoStore } from "~/composables/usePhotoStore";
 import { ALL_SYNC_CATEGORIES, SYNC_CATEGORIES } from "~/utils/photoStyle";
 
@@ -34,42 +36,46 @@ onUnmounted(() => {
 <template>
   <div class="flex flex-col gap-2">
     <FieldRow :label="`${$t('sync.batchSync')} ${$t('sync.photosCount', { n: photoStore.count })}`">
-      <USwitch v-model="photoStore.syncStyle" :aria-label="$t('sync.batchSync')" />
+      <NSwitch
+        v-model:value="photoStore.syncStyle"
+        size="small"
+        :aria-label="$t('sync.batchSync')"
+      />
     </FieldRow>
-    <p class="text-[10px] leading-snug text-dimmed">
+    <p class="text-[10px] leading-snug text-nord-4/60">
       {{ photoStore.syncStyle ? $t("sync.liveOn") : $t("sync.liveOff") }}
     </p>
 
     <div class="flex items-center justify-between">
-      <span class="text-[11px] text-muted">{{ $t("sync.scope") }}</span>
-      <UButton
-        :label="isAllSelected ? $t('sync.clearAll') : $t('sync.selectAll')"
-        variant="link"
-        size="xs"
-        @click="toggleAll"
-      />
+      <span class="text-[11px] text-nord-4">{{ $t("sync.scope") }}</span>
+      <NButton text type="primary" size="tiny" @click="toggleAll">
+        {{ isAllSelected ? $t("sync.clearAll") : $t("sync.selectAll") }}
+      </NButton>
     </div>
     <div class="grid grid-cols-2 gap-x-2 gap-y-1.5">
-      <UCheckbox
+      <NCheckbox
         v-for="cat in SYNC_CATEGORIES"
         :key="cat.id"
-        :model-value="photoStore.syncCategories.includes(cat.id)"
+        :checked="photoStore.syncCategories.includes(cat.id)"
         :label="$t(`sync.categories.${cat.id}`)"
-        size="xs"
-        :ui="{ label: 'text-[11px] font-normal text-toned' }"
-        @update:model-value="photoStore.toggleSyncCategory(cat.id)"
+        size="small"
+        @update:checked="photoStore.toggleSyncCategory(cat.id)"
       />
     </div>
 
-    <UButton
-      :label="appliedFlash ? $t('sync.applied') : $t('sync.applyToAll', { n: otherPhotosCount })"
-      :icon="appliedFlash ? 'i-lucide-check' : 'i-lucide-copy'"
-      :color="appliedFlash ? 'success' : 'neutral'"
-      :variant="appliedFlash ? 'soft' : 'outline'"
-      :disabled="photoStore.syncCategories.length === 0"
+    <NButton
+      size="tiny"
       block
+      :type="appliedFlash ? 'success' : 'default'"
+      :secondary="appliedFlash"
+      :disabled="photoStore.syncCategories.length === 0"
       @click="handleApply"
-    />
-    <p class="text-center text-[10px] text-dimmed">{{ $t("sync.cropNote") }}</p>
+    >
+      <template #icon>
+        <NIcon><component :is="appliedFlash ? Check : Copy" /></NIcon>
+      </template>
+      {{ appliedFlash ? $t("sync.applied") : $t("sync.applyToAll", { n: otherPhotosCount }) }}
+    </NButton>
+    <p class="text-center text-[10px] text-nord-4/60">{{ $t("sync.cropNote") }}</p>
   </div>
 </template>

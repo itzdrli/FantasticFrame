@@ -1,5 +1,19 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, ref, watch, type Component } from "vue";
+import { NButton, NIcon, NSwitch, NTab, NTabs } from "naive-ui";
+import {
+  ChevronDown,
+  ChevronUp,
+  Crop,
+  Download,
+  Info,
+  LayoutTemplate,
+  RefreshCw,
+  RotateCcw,
+  Square,
+  Stamp,
+  Type,
+} from "@lucide/vue";
 import { usePhotoStore } from "~/composables/usePhotoStore";
 import type { TemplateConfig } from "~/types";
 
@@ -24,15 +38,15 @@ const bodies = {
   info: resolveComponent("ExifPanel"),
 };
 
-const icons: Record<SectionId, string> = {
-  presets: "i-lucide-layout-template",
-  canvas: "i-lucide-crop",
-  frame: "i-lucide-square",
-  type: "i-lucide-type",
-  logo: "i-lucide-stamp",
-  export: "i-lucide-download",
-  sync: "i-lucide-refresh-cw",
-  info: "i-lucide-info",
+const icons: Record<SectionId, Component> = {
+  presets: LayoutTemplate,
+  canvas: Crop,
+  frame: Square,
+  type: Type,
+  logo: Stamp,
+  export: Download,
+  sync: RefreshCw,
+  info: Info,
 };
 
 /** Settings a section's reset button returns to the template's values */
@@ -93,9 +107,6 @@ const desktopItems = computed(() => [
 
 // ── Phone: one icon tab per section (Info included) ────────────────────────
 const phoneIds = computed<SectionId[]>(() => [...editSections.value, "info"]);
-const phoneItems = computed(() =>
-  phoneIds.value.map((id) => ({ label: title(id), value: id, icon: icons[id] })),
-);
 const phoneTab = ref<string>("presets");
 watch(phoneTab, () => (collapsed.value = false));
 watch(
@@ -109,34 +120,39 @@ watch(
 <template>
   <div class="flex h-full min-h-0 flex-col">
     <!-- Phone: icon tab bar + collapse toggle -->
-    <div v-if="props.mobile" class="flex shrink-0 items-center border-b border-default">
-      <UTabs
-        v-model="phoneTab"
-        :items="phoneItems"
-        :content="false"
-        variant="link"
-        size="xs"
-        color="primary"
+    <div v-if="props.mobile" class="flex shrink-0 items-center border-b border-nord-3">
+      <!-- Keyed by the tab list: Naive only re-measures the active-tab bar on
+           selection, so the Sync tab appearing would leave it misplaced -->
+      <NTabs
+        :key="phoneIds.join()"
+        v-model:value="phoneTab"
+        type="line"
+        size="small"
         class="min-w-0 flex-1"
-        :ui="{
-          root: 'gap-0',
-          list: 'overflow-x-auto border-b-0',
-          trigger: 'shrink-0 flex-col gap-0.5 px-3 py-1.5 text-[10px]',
-          leadingIcon: 'size-4',
-        }"
-      />
-      <UButton
-        :icon="collapsed ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-        color="neutral"
-        variant="ghost"
-        class="mx-1 shrink-0"
-        :aria-label="collapsed ? $t('panel.edit') : $t('panel.collapse')"
-        @click="collapsed = !collapsed"
-      />
+      >
+        <NTab v-for="id in phoneIds" :key="id" :name="id">
+          <span class="flex flex-col items-center gap-0.5 text-[10px]">
+            <NIcon :size="16"><component :is="icons[id]" /></NIcon>
+            {{ title(id) }}
+          </span>
+        </NTab>
+      </NTabs>
+      <span class="mx-1 flex shrink-0">
+        <NButton
+          quaternary
+          size="tiny"
+          :aria-label="collapsed ? $t('panel.edit') : $t('panel.collapse')"
+          @click="collapsed = !collapsed"
+        >
+          <template #icon>
+            <NIcon><component :is="collapsed ? ChevronUp : ChevronDown" /></NIcon>
+          </template>
+        </NButton>
+      </span>
     </div>
 
     <!-- Desktop: Edit / Info -->
-    <div v-else class="shrink-0 border-b border-default px-2 py-1.5">
+    <div v-else class="shrink-0 border-b border-nord-3 px-2 py-1.5">
       <SegmentedControl v-model="desktopTab" :items="desktopItems" />
     </div>
 
@@ -148,7 +164,7 @@ watch(
 
       <!-- Desktop -->
       <template v-else-if="desktopTab === 'edit'">
-        <p v-if="!photoStore.selectedPhoto" class="px-3 py-8 text-center text-muted">
+        <p v-if="!photoStore.selectedPhoto" class="px-3 py-8 text-center text-nord-4">
           {{ $t("border.selectPhotoFirst") }}
         </p>
         <template v-else>
@@ -160,16 +176,23 @@ watch(
             @update:open="open[id] = $event"
           >
             <template #actions>
-              <USwitch v-if="id === 'logo'" v-model="showLogo" :aria-label="$t('border.show')" />
-              <UButton
+              <NSwitch
+                v-if="id === 'logo'"
+                v-model:value="showLogo"
+                size="small"
+                :aria-label="$t('border.show')"
+              />
+              <NButton
                 v-if="isChanged(id)"
-                icon="i-lucide-rotate-ccw"
-                color="neutral"
-                variant="link"
-                class="p-0.5"
+                text
+                size="tiny"
                 :aria-label="$t('panel.resetSection')"
                 @click="resetSection(id)"
-              />
+              >
+                <template #icon>
+                  <NIcon><RotateCcw /></NIcon>
+                </template>
+              </NButton>
             </template>
             <component :is="bodies[id]" />
           </PanelSection>

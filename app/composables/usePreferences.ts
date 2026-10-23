@@ -1,51 +1,28 @@
 import { computed } from "vue";
+import { PALETTES, type ThemeId } from "~/utils/themes";
 
 /**
  * App-wide appearance preferences (theme + locale).
  *
  * Persisted under `ff:theme` / `ff:locale` in localStorage. The theme is
  * applied by setting `<html data-theme>` — main.css maps every nord-* role to
- * a palette per theme. A tiny inline script in nuxt.config applies the saved
- * theme before first paint; this composable owns it from then on.
+ * a palette per theme, and app.vue feeds the same palette to Naive UI. A tiny
+ * inline script in nuxt.config applies the saved theme before first paint;
+ * this composable owns it from then on.
  */
-
-export type ThemeId = "graphite" | "nord" | "frost" | "sand" | "dusk";
 
 export interface ThemeMeta {
   id: ThemeId;
   /** i18n message key, e.g. appearance.themes.nord */
   labelKey: string;
-  /** Small hex strips for the picker swatch */
+  /** Small hex strips for the picker swatch: page, panel, accent, text */
   swatches: string[];
 }
 
-export const THEME_LIST: ThemeMeta[] = [
-  {
-    id: "graphite",
-    labelKey: "appearance.themes.graphite",
-    swatches: ["#1b1b1b", "#262626", "#5aa2ee", "#ececec"],
-  },
-  {
-    id: "nord",
-    labelKey: "appearance.themes.nord",
-    swatches: ["#2e3440", "#3b4252", "#88c0d0", "#eceff4"],
-  },
-  {
-    id: "frost",
-    labelKey: "appearance.themes.frost",
-    swatches: ["#e7ecf2", "#ffffff", "#0e7490", "#1f2a3a"],
-  },
-  {
-    id: "sand",
-    labelKey: "appearance.themes.sand",
-    swatches: ["#efe7d9", "#faf6ec", "#8a5a23", "#2e2518"],
-  },
-  {
-    id: "dusk",
-    labelKey: "appearance.themes.dusk",
-    swatches: ["#0d0f13", "#191c22", "#6fc3de", "#edf1f7"],
-  },
-];
+export const THEME_LIST: ThemeMeta[] = (Object.keys(PALETTES) as ThemeId[]).map((id) => {
+  const c = PALETTES[id].colors;
+  return { id, labelKey: `appearance.themes.${id}`, swatches: [c[0]!, c[1]!, c[8]!, c[6]!] };
+});
 
 const THEME_KEY = "ff:theme";
 const LOCALE_KEY = "ff:locale";

@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { NButton, NIcon, NInputNumber, NSlider, useThemeVars } from "naive-ui";
+import { RotateCcw } from "@lucide/vue";
 import { clamp } from "~/utils/math";
 
 const props = withDefaults(
@@ -22,6 +24,22 @@ const changed = computed(
 );
 
 const snap = (n: number) => clamp(Math.round(n / props.step) * props.step, props.min, props.max);
+
+// A changed value is drawn in the accent colour, like the label
+const themeVars = useThemeVars();
+const sliderOverrides = computed(() =>
+  changed.value
+    ? { fillColor: themeVars.value.primaryColor, fillColorHover: themeVars.value.primaryColor }
+    : undefined,
+);
+
+// The value reads as plain text until focused, like Lightroom's numeric fields
+const valueOverrides = {
+  peers: { Input: { color: "transparent", colorFocus: "transparent", paddingTiny: "0 2px" } },
+};
+const valueInputProps = {
+  style: { textAlign: "right", fontFamily: "var(--font-mono)" },
+} as const;
 
 function reset() {
   if (props.defaultValue !== undefined) model.value = props.defaultValue;
@@ -58,7 +76,7 @@ function onScrubEnd() {
     <div class="flex h-5 items-center justify-between gap-2">
       <span
         class="min-w-0 flex-1 cursor-ew-resize touch-none truncate select-none text-[11px] transition-colors"
-        :class="changed ? 'text-highlighted' : 'text-muted'"
+        :class="changed ? 'text-nord-6' : 'text-nord-4'"
         @pointerdown="onScrubStart"
         @pointermove="onScrubMove"
         @pointerup="onScrubEnd"
@@ -67,49 +85,49 @@ function onScrubEnd() {
       >
         {{ label }}
       </span>
-      <UButton
+      <span
         v-if="changed"
-        icon="i-lucide-rotate-ccw"
-        color="neutral"
-        variant="link"
-        size="xs"
-        :aria-label="$t('panel.resetValue')"
-        class="p-0.5 opacity-0 transition-opacity group-hover/param:opacity-100 focus-visible:opacity-100 max-md:opacity-100"
-        @click="reset"
-      />
+        class="flex opacity-0 transition-opacity group-hover/param:opacity-100 focus-within:opacity-100 max-md:opacity-100"
+      >
+        <NButton text size="tiny" :aria-label="$t('panel.resetValue')" @click="reset">
+          <template #icon>
+            <NIcon><RotateCcw /></NIcon>
+          </template>
+        </NButton>
+      </span>
       <div class="flex items-center">
-        <UInputNumber
-          :model-value="model"
+        <NInputNumber
+          :value="model"
           :min="min"
           :max="max"
           :step="step"
-          :increment="false"
-          :decrement="false"
-          variant="none"
-          size="xs"
+          :show-button="false"
+          :bordered="false"
+          size="tiny"
+          :input-props="valueInputProps"
+          :theme-overrides="valueOverrides"
           :aria-label="label"
           class="w-12"
-          :ui="{ base: 'px-1 py-0.5 text-right font-mono text-[11px] text-highlighted' }"
-          @update:model-value="onInput"
+          @update:value="onInput"
         />
-        <span v-if="suffix" class="w-4 text-[10px] text-dimmed">{{ suffix }}</span>
+        <span v-if="suffix" class="w-4 text-[10px] text-nord-4/60">{{ suffix }}</span>
       </div>
     </div>
-    <USlider
-      :model-value="model"
-      :min="min"
-      :max="max"
-      :step="step"
-      size="xs"
-      :aria-label="label"
-      :ui="{
-        root: 'h-3',
-        track: 'h-[2px] rounded-none bg-accented',
-        range: changed ? 'rounded-none bg-primary' : 'rounded-none bg-nord-4/60',
-        thumb: 'h-3 w-[3px] rounded-none bg-inverted ring-0 outline-offset-1 hover:bg-primary',
-      }"
-      @update:model-value="(v) => onInput(v as number)"
-      @dblclick="reset"
-    />
+    <div @dblclick="reset">
+      <NSlider
+        :value="model"
+        :min="min"
+        :max="max"
+        :step="step"
+        :tooltip="false"
+        :theme-overrides="sliderOverrides"
+        :aria-label="label"
+        @update:value="onInput"
+      >
+        <template #thumb>
+          <div class="h-3 w-[3px] bg-nord-6 transition-colors hover:bg-nord-8" />
+        </template>
+      </NSlider>
+    </div>
   </div>
 </template>

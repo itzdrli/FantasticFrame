@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { NButton, NButtonGroup, NDivider, NIcon, NInputNumber, NTooltip } from "naive-ui";
+import { Minus, Plus, Scan, ZoomIn, ZoomOut } from "@lucide/vue";
+
 const props = defineProps<{ isCover: boolean; cropScale: number; viewPercent: number }>();
 
 const emit = defineEmits<{
@@ -9,7 +12,9 @@ const emit = defineEmits<{
   resetView: [];
 }>();
 
-function onZoomInput(n: number | null | undefined) {
+const zoomInputProps = { style: { textAlign: "center", fontFamily: "var(--font-mono)" } } as const;
+
+function onZoomInput(n: number | null) {
   if (typeof n === "number" && Number.isFinite(n)) emit("setZoom", n / 100);
 }
 </script>
@@ -17,99 +22,117 @@ function onZoomInput(n: number | null | undefined) {
 <template>
   <!-- Crop + view toolbar; swallows pointer events so it never pans the workspace -->
   <div
-    class="absolute bottom-2 left-1/2 flex max-w-[calc(100%-1rem)] -translate-x-1/2 cursor-default items-center gap-1 overflow-x-auto border border-default bg-default/95 px-1.5 py-1 whitespace-nowrap backdrop-blur-sm md:bottom-3"
+    class="absolute bottom-2 left-1/2 flex max-w-[calc(100%-1rem)] -translate-x-1/2 cursor-default items-center gap-1 overflow-x-auto border border-nord-3 bg-nord-1/95 px-1.5 py-1 whitespace-nowrap backdrop-blur-sm md:bottom-3"
     @pointerdown.stop
     @wheel.stop
     @dblclick.stop
   >
-    <UFieldGroup>
-      <UTooltip :text="$t('preview.fillTitle')">
-        <UButton
-          :label="$t('preview.fill')"
-          :color="props.isCover ? 'primary' : 'neutral'"
-          :variant="props.isCover ? 'soft' : 'outline'"
-          @click="emit('setFitMode', 'cover')"
-        />
-      </UTooltip>
-      <UTooltip :text="$t('preview.fitTitle')">
-        <UButton
-          :label="$t('preview.fit')"
-          :color="!props.isCover ? 'primary' : 'neutral'"
-          :variant="!props.isCover ? 'soft' : 'outline'"
-          @click="emit('setFitMode', 'contain')"
-        />
-      </UTooltip>
-    </UFieldGroup>
+    <NButtonGroup size="tiny">
+      <NTooltip :delay="500">
+        <template #trigger>
+          <NButton
+            :type="props.isCover ? 'primary' : 'default'"
+            :secondary="props.isCover"
+            @click="emit('setFitMode', 'cover')"
+          >
+            {{ $t("preview.fill") }}
+          </NButton>
+        </template>
+        {{ $t("preview.fillTitle") }}
+      </NTooltip>
+      <NTooltip :delay="500">
+        <template #trigger>
+          <NButton
+            :type="!props.isCover ? 'primary' : 'default'"
+            :secondary="!props.isCover"
+            @click="emit('setFitMode', 'contain')"
+          >
+            {{ $t("preview.fit") }}
+          </NButton>
+        </template>
+        {{ $t("preview.fitTitle") }}
+      </NTooltip>
+    </NButtonGroup>
 
     <template v-if="props.isCover">
-      <USeparator orientation="vertical" class="mx-0.5 h-4" />
-      <UButton
-        icon="i-lucide-minus"
-        color="neutral"
-        variant="outline"
+      <NDivider vertical />
+      <NButton
+        size="tiny"
         :aria-label="$t('preview.zoomOut')"
         @click="emit('setZoom', props.cropScale - 0.25)"
-      />
-      <UInputNumber
-        :model-value="Math.round(props.cropScale * 100)"
+      >
+        <template #icon>
+          <NIcon><Minus /></NIcon>
+        </template>
+      </NButton>
+      <NInputNumber
+        :value="Math.round(props.cropScale * 100)"
         :min="100"
         :max="500"
-        :increment="false"
-        :decrement="false"
-        variant="subtle"
+        :show-button="false"
+        size="tiny"
+        :input-props="zoomInputProps"
         class="w-14"
-        :ui="{ base: 'text-center font-mono' }"
         aria-label="Zoom percent"
-        @update:model-value="onZoomInput"
+        @update:value="onZoomInput"
       />
-      <span class="text-[10px] text-dimmed">%</span>
-      <UButton
-        icon="i-lucide-plus"
-        color="neutral"
-        variant="outline"
+      <span class="text-[10px] text-nord-4/60">%</span>
+      <NButton
+        size="tiny"
         :aria-label="$t('preview.zoomIn')"
         @click="emit('setZoom', props.cropScale + 0.25)"
-      />
-      <UTooltip :text="$t('preview.resetCrop')">
-        <UButton
-          :label="$t('preview.reset')"
-          color="neutral"
-          variant="ghost"
-          @click="emit('resetCrop')"
-        />
-      </UTooltip>
+      >
+        <template #icon>
+          <NIcon><Plus /></NIcon>
+        </template>
+      </NButton>
+      <NTooltip :delay="500">
+        <template #trigger>
+          <NButton size="tiny" quaternary @click="emit('resetCrop')">
+            {{ $t("preview.reset") }}
+          </NButton>
+        </template>
+        {{ $t("preview.resetCrop") }}
+      </NTooltip>
     </template>
 
-    <USeparator orientation="vertical" class="mx-0.5 hidden h-4 md:block" />
-    <UButton
-      icon="i-lucide-zoom-out"
-      color="neutral"
-      variant="outline"
-      class="hidden md:inline-flex"
-      :aria-label="$t('preview.viewZoomOut')"
-      @click="emit('zoomView', 1 / 1.25)"
-    />
-    <UTooltip :text="$t('preview.viewHint')">
-      <span class="hidden w-10 text-center font-mono text-[11px] text-muted md:inline">
-        {{ props.viewPercent }}%
-      </span>
-    </UTooltip>
-    <UButton
-      icon="i-lucide-zoom-in"
-      color="neutral"
-      variant="outline"
-      class="hidden md:inline-flex"
-      :aria-label="$t('preview.viewZoomIn')"
-      @click="emit('zoomView', 1.25)"
-    />
-    <UTooltip :text="$t('preview.fitViewTitle')">
-      <UButton
-        icon="i-lucide-scan"
-        :label="$t('preview.fitView')"
-        color="neutral"
-        variant="ghost"
-        @click="emit('resetView')"
-      />
-    </UTooltip>
+    <!-- Workspace zoom: desktop only (phones pinch). Wrapped because Naive's
+         unlayered display rule would beat a `hidden` utility on the button. -->
+    <div class="hidden items-center gap-1 md:flex">
+      <NDivider vertical />
+      <NButton
+        size="tiny"
+        :aria-label="$t('preview.viewZoomOut')"
+        @click="emit('zoomView', 1 / 1.25)"
+      >
+        <template #icon>
+          <NIcon><ZoomOut /></NIcon>
+        </template>
+      </NButton>
+      <NTooltip :delay="500">
+        <template #trigger>
+          <span class="w-10 text-center font-mono text-[11px] text-nord-4">
+            {{ props.viewPercent }}%
+          </span>
+        </template>
+        {{ $t("preview.viewHint") }}
+      </NTooltip>
+      <NButton size="tiny" :aria-label="$t('preview.viewZoomIn')" @click="emit('zoomView', 1.25)">
+        <template #icon>
+          <NIcon><ZoomIn /></NIcon>
+        </template>
+      </NButton>
+    </div>
+    <NTooltip :delay="500">
+      <template #trigger>
+        <NButton size="tiny" quaternary @click="emit('resetView')">
+          <template #icon>
+            <NIcon><Scan /></NIcon>
+          </template>
+          {{ $t("preview.fitView") }}
+        </NButton>
+      </template>
+      {{ $t("preview.fitViewTitle") }}
+    </NTooltip>
   </div>
 </template>

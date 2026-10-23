@@ -1,22 +1,12 @@
 <script setup lang="ts">
+import { NTab, NTabs } from "naive-ui";
+
 defineProps<{ items: { label: string; value: string }[] }>();
 const model = defineModel<string>({ required: true });
 </script>
 
 <template>
-  <UTabs
-    v-model="model"
-    :items="items"
-    :content="false"
-    variant="pill"
-    size="xs"
-    color="neutral"
-    :ui="{
-      root: 'w-full',
-      list: 'w-full rounded-[3px] border border-default bg-muted p-0.5',
-      indicator: 'rounded-[2px] bg-accented shadow-none',
-      trigger:
-        'flex-1 justify-center rounded-[2px] px-1.5 py-1 text-[11px] data-[state=active]:text-highlighted',
-    }"
-  />
+  <NTabs v-model:value="model" type="segment" size="small" animated class="w-full">
+    <NTab v-for="item in items" :key="item.value" :name="item.value" :tab="item.label" />
+  </NTabs>
 </template>

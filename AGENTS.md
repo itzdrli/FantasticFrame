@@ -20,11 +20,10 @@ just saved configs; presets exist but everything is settable by hand.
 ## Stack
 
 - Nuxt 4 / Vue 3 / Pinia / TypeScript
-- Nuxt UI v4 (`@nuxt/ui`, Reka UI) on Tailwind v4 — Nuxt UI registers the
-  Tailwind vite plugin itself, do not add `@tailwindcss/vite`. Google fonts
-  self-hosted (see Fonts below)
-- Keep `nuxt`, `vue` and `vue-router` versions aligned with what `@nuxt/ui`
-  needs: a nested duplicate (`node_modules/nuxt/node_modules/vue`) silently
+- Naive UI (CSS-in-JS, imported per component from `naive-ui`) for controls;
+  Tailwind v4 (`@tailwindcss/vite`) for layout and colours. Icons from
+  `@lucide/vue` (bundled components). Google fonts self-hosted (see Fonts below)
+- Keep `nuxt`, `vue` and `vue-router` versions aligned: a nested duplicate (`node_modules/nuxt/node_modules/vue`) silently
   drops `$t` and the nitro config types and floods `typecheck` with errors.
   If that happens, delete the nested dir and `bun install`.
 - Rendering: takumi-js (WASM in browser, native on server); `@takumi-rs` backend
@@ -60,7 +59,11 @@ Always run `bun run lint`, `bun run fmt:check`, `bun run test` and
   blocks: `ParamSlider` (label scrub, double-click reset, changed highlight,
   editable value), `FieldRow`, `SegmentedControl`, `ColorPicker`. Elsewhere:
   `PreviewPanel`/`PreviewToolbar`, `PhotoUploader`, `PhotoList`, `AppearanceMenu`
-- `app/app.config.ts` — Nuxt UI density/shape overrides (xs sizes, square corners)
+- `app/app.vue` — `NConfigProvider` (theme, overrides, locale) + `NMessageProvider`
+- `app/utils/themes.ts` — palettes per theme + `naiveThemeOverrides()` (editor
+  density: 22px `tiny` controls, 12px type, 2px corners; every colour token
+  mapped onto the nord-* roles)
+- `app/plugins/naive-ui.server.ts` — collects Naive's SSR styles into `<head>`
 - `app/composables/`
   - `usePhotoStore.ts` — Pinia store: photo list, selection, per-photo template
     overrides, crop state, export options. Photos hold a `File` + object URL
@@ -118,17 +121,18 @@ Always run `bun run lint`, `bun run fmt:check`, `bun run test` and
 - Canonical types live in `shared/types.ts` (shared verbatim by browser WASM,
   server, and app); `app/types/index.ts` re-exports them. Add new shared types
   there — never declare a duplicate interface in a component/composable.
-- UI: use Nuxt UI components (`UButton`, `USlider`, `UInputNumber`, `UTabs`,
-  `UPopover`, `UModal`, `useToast`, …), not hand-rolled controls. Colours are
-  the `nord-*` luminance roles (0 page … 6 strong text, 8 accent, 11 danger);
-  `main.css` maps them onto Nuxt UI's `--ui-*` tokens, so all themes
-  (graphite default, nord, frost, sand, dusk) re-skin the library via
-  `<html data-theme>`. `ui.colorMode` and `ui.fonts` are disabled on purpose
-  (own theme system; `@nuxt/fonts` would fetch from Google). Icons are
-  `i-lucide-*`, bundled at build (`icon.clientBundle.scan`,
-  `fallbackToApi: false`) — never from api.iconify.design. Utilities like
-  `bg-highlighted` do not exist: only text has `highlighted`/`toned`; use
-  `bg-inverted`, `bg-accented`, `bg-nord-N`.
+- UI: use Naive UI components (`NButton size="tiny"`, `NSlider`,
+  `NInputNumber`, `NTabs`, `NPopover`, `NModal`, `useMessage`, …), imported
+  explicitly from `naive-ui`, not hand-rolled controls. Colours in templates
+  are the `nord-*` luminance roles as Tailwind classes (0 page … 6 strong
+  text, 8 accent, 11 danger; e.g. `text-nord-4/60` for dimmed text). Naive
+  cannot read CSS variables, so every palette exists twice: `main.css`
+  (`--color-nord-*`, switched by `<html data-theme>`) and `utils/themes.ts`
+  (fed to `NConfigProvider`); `tests/themes.test.ts` fails if they drift.
+  Naive's styles are unlayered and beat Tailwind's `@layer` utilities: don't
+  put `hidden`/`w-*`/`h-*` on a Naive component root that sets the same
+  property — wrap it in an element instead. Icons: `<NIcon><Foo /></NIcon>`
+  with `Foo` from `@lucide/vue` (no brand icons; GitHub is an inline SVG).
 - No comments unless they add value; the codebase uses them heavily for
   rationale, follow that style.
 - Fonts: takumi does NOT auto-load named families — any family not registered

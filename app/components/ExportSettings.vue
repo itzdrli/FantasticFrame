@@ -37,6 +37,6 @@ const hint = computed(() =>
       :max="100"
       suffix="%"
     />
-    <p class="text-[10px] leading-snug text-dimmed">{{ hint }}</p>
+    <p class="text-[10px] leading-snug text-nord-4/60">{{ hint }}</p>
   </div>
 </template>

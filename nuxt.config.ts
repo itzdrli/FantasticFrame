@@ -1,3 +1,5 @@
+import tailwindcss from "@tailwindcss/vite";
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
@@ -9,28 +11,22 @@ export default defineNuxtConfig({
   css: ["~/assets/css/main.css"],
 
   vite: {
+    plugins: [tailwindcss()],
+    // Naive UI's deep CJS chain (date-fns-tz, vueuc) trips dev pre-bundling
+    // otherwise and reloads the page on first visit.
+    optimizeDeps: { include: ["naive-ui", "vueuc", "date-fns-tz"] },
     server: {
       // Allow access via Tailscale MagicDNS: short hostname "s" and *.ts.net FQDNs
       allowedHosts: ["s", ".ts.net"],
     },
   },
 
-  modules: ["@nuxt/ui", "@pinia/nuxt", "@nuxtjs/i18n"],
+  modules: ["@pinia/nuxt", "@nuxtjs/i18n"],
 
-  ui: {
-    // Both modules phone home by default: @nuxt/fonts fetches Google/Bunny
-    // fonts and @nuxt/color-mode owns the <html> class. Fonts are self-hosted
-    // (scripts/fetch-fonts.mjs) and the theme is ours (usePreferences).
-    fonts: false,
-    colorMode: false,
-  },
-
-  icon: {
-    // Icons used in templates are scanned into the client bundle; anything
-    // dynamic comes from our own server, never from api.iconify.design.
-    clientBundle: { scan: true },
-    serverBundle: "local",
-    fallbackToApi: false,
+  build: {
+    // Naive UI ships ESM that imports CJS-only helpers; SSR needs these
+    // transpiled or the server bundle fails with "require is not defined".
+    transpile: ["naive-ui", "vueuc", "@css-render/vue3-ssr"],
   },
 
   i18n: {

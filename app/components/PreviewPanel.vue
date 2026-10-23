@@ -222,7 +222,7 @@ const footerStyle = computed(() => {
     <!-- Empty State -->
     <div
       v-if="!photo || !templateConfig"
-      class="flex h-full w-full items-center justify-center text-muted"
+      class="flex h-full w-full items-center justify-center text-nord-4"
     >
       <div class="flex flex-col items-center justify-center p-8 text-center gap-4">
         <svg
@@ -235,7 +235,7 @@ const footerStyle = computed(() => {
           stroke-width="2"
           stroke-linecap="round"
           stroke-linejoin="round"
-          class="size-16 text-dimmed"
+          class="size-16 text-nord-4/60"
         >
           <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
           <circle cx="9" cy="9" r="2" />

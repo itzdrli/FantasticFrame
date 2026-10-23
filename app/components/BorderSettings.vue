@@ -66,5 +66,5 @@ const paddingHorizontal = computed({
       :default-value="defaults?.paddingHorizontal"
     />
   </div>
-  <p v-else class="py-6 text-center text-muted">{{ $t("border.selectPhotoFirst") }}</p>
+  <p v-else class="py-6 text-center text-nord-4">{{ $t("border.selectPhotoFirst") }}</p>
 </template>

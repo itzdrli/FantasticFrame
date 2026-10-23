@@ -32,18 +32,18 @@ const entries = computed(() => {
     <div
       v-for="[key, val] in entries"
       :key="key"
-      class="flex items-baseline justify-between gap-3 border-b border-default/60 py-1.5 last:border-0"
+      class="flex items-baseline justify-between gap-3 border-b border-nord-3/60 py-1.5 last:border-0"
     >
-      <dt class="shrink-0 text-[11px] text-muted">
+      <dt class="shrink-0 text-[11px] text-nord-4">
         {{ fieldLabels[key] ? t(fieldLabels[key]) : key }}
       </dt>
       <dd
-        class="min-w-0 truncate text-right font-mono text-[11px] text-highlighted"
+        class="min-w-0 truncate text-right font-mono text-[11px] text-nord-6"
         :title="String(val)"
       >
         {{ val }}
       </dd>
     </div>
   </dl>
-  <p v-else class="py-8 text-center text-muted">{{ $t("exif.noData") }}</p>
+  <p v-else class="py-8 text-center text-nord-4">{{ $t("exif.noData") }}</p>
 </template>

@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import { NButton, NIcon, NInputNumber } from "naive-ui";
+import { RotateCw } from "@lucide/vue";
 import { socialCanvasDims } from "~~/shared/render";
 
 const { overrides, resolvedConfig, update } = useSelectedTemplate();
@@ -27,8 +29,8 @@ const modeModel = computed({
 const socialRatios = ["1:1", "4:3", "3:4", "16:9", "21:9", "1.91:1"];
 
 // Separate W and H inputs avoid mid-edit states like "16:" that would be invalid.
-const customW = ref<number | undefined>();
-const customH = ref<number | undefined>();
+const customW = ref<number | null>(null);
+const customH = ref<number | null>(null);
 
 const applyCustomRatio = () => {
   // Whole numbers 1–99: the export API only accepts ratios like "4:5"
@@ -54,61 +56,53 @@ function invertSocialRatio() {
 
     <template v-if="canvasMode === 'social'">
       <div class="grid grid-cols-3 gap-1">
-        <UButton
+        <NButton
           v-for="r in socialRatios"
           :key="r"
-          :label="r"
-          size="xs"
-          :variant="socialRatio === r ? 'soft' : 'outline'"
-          :color="socialRatio === r ? 'primary' : 'neutral'"
+          size="tiny"
+          :type="socialRatio === r ? 'primary' : 'default'"
+          :secondary="socialRatio === r"
           block
           @click="socialRatio = r"
-        />
+        >
+          {{ r }}
+        </NButton>
       </div>
 
       <div class="flex items-center gap-1.5">
-        <UInputNumber
-          v-model="customW"
+        <NInputNumber
+          v-model:value="customW"
           :min="1"
           :max="99"
-          :increment="false"
-          :decrement="false"
+          :show-button="false"
           placeholder="W"
-          variant="subtle"
+          size="tiny"
           class="min-w-0 flex-1"
           @keydown.enter="applyCustomRatio"
         />
-        <span class="text-dimmed">:</span>
-        <UInputNumber
-          v-model="customH"
+        <span class="text-nord-4/60">:</span>
+        <NInputNumber
+          v-model:value="customH"
           :min="1"
           :max="99"
-          :increment="false"
-          :decrement="false"
+          :show-button="false"
           placeholder="H"
-          variant="subtle"
+          size="tiny"
           class="min-w-0 flex-1"
           @keydown.enter="applyCustomRatio"
         />
-        <UButton
-          :label="$t('border.apply')"
-          color="neutral"
-          variant="subtle"
-          @click="applyCustomRatio"
-        />
+        <NButton size="tiny" secondary @click="applyCustomRatio">{{ $t("border.apply") }}</NButton>
       </div>
 
-      <UButton
-        :label="$t('border.invertRatio')"
-        icon="i-lucide-rotate-cw"
-        color="neutral"
-        variant="outline"
-        block
-        @click="invertSocialRatio"
-      />
+      <NButton size="tiny" block @click="invertSocialRatio">
+        <template #icon>
+          <NIcon><RotateCw /></NIcon>
+        </template>
+        {{ $t("border.invertRatio") }}
+      </NButton>
     </template>
 
-    <p class="font-mono text-[10px] text-dimmed">
+    <p class="font-mono text-[10px] text-nord-4/60">
       {{ canvasMode === "social" ? socialDimsText : $t("border.followOriginal") }}
     </p>
   </div>

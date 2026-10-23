@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
+import { NButton, NIcon, NTag, NTooltip } from "naive-ui";
+import { Plus, X } from "@lucide/vue";
 import { usePhotoStore } from "~/composables/usePhotoStore";
 import { usePhotoImport } from "~/composables/usePhotoImport";
 
@@ -19,46 +21,47 @@ function onFileChange(e: Event) {
 
 <template>
   <div class="flex h-full w-full items-center gap-2">
-    <UTooltip :text="$t('photoList.addPhoto')">
-      <UButton
-        color="neutral"
-        variant="outline"
-        :loading="isImporting"
-        :disabled="isImporting"
-        class="size-14 shrink-0 flex-col justify-center border-dashed md:size-[4.5rem]"
-        :aria-label="$t('photoList.addPhoto')"
-        @click="fileInput?.click()"
-      >
-        <template v-if="isImporting">
-          <span class="text-[10px] tabular-nums"
-            >{{ importProgress.current }}/{{ importProgress.total }}</span
-          >
-        </template>
-        <template v-else>
-          <UIcon name="i-lucide-plus" class="size-5" />
-          <span class="text-[10px]">{{ $t("photoList.add") }}</span>
-        </template>
-      </UButton>
-    </UTooltip>
+    <NTooltip :delay="500">
+      <template #trigger>
+        <button
+          type="button"
+          class="flex size-14 shrink-0 flex-col items-center justify-center gap-0.5 border border-dashed border-nord-3 text-nord-4 outline-none transition-colors hover:border-nord-8 hover:text-nord-6 focus-visible:border-nord-8 disabled:cursor-wait md:size-[4.5rem]"
+          :disabled="isImporting"
+          :aria-label="$t('photoList.addPhoto')"
+          @click="fileInput?.click()"
+        >
+          <span v-if="isImporting" class="text-[10px] tabular-nums">
+            {{ importProgress.current }}/{{ importProgress.total }}
+          </span>
+          <template v-else>
+            <NIcon :size="20"><Plus /></NIcon>
+            <span class="text-[10px]">{{ $t("photoList.add") }}</span>
+          </template>
+        </button>
+      </template>
+      {{ $t("photoList.addPhoto") }}
+    </NTooltip>
 
-    <UBadge
+    <NTag
       v-if="skippedFiles.length"
-      color="error"
-      variant="subtle"
+      type="error"
+      size="small"
+      :bordered="false"
       class="shrink-0"
       :title="skippedFiles.map((f) => f.name).join('\n')"
-      :label="$t('photoList.skipped', { n: skippedFiles.length })"
-    />
+    >
+      {{ $t("photoList.skipped", { n: skippedFiles.length }) }}
+    </NTag>
 
     <div class="flex min-w-0 flex-1 gap-1.5 overflow-x-auto py-1.5">
       <div
         v-for="photo in photoStore.photos"
         :key="photo.id"
-        class="group relative size-14 shrink-0 cursor-pointer overflow-hidden border bg-muted md:size-[4.5rem]"
+        class="group relative size-14 shrink-0 cursor-pointer overflow-hidden border bg-nord-0 md:size-[4.5rem]"
         :class="
           photoStore.selectedId === photo.id
-            ? 'border-primary outline outline-1 outline-primary'
-            : 'border-default hover:border-accented'
+            ? 'border-nord-8 outline outline-1 outline-nord-8'
+            : 'border-nord-3 hover:border-nord-4'
         "
         role="button"
         tabindex="0"
@@ -70,14 +73,21 @@ function onFileChange(e: Event) {
       >
         <img :src="photo.thumbUrl" alt="" class="size-full object-cover" />
 
-        <UButton
-          icon="i-lucide-x"
-          color="neutral"
-          variant="solid"
-          class="touch-visible absolute top-0.5 right-0.5 p-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-          :aria-label="$t('border.remove')"
-          @click.stop="photoStore.removePhoto(photo.id)"
-        />
+        <span
+          class="touch-visible absolute top-0.5 right-0.5 flex opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
+        >
+          <NButton
+            size="tiny"
+            circle
+            secondary
+            :aria-label="$t('border.remove')"
+            @click.stop="photoStore.removePhoto(photo.id)"
+          >
+            <template #icon>
+              <NIcon><X /></NIcon>
+            </template>
+          </NButton>
+        </span>
 
         <div
           class="absolute inset-x-0 bottom-0 truncate bg-black/65 px-1 py-px text-center text-[9px] text-white"
@@ -88,7 +98,7 @@ function onFileChange(e: Event) {
 
       <div
         v-if="photoStore.photos.length === 0"
-        class="flex min-w-40 items-center justify-center text-muted"
+        class="flex min-w-40 items-center justify-center text-nord-4"
       >
         {{ $t("photoList.empty") }}
       </div>

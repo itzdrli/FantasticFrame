@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed } from "vue";
+import { NColorPicker } from "naive-ui";
 
 const model = defineModel<string>({ default: "#000000" });
 
@@ -60,66 +61,30 @@ const PRESET_COLORS = [
   "#B48EAD",
 ];
 
-const HEX_RE = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i;
-
 const color = computed(() => model.value || "#000000");
 
-const hexDraft = ref(color.value);
-watch(color, (c) => (hexDraft.value = c));
-
-function commitHex() {
-  const m = HEX_RE.exec(hexDraft.value.trim());
-  if (!m) {
-    hexDraft.value = color.value;
-    return;
-  }
-  let hex = m[1]!;
-  if (hex.length === 3) hex = [...hex].map((c) => c + c).join("");
-  model.value = `#${hex.toUpperCase()}`;
+// Naive reports lowercase hex; templates and presets use uppercase. The
+// trigger fills with the colour and picks a contrasting label colour itself.
+function onUpdate(value: string | null) {
+  if (value) model.value = value.toUpperCase();
 }
 </script>
 
 <template>
-  <UPopover :content="{ side: 'left', align: 'start', sideOffset: 8 }">
-    <button
-      type="button"
-      class="flex h-6 items-center gap-1.5 border border-default bg-muted pr-1.5 pl-0.5 outline-none hover:border-accented focus-visible:border-primary"
-      :aria-label="color"
+  <!-- Sized by a wrapper: Naive's own (unlayered) width rule beats Tailwind's layers -->
+  <div class="w-28">
+    <NColorPicker
+      :value="color"
+      :swatches="PRESET_COLORS"
+      :modes="['hex']"
+      :show-alpha="false"
+      placement="left-start"
+      size="small"
+      @update:value="onUpdate"
     >
-      <span class="size-4 border border-black/30" :style="{ backgroundColor: color }" />
-      <span class="font-mono text-[10px] text-muted uppercase">{{ color }}</span>
-    </button>
-
-    <template #content>
-      <div class="flex w-56 flex-col gap-2 p-2.5">
-        <UColorPicker
-          :model-value="color"
-          size="sm"
-          class="w-full"
-          @update:model-value="model = $event ?? color"
-        />
-        <UInput
-          v-model="hexDraft"
-          size="xs"
-          variant="subtle"
-          maxlength="7"
-          :ui="{ base: 'font-mono uppercase' }"
-          @blur="commitHex"
-          @keydown.enter.prevent="commitHex"
-        />
-        <div class="grid grid-cols-8 gap-1">
-          <button
-            v-for="c in PRESET_COLORS"
-            :key="c"
-            type="button"
-            class="aspect-square border outline-none focus-visible:ring-1 focus-visible:ring-primary"
-            :class="c.toLowerCase() === color.toLowerCase() ? 'border-primary' : 'border-black/30'"
-            :style="{ backgroundColor: c }"
-            :aria-label="c"
-            @click="model = c"
-          />
-        </div>
-      </div>
-    </template>
-  </UPopover>
+      <template #label="value">
+        <span class="font-mono text-[10px] uppercase">{{ value }}</span>
+      </template>
+    </NColorPicker>
+  </div>
 </template>

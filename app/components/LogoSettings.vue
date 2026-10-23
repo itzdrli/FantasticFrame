@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { NButton, NIcon, NInput } from "naive-ui";
+import { ClipboardPaste, ImageUp } from "@lucide/vue";
 import {
   applySvgColor,
   decodeSvgDataUrl,
@@ -184,66 +186,64 @@ function onSvgPaste(e: ClipboardEvent) {
     <FieldRow :label="$t('border.position')">
       <div class="w-40"><SegmentedControl v-model="positionModel" :items="positionItems" /></div>
     </FieldRow>
-    <p v-if="!showLogo" class="text-[10px] text-dimmed">{{ $t("border.logoHiddenHint") }}</p>
+    <p v-if="!showLogo" class="text-[10px] text-nord-4/60">{{ $t("border.logoHiddenHint") }}</p>
 
     <template v-if="showLogo">
       <div class="flex flex-col gap-2">
-        <span class="text-[11px] text-muted">{{ $t("border.logoImage") }}</span>
+        <span class="text-[11px] text-nord-4">{{ $t("border.logoImage") }}</span>
 
         <div
           v-if="logoImageUrl"
-          class="flex items-center gap-2 border border-default bg-muted p-1.5"
+          class="flex items-center gap-2 border border-nord-3 bg-nord-0 p-1.5"
         >
           <img :src="logoImageUrl" class="h-8 max-w-30 object-contain" alt="" />
-          <UButton
-            :label="$t('border.remove')"
-            color="error"
-            variant="ghost"
-            class="ml-auto"
-            @click="clearLogoImage"
-          />
+          <span class="ml-auto">
+            <NButton size="tiny" type="error" quaternary @click="clearLogoImage">
+              {{ $t("border.remove") }}
+            </NButton>
+          </span>
         </div>
         <template v-else>
           <div class="grid grid-cols-2 gap-1.5">
-            <UButton
-              :label="$t('border.upload')"
-              icon="i-lucide-image-up"
-              color="neutral"
-              variant="outline"
+            <NButton size="tiny" block @click="logoImageInput?.click()">
+              <template #icon>
+                <NIcon><ImageUp /></NIcon>
+              </template>
+              {{ $t("border.upload") }}
+            </NButton>
+            <NButton
+              size="tiny"
               block
-              @click="logoImageInput?.click()"
-            />
-            <UButton
-              :label="$t('border.pasteSvg')"
-              icon="i-lucide-clipboard-paste"
-              :color="showPasteSvg ? 'primary' : 'neutral'"
-              variant="outline"
-              block
+              :type="showPasteSvg ? 'primary' : 'default'"
+              :ghost="showPasteSvg"
               @click="showPasteSvg = !showPasteSvg"
-            />
+            >
+              <template #icon>
+                <NIcon><ClipboardPaste /></NIcon>
+              </template>
+              {{ $t("border.pasteSvg") }}
+            </NButton>
           </div>
 
           <div v-if="showPasteSvg" class="flex flex-col gap-1.5">
-            <UTextarea
-              v-model="svgInput"
+            <NInput
+              v-model:value="svgInput"
+              type="textarea"
               :placeholder="$t('border.svgPlaceholder')"
               :rows="5"
-              variant="subtle"
-              spellcheck="false"
-              :ui="{ base: 'font-mono text-[11px] resize-y' }"
+              size="tiny"
+              :input-props="{ spellcheck: false, style: { fontFamily: 'var(--font-mono)' } }"
               @paste="onSvgPaste"
             />
             <div class="grid grid-cols-2 gap-1.5">
-              <UButton :label="$t('border.apply')" block @click="applySvg" />
-              <UButton
-                :label="$t('border.cancel')"
-                color="neutral"
-                variant="subtle"
-                block
-                @click="cancelSvgPaste"
-              />
+              <NButton size="tiny" type="primary" block @click="applySvg">
+                {{ $t("border.apply") }}
+              </NButton>
+              <NButton size="tiny" secondary block @click="cancelSvgPaste">
+                {{ $t("border.cancel") }}
+              </NButton>
             </div>
-            <p v-if="svgError" class="text-[10px] text-error">{{ svgError }}</p>
+            <p v-if="svgError" class="text-[10px] text-nord-11">{{ svgError }}</p>
           </div>
         </template>
         <input
@@ -266,20 +266,17 @@ function onSvgPaste(e: ClipboardEvent) {
 
           <!-- SVG colour override (SVG logos only) -->
           <FieldRow v-if="isSvgLogo" :label="$t('border.svgColor')">
-            <UButton
-              v-if="svgColor"
-              :label="$t('border.reset')"
-              color="neutral"
-              variant="link"
-              @click="svgColor = ''"
-            />
-            <UButton
-              :label="$t('border.useFontColor')"
-              color="neutral"
-              variant="link"
-              :class="svgColor === fontColor ? 'text-primary' : ''"
+            <NButton v-if="svgColor" text size="tiny" @click="svgColor = ''">
+              {{ $t("border.reset") }}
+            </NButton>
+            <NButton
+              text
+              size="tiny"
+              :type="svgColor === fontColor ? 'primary' : 'default'"
               @click="svgColor = fontColor"
-            />
+            >
+              {{ $t("border.useFontColor") }}
+            </NButton>
             <ColorPicker
               :model-value="svgColor || '#000000'"
               @update:model-value="svgColor = $event"
@@ -289,11 +286,11 @@ function onSvgPaste(e: ClipboardEvent) {
       </div>
 
       <div class="flex flex-col gap-1">
-        <span class="text-[11px] text-muted">{{ $t("border.logoText") }}</span>
-        <UInput
-          v-model="logoText"
+        <span class="text-[11px] text-nord-4">{{ $t("border.logoText") }}</span>
+        <NInput
+          v-model:value="logoText"
           :placeholder="$t('border.logoTextPlaceholder')"
-          variant="subtle"
+          size="tiny"
         />
       </div>
     </template>
