@@ -1,24 +1,46 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { usePhotoStore } from "~/composables/usePhotoStore";
-import { getResolvedConfig } from "~/composables/useTemplate";
+import { PRESET_LIST, getResolvedConfig } from "~/composables/useTemplate";
+import { buildRenderTree, computeCanvasDims, exifEntriesFor } from "~~/shared/render";
 
 const photoStore = usePhotoStore();
-
 const selectedPhoto = computed(() => photoStore.selectedPhoto);
 
-const templates = [
-  { id: "classic", name: "Classic" },
-  { id: "dark", name: "Dark" },
-  { id: "minimal", name: "Minimal" },
-  { id: "film-style", name: "Film Style" },
-  { id: "card-style", name: "Card Style" },
-  { id: "nord", name: "Nord" },
-];
+/** Thumbnail box, CSS px; each preset is drawn with the selected photo inside it */
+const THUMB_W = 94;
+const THUMB_H = 70;
 
-const resolvedTemplates = computed(() =>
-  templates.map((tpl) => ({ ...tpl, config: getResolvedConfig(tpl.id) })),
-);
+const groups = computed(() => {
+  const p = selectedPhoto.value;
+  const cards = PRESET_LIST.map((preset) => {
+    if (!p) return { ...preset, thumb: null };
+    const cfg = getResolvedConfig(preset.id);
+    const full = computeCanvasDims({
+      cfg,
+      photoWidth: p.width,
+      photoHeight: p.height,
+      exifEntries: exifEntriesFor(p.exif, cfg.visibleFields as string[]),
+      makeFallback: p.exif.make,
+    });
+    const scale = Math.min(THUMB_W / full.w, THUMB_H / full.h);
+    const thumb = buildRenderTree(
+      {
+        photoBase64: p.thumbUrl,
+        exifData: p.exif,
+        templateConfig: cfg,
+        photoWidth: p.width,
+        photoHeight: p.height,
+      },
+      { scale },
+    );
+    return { ...preset, thumb };
+  });
+  return (["modern", "retro"] as const).map((group) => ({
+    group,
+    cards: cards.filter((c) => c.group === group),
+  }));
+});
 
 const selectTemplate = (templateId: string) => {
   if (selectedPhoto.value) {
@@ -28,43 +50,38 @@ const selectTemplate = (templateId: string) => {
 </script>
 
 <template>
-  <div class="grid grid-cols-3 gap-1.5">
-    <button
-      v-for="tpl in resolvedTemplates"
-      :key="tpl.id"
-      type="button"
-      class="flex flex-col gap-1 border p-1 text-left outline-none transition-colors focus-visible:border-nord-8"
-      :class="
-        selectedPhoto?.templateId === tpl.id
-          ? 'border-nord-8 bg-nord-8/10'
-          : 'border-nord-3 hover:border-nord-4'
-      "
-      :aria-pressed="selectedPhoto?.templateId === tpl.id"
-      @click="selectTemplate(tpl.id)"
-    >
-      <div
-        class="relative flex aspect-[4/3] w-full flex-col overflow-hidden"
-        :style="{
-          backgroundColor: tpl.config.backgroundColor,
-          borderRadius: `${Math.min(tpl.config.borderRadius / 4, 6)}px`,
-        }"
-      >
-        <div class="m-1 flex-1 bg-black/25" />
-        <div
-          class="flex h-3 items-center justify-around pb-0.5 text-[6px] font-bold"
-          :style="{ color: tpl.config.fontColor, fontFamily: tpl.config.fontFamily }"
+  <div class="flex flex-col gap-3">
+    <div v-for="g in groups" :key="g.group" class="flex flex-col gap-1.5">
+      <span class="text-[12px] text-nord-4/60">{{ $t(`presets.${g.group}`) }}</span>
+      <div class="grid grid-cols-3 gap-1.5">
+        <button
+          v-for="card in g.cards"
+          :key="card.id"
+          type="button"
+          class="flex flex-col gap-1 border p-1 text-left outline-none transition-colors focus-visible:border-nord-8"
+          :class="
+            selectedPhoto?.templateId === card.id
+              ? 'border-nord-8 bg-nord-8/10'
+              : 'border-nord-3 hover:border-nord-4'
+          "
+          :aria-pressed="selectedPhoto?.templateId === card.id"
+          @click="selectTemplate(card.id)"
         >
-          <span>A</span>
-          <span>B</span>
-          <span>C</span>
-        </div>
+          <!-- The real preset, rendered by the exporter's own node tree -->
+          <div
+            class="pointer-events-none flex w-full items-center justify-center overflow-hidden bg-nord-0"
+            :style="{ height: `${THUMB_H}px` }"
+          >
+            <RenderNodeView v-if="card.thumb" :node="card.thumb.nodeTree" />
+          </div>
+          <span
+            class="truncate text-center text-[12px]"
+            :class="selectedPhoto?.templateId === card.id ? 'text-nord-6' : 'text-nord-4'"
+          >
+            {{ $t(`presets.${card.id}`) }}
+          </span>
+        </button>
       </div>
-      <span
-        class="truncate text-center text-[12px]"
-        :class="selectedPhoto?.templateId === tpl.id ? 'text-nord-6' : 'text-nord-4'"
-      >
-        {{ tpl.name }}
-      </span>
-    </button>
+    </div>
   </div>
 </template>

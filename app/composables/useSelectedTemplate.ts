@@ -1,6 +1,6 @@
 import { computed } from "vue";
 import { usePhotoStore } from "~/composables/usePhotoStore";
-import { getResolvedConfig } from "~/composables/useTemplate";
+import { DEFAULT_TEMPLATE_ID, getResolvedConfig } from "~/composables/useTemplate";
 import type { TemplateConfig } from "~/types";
 
 /**
@@ -12,7 +12,7 @@ export const useSelectedTemplate = () => {
   const photoStore = usePhotoStore();
 
   const selectedPhoto = computed(() => photoStore.selectedPhoto);
-  const templateId = computed(() => selectedPhoto.value?.templateId || "classic");
+  const templateId = computed(() => selectedPhoto.value?.templateId || DEFAULT_TEMPLATE_ID);
   const overrides = computed(() => selectedPhoto.value?.templateOverrides || {});
   const resolvedConfig = computed(() =>
     selectedPhoto.value ? getResolvedConfig(templateId.value, overrides.value) : null,

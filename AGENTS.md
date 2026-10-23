@@ -57,8 +57,13 @@ Always run `bun run lint`, `bun run fmt:check`, `bun run test` and
   `CanvasSettings`, `BorderSettings` (frame), `TypeSettings` (caption),
   `LogoSettings`, `ExportSettings`, `StyleSyncBar`, `ExifPanel`. Building
   blocks: `ParamSlider` (label scrub, double-click reset, changed highlight,
-  editable value), `FieldRow`, `SegmentedControl`, `ColorPicker`. Elsewhere:
+  editable value), `FieldRow`, `SegmentedControl`, `ColorPicker`,
+  `FieldOrderList` (drag/arrow reordering of visible EXIF fields). Elsewhere:
   `PreviewPanel`/`PreviewToolbar`, `PhotoUploader`, `PhotoList`, `AppearanceMenu`
+- `app/components/RenderNodeView.vue` — draws a takumi node tree as DOM. The
+  live preview and the preset thumbnails render `buildRenderTree()` output
+  through it, so there is no second layout implementation: a new template
+  feature goes into `shared/render.ts` only and shows up in both.
 - `app/app.vue` — `NConfigProvider` (theme, overrides, locale) + `NMessageProvider`
 - `app/utils/themes.ts` — palettes per theme + `naiveThemeOverrides()` (editor
   density: 28px `tiny` controls, 13px type, 2px corners; every colour token
@@ -70,8 +75,10 @@ Always run `bun run lint`, `bun run fmt:check`, `bun run test` and
     (never base64); `removePhoto`/`clearAll` revoke the URLs.
   - `useIsMobile.ts` — `<768px` flag; below it the settings/EXIF drawers are
     in-flow bottom sheets (one open at a time, closed by default)
-  - `useTemplate.ts` — `DEFAULT_TEMPLATE_CONFIG`, `PRESET_TEMPLATES` (classic,
-    dark, minimal, film-style, card-style, nord), `getResolvedConfig()`
+  - `useTemplate.ts` — `DEFAULT_TEMPLATE_CONFIG`, `PRESET_TEMPLATES` /
+    `PRESET_LIST` (modern: leica, gallery, frosted, card, cinema, magazine;
+    retro: polaroid, datestamp, negative; names in i18n `presets.*`),
+    `DEFAULT_TEMPLATE_ID`, `getResolvedConfig()`
   - `useImageRender.ts` — render orchestration (worker → server fallback),
     single save, `batchExport()` (browser zip, one photo at a time)
   - `useExifReader.ts` — exifr-based EXIF extraction
@@ -92,8 +99,14 @@ Always run `bun run lint`, `bun run fmt:check`, `bun run test` and
   the takumi render node tree from a config; shared verbatim between browser
   (WASM) and server (native). Types come from `shared/types.ts`. Contains
   `formatExif()`, `coverCropRect()` (cover crop/zoom geometry), and the
-  footer/canvas layout math (`estimateFooterLayout`, `computeCanvasDims`,
-  `layoutScaleFactor`) that the live preview also uses.
+  layout math (`computeFrameGeometry`, `estimateFooterLayout`,
+  `computeCanvasDims`, `layoutScaleFactor`). `buildRenderTree(payload,
+  { scale })` builds the preview at on-screen size; the footer is estimated at
+  full size and scaled so the preview never drifts from the export. Template
+  effects: blurred-photo background (stacked sharp→blurred layers, since
+  takumi clips a filter before blurring), photo shadow, `captionStyle`
+  "split" (watermark bar, fields slotted by `splitCaption()`), secondary
+  colour, letter spacing, DSEG7 date stamp, film edge text.
 - `server/api/render.post.ts` — fallback render endpoint: rate limit + render
   slots (`server/utils/guard.ts`), header-sniffed pixel caps
   (`shared/imageSize.ts`), generic 500s
@@ -139,7 +152,10 @@ Always run `bun run lint`, `bun run fmt:check`, `bun run test` and
   renders in the default font. Google families live in `GOOGLE_FONTS`
   (`shared/fonts.ts`); `scripts/fetch-fonts.mjs` downloads them into
   git-ignored `public/fonts/google/` (runs in `dev`/`build`/Docker). A new
-  template font must be added to that list; LXGW WenKai is committed under
-  `public/fonts/`.
+  template font must be added to that list; LXGW WenKai and DSEG7 Classic
+  (date stamp) are committed under `public/fonts/` (`SELF_HOSTED_FONTS`).
+  Export fonts come from `exportFontFamily(cfg)`. Never pass `weight` in the
+  takumi font loaders: takumi then lets one weight overwrite the other, and
+  bold text renders regular (or the reverse) depending on load order.
 - The Dockerfile is multi-stage: it builds `.output/` in a build stage and
   copies it into a runtime-only image.

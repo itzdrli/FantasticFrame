@@ -16,120 +16,194 @@ export const DEFAULT_TEMPLATE_CONFIG: TemplateConfig = {
   fontColor: "#333333",
   modelFontSize: 26,
   canvasMode: "original",
+  backgroundMode: "solid",
+  backgroundBlur: 40,
+  backgroundDim: 20,
+  photoShadow: 0,
+  captionStyle: "stack",
+  secondaryColor: "#333333",
+  letterSpacing: 0,
+  dateStamp: false,
+  dateStampColor: "#FF7A1A",
+  edgeText: "",
 };
 
-// Nord color palette (https://www.nordtheme.org/) — kept here for reference:
-//   polar night:  nord0 #2E3440 · nord1 #3B4252 · nord2 #434C5E · nord3 #4C566A
-//   snow storm:   nord4 #D8DEE9 · nord5 #E5E9F0 · nord6 #ECEFF4
-//   frost:        nord7 #8FBCBB · nord8 #88C0D0 · nord9 #81A1C1 · nord10 #5E81AC
-//   aurora:       nord11 #BF616A · nord12 #D08770 · nord13 #EBCB8B · nord14 #A3BE8C · nord15 #B48EAD
+/** Template new photos start with */
+export const DEFAULT_TEMPLATE_ID = "leica";
+
+/** Exposure fields in the order most watermark styles print them */
+const EXPOSURE = ["focalLength", "fNumber", "exposureTime", "iso"] as const;
+
+export interface PresetMeta {
+  id: string;
+  group: "modern" | "retro";
+}
+
+/** Display order of the presets; names live in i18n presets.<id> */
+export const PRESET_LIST: PresetMeta[] = [
+  { id: "leica", group: "modern" },
+  { id: "gallery", group: "modern" },
+  { id: "frosted", group: "modern" },
+  { id: "card", group: "modern" },
+  { id: "cinema", group: "modern" },
+  { id: "magazine", group: "modern" },
+  { id: "polaroid", group: "retro" },
+  { id: "datestamp", group: "retro" },
+  { id: "negative", group: "retro" },
+];
 
 export const PRESET_TEMPLATES: Record<string, Partial<TemplateConfig>> = {
-  // ─── Classic ───────────────────────────────────────────────────────────────
-  // Pure white museum mat — even breathing room, centered model + full specs row
-  classic: {
+  // ─── Modern ────────────────────────────────────────────────────────────────
+
+  // The camera-watermark bar: full-bleed photo over a white strip, model and
+  // lens on the left, brand | exposure over date on the right
+  leica: {
     backgroundColor: "#FFFFFF",
-    paddingTop: 32,
-    paddingBottom: 16,
-    paddingHorizontal: 32,
-    borderRadius: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
+    paddingHorizontal: 0,
+    captionStyle: "split",
     showLogo: true,
-    logoPosition: "center",
-    fontFamily: "Inter, sans-serif",
+    fontFamily: "'IBM Plex Sans', sans-serif",
     fontColor: "#1A1A1A",
+    secondaryColor: "#8C8C8C",
     fontSize: 15,
-    modelFontSize: 24,
-    infoLayout: "horizontal",
-    visibleFields: ["model", "fNumber", "exposureTime", "iso", "focalLength"],
+    modelFontSize: 26,
+    visibleFields: ["model", "lensModel", ...EXPOSURE, "dateTimeOriginal"],
   },
 
-  // ─── Dark ──────────────────────────────────────────────────────────────────
-  // Cinematic near-black, borderless full-bleed, monospace spec readout, model left
-  dark: {
-    backgroundColor: "#18181B",
-    paddingTop: 0,
-    paddingBottom: 0,
-    paddingHorizontal: 0,
-    borderRadius: 0,
-    showLogo: true,
-    logoPosition: "left",
-    fontFamily: "'JetBrains Mono', monospace",
-    fontColor: "#E8E8EC",
-    fontSize: 14,
-    modelFontSize: 22,
-    infoLayout: "horizontal",
-    visibleFields: ["model", "fNumber", "exposureTime", "iso", "focalLength"],
-  },
-
-  // ─── Minimal ───────────────────────────────────────────────────────────────
-  // Quiet gallery off-white, only model + capture date in muted neutral sans
-  minimal: {
-    backgroundColor: "#F5F5F3",
-    paddingTop: 0,
-    paddingBottom: 0,
-    paddingHorizontal: 0,
-    borderRadius: 0,
+  // Museum mat: wide even white margin, one quiet tracked line of specs
+  gallery: {
+    backgroundColor: "#F7F7F5",
+    paddingTop: 72,
+    paddingBottom: 6,
+    paddingHorizontal: 72,
     showLogo: false,
-    fontFamily: "'Source Sans 3', sans-serif",
-    fontColor: "#8A8A85",
-    fontSize: 14,
-    modelFontSize: 20,
-    infoLayout: "horizontal",
-    visibleFields: ["model", "dateTimeOriginal"],
+    logoPosition: "center",
+    fontFamily: "'DM Sans', sans-serif",
+    fontColor: "#1A1A1A",
+    secondaryColor: "#8E8E8A",
+    fontSize: 13,
+    letterSpacing: 1,
+    visibleFields: ["model", ...EXPOSURE],
   },
 
-  // ─── Film style ────────────────────────────────────────────────────────────
-  // Pure-black celluloid frame, warm cream serif (Playfair), make + model + key specs
-  "film-style": {
-    backgroundColor: "#0A0A0A",
-    paddingTop: 18,
-    paddingBottom: 18,
-    paddingHorizontal: 18,
-    borderRadius: 0,
-    showLogo: true,
-    logoPosition: "left",
-    fontFamily: "'Playfair Display', serif",
-    fontColor: "#D9C7A3",
-    fontSize: 15,
-    modelFontSize: 24,
-    infoLayout: "horizontal",
-    visibleFields: ["model", "fNumber", "exposureTime", "iso"],
-  },
-
-  // ─── Card style ────────────────────────────────────────────────────────────
-  // Warm paper surface, large rounded photo (Polaroid-like), brand + specs centered
-  "card-style": {
-    backgroundColor: "#EFEDEC",
-    paddingTop: 24,
-    paddingBottom: 28,
-    paddingHorizontal: 24,
-    borderRadius: 14,
+  // The photo floats on a blurred, darkened copy of itself
+  frosted: {
+    backgroundMode: "blur",
+    backgroundColor: "#1A1A1A",
+    backgroundBlur: 48,
+    backgroundDim: 18,
+    paddingTop: 64,
+    paddingBottom: 10,
+    paddingHorizontal: 64,
+    borderRadius: 22,
+    photoShadow: 55,
     showLogo: true,
     logoPosition: "center",
-    fontFamily: "'Source Sans 3', sans-serif",
-    fontColor: "#2A2A2E",
+    fontFamily: "Outfit, sans-serif",
+    fontColor: "#FFFFFF",
+    secondaryColor: "#E2E2E2",
     fontSize: 14,
-    modelFontSize: 22,
-    infoLayout: "horizontal",
-    visibleFields: ["model", "fNumber", "exposureTime", "iso", "focalLength"],
+    modelFontSize: 24,
+    visibleFields: ["model", ...EXPOSURE],
   },
 
-  // ─── Nord Dark ──────────────────────────────────────────────────────────────
-  // Polar-night surface (nord0) with snow-storm ink (nord4), monospace terminal-luxe
-  nord: {
-    backgroundColor: "#2E3440",
+  // Rounded photo lifted off a soft grey card, watermark bar beneath
+  card: {
+    backgroundColor: "#ECECEF",
+    paddingTop: 48,
+    paddingBottom: 6,
+    paddingHorizontal: 48,
+    borderRadius: 16,
+    photoShadow: 35,
+    captionStyle: "split",
+    showLogo: true,
+    fontFamily: "Inter, sans-serif",
+    fontColor: "#1F1F23",
+    secondaryColor: "#8A8A93",
+    fontSize: 14,
+    modelFontSize: 22,
+    visibleFields: ["model", "lensModel", ...EXPOSURE, "dateTimeOriginal"],
+  },
+
+  // Letterbox: black bars, small widely-tracked monospace credits
+  cinema: {
+    backgroundColor: "#000000",
+    paddingTop: 64,
+    paddingBottom: 4,
+    paddingHorizontal: 0,
+    showLogo: false,
+    logoPosition: "center",
+    fontFamily: "'JetBrains Mono', monospace",
+    fontColor: "#C8C8C8",
+    secondaryColor: "#9A9A9A",
+    fontSize: 12,
+    letterSpacing: 4,
+    visibleFields: ["model", ...EXPOSURE],
+  },
+
+  // Editorial: big spaced serif masthead, model / lens / date as the dek
+  magazine: {
+    backgroundColor: "#F3F1EC",
+    paddingTop: 48,
+    paddingBottom: 8,
+    paddingHorizontal: 48,
+    showLogo: true,
+    logoPosition: "center",
+    fontFamily: "'Playfair Display', serif",
+    fontColor: "#141414",
+    secondaryColor: "#6E6A63",
+    fontSize: 13,
+    modelFontSize: 40,
+    letterSpacing: 2,
+    visibleFields: ["model", "lensModel", "dateTimeOriginal"],
+  },
+
+  // ─── Retro ─────────────────────────────────────────────────────────────────
+
+  // Instant print: thick bottom margin, the date hand-written on it
+  polaroid: {
+    backgroundColor: "#F6F4EE",
+    paddingTop: 40,
+    paddingBottom: 48,
+    paddingHorizontal: 40,
+    showLogo: false,
+    logoPosition: "center",
+    fontFamily: "'LXGW WenKai', serif",
+    fontColor: "#3B3A36",
+    secondaryColor: "#3B3A36",
+    fontSize: 26,
+    visibleFields: ["dateTimeOriginal"],
+  },
+
+  // Point-and-shoot print: no border, orange LCD date burnt into the corner
+  datestamp: {
+    backgroundColor: "#000000",
     paddingTop: 0,
     paddingBottom: 0,
     paddingHorizontal: 0,
-    borderRadius: 0,
-    showLogo: true,
+    showLogo: false,
+    visibleFields: [],
+    dateStamp: true,
+    dateStampColor: "#FF7A1A",
+  },
+
+  // Scanned negative strip: black rebate with amber edge code and frame data
+  negative: {
+    backgroundColor: "#121212",
+    paddingTop: 52,
+    paddingBottom: 4,
+    paddingHorizontal: 28,
+    showLogo: false,
     logoPosition: "left",
-    fontFamily: "'JetBrains Mono', monospace",
-    fontColor: "#D8DEE9",
-    fontSize: 14,
-    modelFontSize: 22,
-    infoLayout: "horizontal",
-    visibleFields: ["model", "fNumber", "exposureTime", "iso", "focalLength"],
+    fontFamily: "'IBM Plex Mono', monospace",
+    fontColor: "#E39B3A",
+    secondaryColor: "#E39B3A",
+    fontSize: 12,
+    letterSpacing: 3,
+    edgeText: "KODAK PORTRA 400 · 24A",
+    visibleFields: ["model", ...EXPOSURE],
   },
 };
 

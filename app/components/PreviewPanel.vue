@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed, watch } from "vue";
 import { usePhotoStore } from "~/composables/usePhotoStore";
+import { buildRenderTree } from "~~/shared/render";
 
 const photoStore = usePhotoStore();
 
 const photo = computed(() => photoStore.selectedPhoto);
 
-const { templateConfig, parsedExif, baseScaleFactor, canvasDims, footerLayout, photoLayout } =
-  usePreviewLayout(photo);
+const { templateConfig, canvasDims, photoLayout } = usePreviewLayout(photo);
 
 const {
   viewportRef,
@@ -35,7 +35,6 @@ const {
   cropScale,
   dragging,
   canPan,
-  croppedImageStyle,
   setFitMode,
   setZoom,
   resetCrop,
@@ -45,162 +44,50 @@ const {
   onWheel,
 } = usePhotoCrop(photo, photoLayout, previewScale);
 
-// Scales a 1080px-based config value to PREVIEW canvas pixels
-// (full canvas value = val * baseScaleFactor; preview = that * previewScale)
-const configScale = computed(() => baseScaleFactor.value * previewScale.value);
+// The tree is built at on-screen size (never above full resolution); zooming
+// the view past 100% scales the finished tree with CSS instead.
+const treeScale = computed(() => Math.min(previewScale.value, 1));
 
-const s = (v: number) => Math.round(v * configScale.value);
-
-const imageRenderStyle = computed(() => {
-  if (!photo.value || !templateConfig.value) return {};
+const preview = computed(() => {
+  const p = photo.value;
   const cfg = templateConfig.value;
-  const layout = photoLayout.value;
-  if (!layout) return {};
-  const ps = previewScale.value;
-
-  return {
-    width: `${Math.round(layout.imgW * ps)}px`,
-    height: `${Math.round(layout.imgH * ps)}px`,
-    borderRadius: `${s(cfg.borderRadius)}px`,
-    objectFit: "contain" as const,
-    display: "block" as const,
-    boxSizing: "border-box" as const,
-  };
+  if (!p || !cfg || treeScale.value <= 0) return null;
+  return buildRenderTree(
+    {
+      photoBase64: p.url,
+      exifData: p.exif,
+      templateConfig: cfg,
+      photoWidth: p.width,
+      photoHeight: p.height,
+      crop: p.crop,
+    },
+    { scale: treeScale.value },
+  );
 });
 
-// Cover mode: clipping frame + absolutely positioned (zoomed/panned) image
-const photoFrameStyle = computed(() => {
-  if (!photo.value || !templateConfig.value) return {};
-  const cfg = templateConfig.value;
-  const layout = photoLayout.value;
-  if (!layout) return {};
-  const ps = previewScale.value;
+const canvasStyle = computed(() => ({
+  width: `${previewDims.value.w}px`,
+  height: `${previewDims.value.h}px`,
+}));
 
-  return {
-    width: `${Math.round(layout.availW * ps)}px`,
-    height: `${Math.round(layout.availH * ps)}px`,
-    position: "relative" as const,
-    overflow: "hidden" as const,
-    borderRadius: `${s(cfg.borderRadius)}px`,
-    boxSizing: "border-box" as const,
-    touchAction: "none" as const,
-  };
+const treeStyle = computed(() => {
+  const k = previewScale.value / treeScale.value;
+  return k > 1.0001 ? { transform: `scale(${k})`, transformOrigin: "0 0" } : {};
 });
 
-const displayExifEntries = computed(() => {
-  if (!templateConfig.value || !parsedExif.value) return [];
-  return (templateConfig.value.visibleFields ?? [])
-    .map((f) => ({ key: f, value: parsedExif.value[f] }))
-    .filter((e) => e.value);
-});
-
-const hasExif = computed(() => displayExifEntries.value.length > 0);
-
-const resolvedLogoImage = computed(() => {
-  if (!templateConfig.value) return "";
-  return templateConfig.value.logoImageUrl || "";
-});
-
-const resolvedLogoText = computed(() => {
-  if (!templateConfig.value || !photo.value) return "";
-  return templateConfig.value.logoText || (photo.value.exif.make || "").toUpperCase();
-});
-
-const hasLogo = computed(
-  () =>
-    templateConfig.value?.showLogo !== false &&
-    (!!resolvedLogoImage.value || !!resolvedLogoText.value),
+// Cover crop: the photo frame takes the drag/wheel gestures
+const frameAttrs = computed(() =>
+  isCover.value
+    ? {
+        class: dragging.value ? "cursor-grabbing" : canPan.value ? "cursor-grab" : "cursor-default",
+        onPointerdown: onPanStart,
+        onPointermove: onPanMove,
+        onPointerup: onPanEnd,
+        onPointercancel: onPanEnd,
+        onWheel,
+      }
+    : undefined,
 );
-
-const logoStyle = computed(() => {
-  if (!templateConfig.value) return {};
-  return {
-    fontSize: `${s(templateConfig.value.modelFontSize)}px`,
-    fontWeight: "bold",
-    color: templateConfig.value.fontColor,
-    fontFamily: templateConfig.value.fontFamily,
-  };
-});
-
-const exifItemStyle = computed(() => {
-  if (!templateConfig.value) return {};
-  return {
-    fontSize: `${s(templateConfig.value.fontSize)}px`,
-    color: templateConfig.value.fontColor,
-    fontFamily: templateConfig.value.fontFamily,
-  };
-});
-
-const exifContainerStyle = computed(() => {
-  const layout = templateConfig.value?.infoLayout || "horizontal";
-  if (layout === "list") {
-    return {
-      display: "flex",
-      flexDirection: "column" as const,
-      gap: `${s(4)}px`,
-    };
-  }
-  if (layout === "grid") {
-    return {
-      display: "grid",
-      gridTemplateColumns: "repeat(2, auto)",
-      gap: `${s(4)}px ${s(14)}px`,
-    };
-  }
-  // horizontal
-  return {
-    display: "flex",
-    flexDirection: "row" as const,
-    flexWrap: "wrap" as const,
-    gap: `${s(2)}px ${s(14)}px`,
-  };
-});
-
-// Logo <img> display size — comes straight from the shared footer layout
-// (the same function buildRenderTree uses), scaled to preview pixels.
-const logoImgWidth = computed(() =>
-  Math.round((footerLayout.value?.logoImageW ?? 0) * previewScale.value),
-);
-
-const logoImgHeight = computed(() =>
-  Math.round((footerLayout.value?.logoImageH ?? 0) * previewScale.value),
-);
-
-const canvasStyle = computed(() => {
-  if (!templateConfig.value) return {};
-  const cfg = templateConfig.value;
-  return {
-    width: `${previewDims.value.w}px`,
-    height: `${previewDims.value.h}px`,
-    background: cfg.backgroundColor || "#fff",
-    fontFamily: cfg.fontFamily,
-    color: cfg.fontColor,
-    position: "relative" as const,
-    display: "flex",
-    flexDirection: "column" as const,
-    overflow: "hidden" as const,
-  };
-});
-
-const footerStyle = computed(() => {
-  if (!templateConfig.value) return {};
-  const cfg = templateConfig.value;
-  const horizPad = Math.max(s(20), s(cfg.paddingHorizontal));
-  return {
-    width: "100%",
-    paddingLeft: `${horizPad}px`,
-    paddingRight: `${horizPad}px`,
-    paddingTop: `${s(20)}px`,
-    paddingBottom: `${s(20)}px`,
-    boxSizing: "border-box" as const,
-    display: "flex",
-    flexDirection: cfg.logoPosition === "center" ? ("column" as const) : ("row" as const),
-    alignItems: "center",
-    justifyContent: cfg.logoPosition === "center" ? "center" : "space-between",
-    gap: `${s(16)}px`,
-    flexShrink: 0,
-  };
-});
 </script>
 
 <template>
@@ -249,84 +136,12 @@ const footerStyle = computed(() => {
       <!-- Canvas Wrapper (positioned by workspace pan/zoom) -->
       <div :style="canvasPositionStyle">
         <div :style="canvasStyle" class="shadow-[0_4px_28px_rgba(0,0,0,0.5)]">
-          <div
-            class="flex-1 w-full flex items-center justify-center"
-            :style="{
-              paddingTop: `${s(templateConfig.paddingTop)}px`,
-              paddingBottom: `${s(templateConfig.paddingBottom)}px`,
-              paddingLeft: `${s(templateConfig.paddingHorizontal)}px`,
-              paddingRight: `${s(templateConfig.paddingHorizontal)}px`,
-            }"
-          >
-            <div
-              v-if="isCover"
-              :style="photoFrameStyle"
-              class="select-none"
-              :class="dragging ? 'cursor-grabbing' : canPan ? 'cursor-grab' : 'cursor-default'"
-              @pointerdown="onPanStart"
-              @pointermove="onPanMove"
-              @pointerup="onPanEnd"
-              @pointercancel="onPanEnd"
-              @wheel="onWheel"
-            >
-              <img :src="photo.url" :style="croppedImageStyle" draggable="false" alt="" />
-            </div>
-            <img v-else :src="photo.url" :style="imageRenderStyle" />
-          </div>
-
-          <!-- Footer -->
-          <div v-if="hasLogo || hasExif" :style="footerStyle">
-            <!-- Right position: EXIF first, logo pushed to the right edge -->
-            <template v-if="templateConfig.logoPosition === 'right'">
-              <div v-if="!hasLogo" class="flex-1" />
-              <div v-if="hasExif" :style="exifContainerStyle">
-                <span v-for="entry in displayExifEntries" :key="entry.key" :style="exifItemStyle">
-                  {{ entry.value }}
-                </span>
-              </div>
-              <div v-if="hasLogo && hasExif" class="flex-1" />
-              <template v-if="hasLogo">
-                <img
-                  v-if="resolvedLogoImage"
-                  :src="resolvedLogoImage"
-                  :style="{
-                    width: `${logoImgWidth}px`,
-                    height: `${logoImgHeight}px`,
-                    objectFit: 'contain',
-                  }"
-                />
-                <span v-else :style="logoStyle">{{ resolvedLogoText }}</span>
-              </template>
-            </template>
-
-            <!-- Left / center positions -->
-            <template v-else>
-              <template v-if="hasLogo">
-                <img
-                  v-if="resolvedLogoImage"
-                  :src="resolvedLogoImage"
-                  :style="{
-                    width: `${logoImgWidth}px`,
-                    height: `${logoImgHeight}px`,
-                    objectFit: 'contain',
-                  }"
-                />
-                <span v-else :style="logoStyle">{{ resolvedLogoText }}</span>
-              </template>
-
-              <!-- Spacer for left/right layouts -->
-              <div
-                v-if="templateConfig.logoPosition !== 'center' && hasLogo && hasExif"
-                class="flex-1"
-              />
-
-              <!-- EXIF entries with dynamic layout -->
-              <div v-if="hasExif" :style="exifContainerStyle">
-                <span v-for="entry in displayExifEntries" :key="entry.key" :style="exifItemStyle">
-                  {{ entry.value }}
-                </span>
-              </div>
-            </template>
+          <div v-if="preview" :style="treeStyle">
+            <RenderNodeView
+              :node="preview.nodeTree"
+              :frame="preview.photoFrame"
+              :frame-attrs="frameAttrs"
+            />
           </div>
         </div>
       </div>

@@ -4,7 +4,8 @@
  *
  * - Google families are downloaded at build time by scripts/fetch-fonts.mjs
  *   into public/fonts/google/ (woff2 slices + fonts.css + manifest.json).
- * - LXGW WenKai is not on Google Fonts; it is committed under public/fonts/.
+ * - LXGW WenKai and DSEG7 are not on Google Fonts; they are committed under
+ *   public/fonts/.
  */
 
 export interface GoogleFontSpec {
@@ -44,10 +45,19 @@ export const CJK_FALLBACK_FAMILY = "Noto Sans SC";
 export const LXGW_FAMILY = "LXGW WenKai";
 export const LXGW_FONT_PATH = "/fonts/LXGWWenKai-Regular.ttf";
 
-/** Self-hosted faces that are single files (DOM @font-face lives in main.css) */
-export const SELF_HOSTED_FONT_PATHS = [LXGW_FONT_PATH] as const;
+/**
+ * Self-hosted faces that are single files, by family (DOM @font-face lives in
+ * main.css). DSEG7 Classic (OFL, keshikan) draws the retro date stamp.
+ */
+export const SELF_HOSTED_FONTS: Record<string, string> = {
+  [LXGW_FAMILY]: LXGW_FONT_PATH,
+  "DSEG7 Classic": "/fonts/DSEG7Classic-Bold.woff2",
+};
 
-const KNOWN_FAMILIES = new Set<string>([...GOOGLE_FONTS.map((f) => f.name), LXGW_FAMILY]);
+const KNOWN_FAMILIES = new Set<string>([
+  ...GOOGLE_FONTS.map((f) => f.name),
+  ...Object.keys(SELF_HOSTED_FONTS),
+]);
 
 /** Family names in a CSS font-family list that we ship, in order, without duplicates */
 export function knownFamiliesIn(fontFamily: string | undefined): string[] {

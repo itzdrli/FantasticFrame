@@ -93,7 +93,17 @@
     "useFontColor": "使用文字颜色",
     "logoText": "Logo 文字（留空则使用相机品牌）",
     "logoTextPlaceholder": "例如：Fantastic Frame",
-    "selectPhotoFirst": "请先选择一张照片"
+    "selectPhotoFirst": "请先选择一张照片",
+    "fill": "填充",
+    "fillSolid": "纯色",
+    "fillBlur": "模糊照片",
+    "blur": "模糊",
+    "dim": "压暗",
+    "shadow": "投影",
+    "edgeText": "胶片边码",
+    "edgeTextPlaceholder": "例如：KODAK PORTRA 400",
+    "edgeTextHint": "印在顶部边框里，顶部留白为 0 时不显示",
+    "logoSplitHint": "分栏样式下 Logo 固定在右侧分隔线前"
   },
   "typography": {
     "sectionTitle": "字体排版",
@@ -112,7 +122,21 @@
       "mono": "等宽",
       "cjk": "中文",
       "cjkDisplay": "中文展示"
-    }
+    },
+    "captionStyle": "版式",
+    "styleStack": "堆叠",
+    "styleSplit": "分栏",
+    "secondaryColor": "次要颜色",
+    "letterSpacing": "字距",
+    "dateStamp": "日期戳",
+    "dateStampColor": "日期戳颜色",
+    "dateStampHint": "需要照片带拍摄日期",
+    "splitHint": "分栏：左侧机型与镜头，右侧参数与日期。同一行内按下方顺序排列。",
+    "fieldOrder": "拖动或用箭头调整顺序",
+    "moveUp": "上移",
+    "moveDown": "下移",
+    "dragToReorder": "拖动排序",
+    "hiddenFields": "未显示"
   },
   "sync": {
     "batchSync": "同步编辑",
@@ -186,5 +210,18 @@
     "collapse": "收起面板",
     "dropTitle": "拖入照片开始",
     "dropHint": "或点击选择文件"
+  },
+  "presets": {
+    "modern": "现代",
+    "retro": "复古",
+    "leica": "徕卡水印",
+    "gallery": "极简画廊",
+    "frosted": "毛玻璃",
+    "card": "柔和卡片",
+    "cinema": "宽银幕",
+    "magazine": "杂志",
+    "polaroid": "拍立得",
+    "datestamp": "日期戳",
+    "negative": "胶片底片"
   }
 }

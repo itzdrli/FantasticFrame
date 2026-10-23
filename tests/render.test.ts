@@ -5,6 +5,8 @@ import {
   coverCropRect,
   buildRenderTree,
   computeCanvasDims,
+  formatDateStamp,
+  splitCaption,
   layoutScaleFactor,
 } from "../shared/render";
 import type { RenderPayload } from "../shared/types";
@@ -172,7 +174,13 @@ describe("buildRenderTree", () => {
       logoText: "TESTCAM",
       visibleFields: ["model", "fNumber", "exposureTime", "iso", "focalLength"],
     };
-    const exifValues = ["X-1", "f/2.8", "1/250", "ISO 400", "50mm"];
+    const exifEntries = [
+      { key: "model", value: "X-1" },
+      { key: "fNumber", value: "f/2.8" },
+      { key: "exposureTime", value: "1/250" },
+      { key: "iso", value: "ISO 400" },
+      { key: "focalLength", value: "50mm" },
+    ];
     const { width, height } = buildRenderTree({
       photoBase64: "data:image/jpeg;base64,x",
       exifData: {
@@ -192,7 +200,7 @@ describe("buildRenderTree", () => {
       cfg,
       photoWidth: 3000,
       photoHeight: 4000,
-      exifValues,
+      exifEntries,
       makeFallback: "TestCam",
     });
     expect([width, height]).toEqual([dims.w, dims.h]);
@@ -298,5 +306,105 @@ describe("buildRenderTree", () => {
     });
     expect(custom.format).toBe("jpeg");
     expect(custom.quality).toBe(80);
+  });
+});
+
+describe("template effects", () => {
+  const exif = {
+    make: "FUJIFILM",
+    model: "X-T5",
+    lensModel: "XF35mmF1.4 R",
+    fNumber: 2.8,
+    exposureTime: 0.004,
+    iso: 400,
+    focalLength: 35,
+    dateTimeOriginal: new Date(2026, 9, 23),
+  };
+  const texts = (node: any): string[] =>
+    node.type === "text" ? [node.text] : (node.children ?? []).flatMap(texts);
+
+  it("visible fields render in the user's order", () => {
+    const { nodeTree } = buildRenderTree({
+      photoBase64: "p",
+      exifData: exif,
+      templateConfig: { ...baseCfg, showLogo: false, visibleFields: ["iso", "model", "fNumber"] },
+      photoWidth: 1000,
+      photoHeight: 1000,
+    });
+    expect(texts(nodeTree)).toEqual(["ISO 400", "X-T5", "f/2.8"]);
+  });
+
+  it("split caption: identity left, exposure over date right, order kept within a row", () => {
+    const rows = splitCaption([
+      { key: "iso", value: "ISO 400" },
+      { key: "model", value: "X-T5" },
+      { key: "dateTimeOriginal", value: "2026/10/23" },
+      { key: "fNumber", value: "f/2.8" },
+      { key: "lensModel", value: "XF35" },
+    ]);
+    expect(rows).toEqual({
+      leftMain: ["X-T5"],
+      leftSub: ["XF35"],
+      rightMain: ["ISO 400", "f/2.8"],
+      rightSub: ["2026/10/23"],
+    });
+  });
+
+  it("blur background stacks sharp-to-blurred copies of the photo behind the content", () => {
+    const { nodeTree } = buildRenderTree({
+      photoBase64: "p",
+      templateConfig: { ...baseCfg, backgroundMode: "blur", backgroundBlur: 60, backgroundDim: 30 },
+      photoWidth: 1080,
+      photoHeight: 1080,
+    });
+    const layers = nodeTree.children.filter((c: any) => c.type === "image");
+    expect(layers.map((l: any) => l.style.filter)).toEqual([undefined, "blur(20px)", "blur(60px)"]);
+    expect(nodeTree.children[3].style.backgroundColor).toBe("rgba(0, 0, 0, 0.3)");
+  });
+
+  it("date stamp sits inside the photo frame in the seven-segment face", () => {
+    expect(formatDateStamp(new Date(2026, 0, 5))).toBe("'26 1 5");
+    const { photoFrame } = buildRenderTree({
+      photoBase64: "p",
+      exifData: exif,
+      templateConfig: { ...baseCfg, dateStamp: true },
+      photoWidth: 1000,
+      photoHeight: 1000,
+    });
+    const stamp = photoFrame.children.find((c: any) => c.type === "text");
+    expect(stamp.text).toBe("'26 10 23");
+    expect(stamp.style.fontFamily).toBe("DSEG7 Classic");
+  });
+
+  it("edge text is drawn only when there is a top border to hold it", () => {
+    const build = (paddingTop: number) =>
+      buildRenderTree({
+        photoBase64: "p",
+        templateConfig: { ...baseCfg, paddingTop, edgeText: "PORTRA 400" },
+        photoWidth: 1000,
+        photoHeight: 1000,
+      }).nodeTree;
+    expect(texts(build(40))).toContain("PORTRA 400");
+    expect(texts(build(0))).not.toContain("PORTRA 400");
+  });
+
+  it("a preview-scale tree is the export tree shrunk, not re-laid-out", () => {
+    const payload = {
+      photoBase64: "p",
+      exifData: exif,
+      templateConfig: {
+        ...baseCfg,
+        captionStyle: "split" as const,
+        paddingTop: 0,
+        paddingBottom: 0,
+      },
+      photoWidth: 4000,
+      photoHeight: 3000,
+    };
+    const full = buildRenderTree(payload);
+    const small = buildRenderTree(payload, { scale: 0.1 });
+    const photoH = (t: any) => t.nodeTree.children[0].style.height;
+    expect(small.width).toBe(Math.round(full.width * 0.1));
+    expect(Math.abs(photoH(small) - photoH(full) * 0.1)).toBeLessThanOrEqual(1);
   });
 });

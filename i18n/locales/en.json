@@ -93,7 +93,17 @@
     "useFontColor": "Use Font Color",
     "logoText": "Logo Text (Leave blank to use camera brand)",
     "logoTextPlaceholder": "e.g. Fantastic Frame",
-    "selectPhotoFirst": "Please select a photo first"
+    "selectPhotoFirst": "Please select a photo first",
+    "fill": "Fill",
+    "fillSolid": "Solid",
+    "fillBlur": "Blurred photo",
+    "blur": "Blur",
+    "dim": "Darken",
+    "shadow": "Shadow",
+    "edgeText": "Film edge code",
+    "edgeTextPlaceholder": "e.g. KODAK PORTRA 400",
+    "edgeTextHint": "Printed in the top border; hidden when top padding is 0",
+    "logoSplitHint": "In split style the logo sits before the divider on the right"
   },
   "typography": {
     "sectionTitle": "Typography",
@@ -112,7 +122,21 @@
       "mono": "Mono",
       "cjk": "CJK",
       "cjkDisplay": "CJK Display"
-    }
+    },
+    "captionStyle": "Style",
+    "styleStack": "Stacked",
+    "styleSplit": "Split",
+    "secondaryColor": "Secondary color",
+    "letterSpacing": "Tracking",
+    "dateStamp": "Date stamp",
+    "dateStampColor": "Stamp color",
+    "dateStampHint": "Needs a capture date in the photo",
+    "splitHint": "Split: camera and lens on the left, exposure and date on the right. Each row follows the order below.",
+    "fieldOrder": "Drag or use the arrows to reorder",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "dragToReorder": "Drag to reorder",
+    "hiddenFields": "Hidden"
   },
   "sync": {
     "batchSync": "Edit Sync",
@@ -186,5 +210,18 @@
     "collapse": "Collapse panel",
     "dropTitle": "Drop photos to begin",
     "dropHint": "or click to browse"
+  },
+  "presets": {
+    "modern": "Modern",
+    "retro": "Retro",
+    "leica": "Leica Bar",
+    "gallery": "Gallery",
+    "frosted": "Frosted",
+    "card": "Soft Card",
+    "cinema": "Cinema",
+    "magazine": "Magazine",
+    "polaroid": "Polaroid",
+    "datestamp": "Date Stamp",
+    "negative": "Negative"
   }
 }

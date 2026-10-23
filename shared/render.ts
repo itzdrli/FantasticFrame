@@ -155,12 +155,70 @@ export function computeLogoImageSize(
   };
 }
 
+/** A visible EXIF field with its formatted text (empty values filtered out) */
+export interface ExifEntry {
+  key: string;
+  value: string;
+}
+
+/** Formatted entries for the template's visible fields, in the user's order */
+export function exifEntriesFor(
+  exif: ExifData | null | undefined,
+  fields: readonly string[] | undefined,
+): ExifEntry[] {
+  return (fields ?? [])
+    .map((key) => ({ key, value: formatExif(exif, key) }))
+    .filter((e) => e.value);
+}
+
+/**
+ * Rows of the "split" caption (the camera-watermark bar). Each field lands in
+ * a fixed slot by meaning; within a slot the user's field order is kept.
+ */
+export interface SplitCaption {
+  /** Camera make / model — left, primary */
+  leftMain: string[];
+  /** Lens — left, secondary */
+  leftSub: string[];
+  /** Exposure (focal length, aperture, shutter, ISO, …) — right, primary */
+  rightMain: string[];
+  /** Capture date and location — right, secondary */
+  rightSub: string[];
+}
+
+export function splitCaption(entries: ExifEntry[]): SplitCaption {
+  const out: SplitCaption = { leftMain: [], leftSub: [], rightMain: [], rightSub: [] };
+  for (const { key, value } of entries) {
+    if (key === "make" || key === "model") out.leftMain.push(value);
+    else if (key === "lensModel") out.leftSub.push(value);
+    else if (key === "dateTimeOriginal" || key === "gps") out.rightSub.push(value);
+    else out.rightMain.push(value);
+  }
+  return out;
+}
+
+/** The film date-stamp text, e.g. '26 10 23 — like the LCD backs of 90s compacts */
+export const formatDateStamp = (value: Date | string | undefined): string => {
+  if (!value) return "";
+  const d = typeof value === "string" ? new Date(value) : value;
+  if (Number.isNaN(d.getTime())) return "";
+  return `'${String(d.getFullYear() % 100).padStart(2, "0")} ${d.getMonth() + 1} ${d.getDate()}`;
+};
+
+/** Seven-segment face of the date stamp (self-hosted, see shared/fonts.ts) */
+export const DATE_STAMP_FONT = "DSEG7 Classic";
+
+/** CSS font-family list naming every face an export of this config draws with */
+export function exportFontFamily(cfg: TemplateConfig): string {
+  return cfg.dateStamp ? `${cfg.fontFamily}, ${DATE_STAMP_FONT}` : cfg.fontFamily;
+}
+
 export interface FooterLayoutInput {
   cfg: TemplateConfig;
   scaleFactor: number;
   canvasW: number;
-  /** Already-formatted EXIF display strings (empty entries filtered out) */
-  exifValues: string[];
+  /** Visible EXIF entries (see exifEntriesFor) */
+  exifEntries: ExifEntry[];
   /** Camera make used as the text-logo fallback when logoText is empty */
   makeFallback?: string;
 }
@@ -177,18 +235,28 @@ export interface FooterLayout {
   footerInnerW: number;
 }
 
+const LINE_HEIGHT = 1.4;
+
+/** Font sizes of the split caption's primary and secondary rows */
+const splitFontSizes = (cfg: TemplateConfig, scaleFactor: number) => ({
+  main: Math.round((cfg.fontSize ?? 14) * scaleFactor),
+  sub: Math.round((cfg.fontSize ?? 14) * 0.8 * scaleFactor),
+});
+
 /** Footer content + total height — shared by buildRenderTree and the preview. */
 export function estimateFooterLayout(input: FooterLayoutInput): FooterLayout {
-  const { cfg, scaleFactor, canvasW, exifValues } = input;
+  const { cfg, scaleFactor, canvasW, exifEntries } = input;
+  const exifValues = exifEntries.map((e) => e.value);
   const modelFontSizeBase = cfg.modelFontSize ?? 24;
   const modelFontSize = Math.round(modelFontSizeBase * scaleFactor);
   const fontSize = Math.round((cfg.fontSize ?? 14) * scaleFactor);
+  const tracking = (cfg.letterSpacing ?? 0) * scaleFactor;
   const logoTxt = cfg.logoText || (input.makeFallback || "").toUpperCase();
   const hasLogo = cfg.showLogo !== false && (!!cfg.logoImageUrl || !!logoTxt);
   const hasExif = exifValues.length > 0;
 
-  const logoLineH = Math.ceil(modelFontSize * 1.4);
-  const exifLineH = Math.ceil(fontSize * 1.4);
+  const logoLineH = Math.ceil(modelFontSize * LINE_HEIGHT);
+  const exifLineH = Math.ceil(fontSize * LINE_HEIGHT);
   const footerPaddingX = Math.max(
     Math.round(20 * scaleFactor),
     Math.round((cfg.paddingHorizontal ?? 0) * scaleFactor),
@@ -200,44 +268,62 @@ export function estimateFooterLayout(input: FooterLayoutInput): FooterLayout {
     scaleFactor,
     footerInnerW,
   );
-
-  let exifLines = hasExif ? 1 : 0;
-  if (cfg.infoLayout === "list") {
-    exifLines = exifValues.length;
-  } else if (cfg.infoLayout === "grid") {
-    exifLines = Math.ceil(exifValues.length / 2);
-  } else if (hasExif) {
-    const rowGap = Math.round(10 * scaleFactor);
-    const logoW = cfg.logoImageUrl ? logoImageW : Math.ceil(logoTxt.length * modelFontSize * 0.7);
-    const availExifW =
-      hasLogo && cfg.logoPosition !== "center"
-        ? Math.max(1, footerInnerW - logoW - Math.round(16 * scaleFactor))
-        : footerInnerW;
-    let curW = 0;
-    for (const t of exifValues) {
-      const w = t.length * fontSize * 0.62;
-      if (curW > 0 && curW + rowGap + w > availExifW) {
-        exifLines++;
-        curW = w;
-      } else {
-        curW += (curW > 0 ? rowGap : 0) + w;
-      }
-    }
-  }
-
-  const gridGapV = Math.round(4 * scaleFactor);
-  const rowGap = Math.round((cfg.infoLayout === "list" ? 4 : 10) * scaleFactor);
-  const exifBlockH = hasExif
-    ? exifLines * exifLineH +
-      Math.max(0, exifLines - 1) * (cfg.infoLayout === "grid" ? gridGapV : rowGap)
-    : 0;
   const logoBlockH = hasLogo ? Math.max(logoLineH, cfg.logoImageUrl ? logoImageH : 0) : 0;
 
   let footerContentH = 0;
-  if (hasLogo && hasExif && cfg.logoPosition === "center") {
-    footerContentH = logoBlockH + Math.round(12 * scaleFactor) + exifBlockH;
+  if (cfg.captionStyle === "split") {
+    const rows = splitCaption(exifEntries);
+    const fs = splitFontSizes(cfg, scaleFactor);
+    const rowGap = Math.round(4 * scaleFactor);
+    const colH = (main: string[], sub: string[]) => {
+      const mainH = main.length ? Math.ceil(fs.main * LINE_HEIGHT) : 0;
+      const subH = sub.length ? Math.ceil(fs.sub * LINE_HEIGHT) : 0;
+      return mainH + subH + (mainH && subH ? rowGap : 0);
+    };
+    footerContentH = Math.max(
+      colH(rows.leftMain, rows.leftSub),
+      colH(rows.rightMain, rows.rightSub),
+      logoBlockH,
+    );
   } else {
-    footerContentH = Math.max(logoBlockH, exifBlockH);
+    let exifLines = hasExif ? 1 : 0;
+    if (cfg.infoLayout === "list") {
+      exifLines = exifValues.length;
+    } else if (cfg.infoLayout === "grid") {
+      exifLines = Math.ceil(exifValues.length / 2);
+    } else if (hasExif) {
+      const rowGap = Math.round(10 * scaleFactor);
+      const logoW = cfg.logoImageUrl
+        ? logoImageW
+        : Math.ceil(logoTxt.length * (modelFontSize * 0.7 + tracking));
+      const availExifW =
+        hasLogo && cfg.logoPosition !== "center"
+          ? Math.max(1, footerInnerW - logoW - Math.round(16 * scaleFactor))
+          : footerInnerW;
+      let curW = 0;
+      for (const t of exifValues) {
+        const w = t.length * (fontSize * 0.62 + tracking);
+        if (curW > 0 && curW + rowGap + w > availExifW) {
+          exifLines++;
+          curW = w;
+        } else {
+          curW += (curW > 0 ? rowGap : 0) + w;
+        }
+      }
+    }
+
+    const gridGapV = Math.round(4 * scaleFactor);
+    const rowGap = Math.round((cfg.infoLayout === "list" ? 4 : 10) * scaleFactor);
+    const exifBlockH = hasExif
+      ? exifLines * exifLineH +
+        Math.max(0, exifLines - 1) * (cfg.infoLayout === "grid" ? gridGapV : rowGap)
+      : 0;
+
+    if (hasLogo && hasExif && cfg.logoPosition === "center") {
+      footerContentH = logoBlockH + Math.round(12 * scaleFactor) + exifBlockH;
+    } else {
+      footerContentH = Math.max(logoBlockH, exifBlockH);
+    }
   }
   const footerH = hasLogo || hasExif ? Math.round(40 * scaleFactor) + footerContentH : 0;
 
@@ -258,8 +344,8 @@ export interface CanvasDimsInput {
   cfg: TemplateConfig;
   photoWidth: number;
   photoHeight: number;
-  /** Formatted EXIF strings (for original-mode height, which depends on footerH) */
-  exifValues?: string[];
+  /** Visible EXIF entries (for original-mode height, which depends on footerH) */
+  exifEntries?: ExifEntry[];
   makeFallback?: string;
 }
 
@@ -289,7 +375,7 @@ export function computeCanvasDims(input: CanvasDimsInput): { w: number; h: numbe
     cfg,
     scaleFactor,
     canvasW: w,
-    exifValues: input.exifValues ?? [],
+    exifEntries: input.exifEntries ?? [],
     makeFallback: input.makeFallback,
   });
   const availW = w - paddingH * 2;
@@ -324,72 +410,89 @@ export function layoutScaleFactor(input: LayoutScaleInput): number {
   return Math.max(w, input.photoHeight || w) / 1080;
 }
 
-// ── Node tree builder ───────────────────────────────────────────────────────
+export interface FrameGeometryInput {
+  cfg: TemplateConfig;
+  photoWidth: number;
+  photoHeight: number;
+  exifEntries: ExifEntry[];
+  makeFallback?: string;
+  /**
+   * Uniform output scale. The live preview builds the tree at its on-screen
+   * size (scale < 1) instead of CSS-scaling a full-resolution canvas, so a
+   * blurred background never has to be composited at 6000px.
+   */
+  scale?: number;
+}
 
-export const buildRenderTree = (payload: RenderPayload): RenderTreeResult => {
-  const { photoBase64, exifData, templateConfig, exportOptions, photoWidth, photoHeight } = payload;
+/** Every size the node tree is built from, in output pixels */
+export interface FrameGeometry {
+  canvasW: number;
+  canvasH: number;
+  scaleFactor: number;
+  footer: FooterLayout;
+  paddingTop: number;
+  paddingBottom: number;
+  paddingH: number;
+  /** Box the photo is fitted into (between the paddings, above the footer) */
+  availW: number;
+  availH: number;
+  /** Contain-fit photo size inside avail */
+  imgW: number;
+  imgH: number;
+}
 
-  const visibleFields: string[] = templateConfig.visibleFields || [];
-  const exifTexts = visibleFields
-    .map((field: string) => formatExif(exifData, field))
-    .filter((t: string) => t);
-  // Resolve canvas dims. For original mode the height depends on footerH, so
-  // computeCanvasDims runs the footer estimation internally.
-  let { w: canvasWidth, h: canvasHeight } = computeCanvasDims({
-    cfg: templateConfig,
-    photoWidth: photoWidth || 1080,
-    photoHeight: photoHeight || 1080,
-    exifValues: exifTexts,
-    makeFallback: exifData?.make,
-  });
-
-  // For social the dims above are final; for original they already
-  // include the footer. Re-run the footer layout at the resolved scale so the
-  // rest of the builder has logo sizes / paddings ready.
-  const scaleFactor = layoutScaleFactor({
-    cfg: templateConfig,
-    canvasWidth,
-    canvasHeight,
+export function computeFrameGeometry(input: FrameGeometryInput): FrameGeometry {
+  const { cfg, photoWidth, photoHeight } = input;
+  const k = input.scale ?? 1;
+  const full = computeCanvasDims({
+    cfg,
     photoWidth,
     photoHeight,
+    exifEntries: input.exifEntries,
+    makeFallback: input.makeFallback,
   });
-  const footer = estimateFooterLayout({
-    cfg: templateConfig,
-    scaleFactor,
-    canvasW: canvasWidth,
-    exifValues: exifTexts,
-    makeFallback: exifData?.make,
+  const canvasW = Math.max(1, Math.round(full.w * k));
+  const canvasH = Math.max(1, Math.round(full.h * k));
+  const scaleFactor =
+    layoutScaleFactor({
+      cfg,
+      canvasWidth: full.w,
+      canvasHeight: full.h,
+      photoWidth,
+      photoHeight,
+    }) * k;
+  // The footer is estimated at full resolution and then scaled: estimating it
+  // at a small preview scale rounds every line height up, so the preview's
+  // footer came out relatively taller and letterboxed the photo.
+  const fullFooter = estimateFooterLayout({
+    cfg,
+    scaleFactor: scaleFactor / k,
+    canvasW: full.w,
+    exifEntries: input.exifEntries,
+    makeFallback: input.makeFallback,
   });
-  const { footerH, hasLogo, hasExif, logoTxt, logoImageW, logoImageH, footerPaddingX } = footer;
+  const footer: FooterLayout =
+    k === 1
+      ? fullFooter
+      : {
+          ...fullFooter,
+          footerContentH: Math.round(fullFooter.footerContentH * k),
+          footerH: Math.round(fullFooter.footerH * k),
+          logoImageW: Math.round(fullFooter.logoImageW * k),
+          logoImageH: Math.round(fullFooter.logoImageH * k),
+          footerPaddingX: Math.round(fullFooter.footerPaddingX * k),
+          footerInnerW: Math.round(fullFooter.footerInnerW * k),
+        };
 
-  const bgColor = templateConfig.backgroundColor || "#ffffff";
-
-  const paddingTop = Math.round((templateConfig.paddingTop ?? 0) * scaleFactor);
-  const paddingBottom = Math.round((templateConfig.paddingBottom ?? 0) * scaleFactor);
-  const paddingH = Math.round((templateConfig.paddingHorizontal ?? 0) * scaleFactor);
-  const borderRadius = Math.round((templateConfig.borderRadius ?? 0) * scaleFactor);
-
-  const fontFamily = templateConfig.fontFamily || "Inter, sans-serif";
-  const fontSizeBase = templateConfig.fontSize ?? 14;
-  const fontSize = Math.round(fontSizeBase * scaleFactor);
-  const fontColor = templateConfig.fontColor || "#000000";
-  const modelFontSizeBase = templateConfig.modelFontSize ?? 24;
-  const modelFontSize = Math.round(modelFontSizeBase * scaleFactor);
-  const logoPosition = templateConfig.logoPosition || "center";
-  const logoImageUrl: string = templateConfig.logoImageUrl || "";
-  const infoLayout = templateConfig.infoLayout || "horizontal";
-
-  const gridGapV = Math.round(4 * scaleFactor);
-  const rowGap = Math.round((infoLayout === "list" ? 4 : 10) * scaleFactor);
-
-  const availW = canvasWidth - paddingH * 2;
-  const availH = Math.max(1, canvasHeight - footerH - paddingTop - paddingBottom);
+  const paddingTop = Math.round((cfg.paddingTop ?? 0) * scaleFactor);
+  const paddingBottom = Math.round((cfg.paddingBottom ?? 0) * scaleFactor);
+  const paddingH = Math.round((cfg.paddingHorizontal ?? 0) * scaleFactor);
+  const availW = canvasW - paddingH * 2;
+  const availH = Math.max(1, canvasH - footer.footerH - paddingTop - paddingBottom);
 
   const pAspect = photoWidth && photoHeight && photoHeight > 0 ? photoWidth / photoHeight : 1;
-
   let imgW: number;
   let imgH: number;
-
   if (availW > 0 && availH > 0 && pAspect > availW / availH) {
     imgW = availW;
     imgH = Math.round(availW / pAspect);
@@ -398,28 +501,113 @@ export const buildRenderTree = (payload: RenderPayload): RenderTreeResult => {
     imgW = Math.round(availH * pAspect);
   }
 
+  return {
+    canvasW,
+    canvasH,
+    scaleFactor,
+    footer,
+    paddingTop,
+    paddingBottom,
+    paddingH,
+    availW,
+    availH,
+    imgW,
+    imgH,
+  };
+}
+
+// ── Node tree builder ───────────────────────────────────────────────────────
+
+export interface BuildOptions {
+  /** See FrameGeometryInput.scale */
+  scale?: number;
+}
+
+export const buildRenderTree = (
+  payload: RenderPayload,
+  options: BuildOptions = {},
+): RenderTreeResult => {
+  const { photoBase64, exifData, templateConfig: cfg, exportOptions } = payload;
+  const photoWidth = payload.photoWidth || 1080;
+  const photoHeight = payload.photoHeight || 1080;
+
+  const entries = exifEntriesFor(exifData, cfg.visibleFields as string[]);
+  const exifTexts = entries.map((e) => e.value);
+  const geo = computeFrameGeometry({
+    cfg,
+    photoWidth,
+    photoHeight,
+    exifEntries: entries,
+    makeFallback: exifData?.make,
+    scale: options.scale,
+  });
+  const { canvasW: canvasWidth, canvasH: canvasHeight, scaleFactor, footer } = geo;
+  const { hasLogo, hasExif, logoTxt, logoImageW, logoImageH, footerPaddingX } = footer;
+  const px = (v: number) => Math.round(v * scaleFactor);
+
+  const bgColor = cfg.backgroundColor || "#ffffff";
+  const borderRadius = px(cfg.borderRadius ?? 0);
+
+  const fontFamily = cfg.fontFamily || "Inter, sans-serif";
+  const fontSize = px(cfg.fontSize ?? 14);
+  const fontColor = cfg.fontColor || "#000000";
+  const secondaryColor = cfg.secondaryColor || fontColor;
+  const modelFontSize = px(cfg.modelFontSize ?? 24);
+  const tracking = cfg.letterSpacing ? px(cfg.letterSpacing) : 0;
+  const trackingStyle = tracking ? { letterSpacing: tracking } : {};
+  const logoPosition = cfg.logoPosition || "center";
+  const logoImageUrl: string = cfg.logoImageUrl || "";
+  const infoLayout = cfg.infoLayout || "horizontal";
+
+  const gridGapV = px(4);
+  const rowGap = px(infoLayout === "list" ? 4 : 10);
+
+  const pAspect = photoWidth / photoHeight;
   const crop = payload.crop;
   const useCover = crop?.fitMode === "cover";
-  const boxW = useCover ? Math.round(availW) : Math.round(imgW);
-  const boxH = useCover ? Math.round(availH) : Math.round(imgH);
+  const boxW = Math.round(useCover ? geo.availW : geo.imgW);
+  const boxH = Math.round(useCover ? geo.availH : geo.imgH);
 
   const children: RenderNode[] = [];
 
-  const photoNode = (() => {
-    if (!useCover) {
-      return {
+  // Frosted background: the photo itself, blurred and darkened. Takumi clips
+  // a filter to the canvas before blurring, so a lone blurred layer fades to
+  // the page colour at the edges; sharper copies underneath fill that fringe.
+  if (cfg.backgroundMode === "blur") {
+    const blur = px(cfg.backgroundBlur ?? 40);
+    const dim = Math.min(90, Math.max(0, cfg.backgroundDim ?? 20));
+    for (const radius of [0, Math.round(blur / 3), blur]) {
+      children.push({
         type: "image",
         src: photoBase64,
-        width: boxW,
-        height: boxH,
+        width: canvasWidth,
+        height: canvasHeight,
         style: {
-          borderRadius,
+          position: "absolute",
+          left: 0,
+          top: 0,
+          objectFit: "cover",
+          ...(radius > 0 && { filter: `blur(${radius}px)` }),
         },
-      };
+      });
     }
-    // Cover: a clipping container sized to the frame, with the photo absolutely
-    // positioned inside it (zoom + pan). Radius lives on the container so the
-    // cropped image is clipped to the rounded frame.
+    if (dim > 0) {
+      children.push({
+        type: "container",
+        style: {
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: canvasWidth,
+          height: canvasHeight,
+          backgroundColor: `rgba(0, 0, 0, ${dim / 100})`,
+        },
+      });
+    }
+  }
+
+  const photoChildren: RenderNode[] = [];
+  if (useCover) {
     const {
       left,
       top,
@@ -433,83 +621,123 @@ export const buildRenderTree = (payload: RenderPayload): RenderTreeResult => {
       crop?.offsetX ?? 0,
       crop?.offsetY ?? 0,
     );
-    return {
-      type: "container",
-      tagName: "div",
+    photoChildren.push({
+      type: "image",
+      src: photoBase64,
+      width: Math.round(cw),
+      height: Math.round(ch),
+      style: { position: "absolute", left: Math.round(left), top: Math.round(top) },
+    });
+  } else {
+    photoChildren.push({ type: "image", src: photoBase64, width: boxW, height: boxH });
+  }
+
+  const stamp = cfg.dateStamp ? formatDateStamp(exifData?.dateTimeOriginal) : "";
+  if (stamp) {
+    const stampSize = Math.max(6, Math.round(Math.min(boxW, boxH) * 0.045));
+    const stampColor = cfg.dateStampColor || "#FF7A1A";
+    photoChildren.push({
+      type: "text",
+      text: stamp,
       style: {
-        position: "relative",
-        width: boxW,
-        height: boxH,
-        overflow: "hidden",
-        borderRadius,
+        position: "absolute",
+        right: Math.round(stampSize * 1.3),
+        bottom: Math.round(stampSize * 1.1),
+        fontSize: stampSize,
+        fontFamily: DATE_STAMP_FONT,
+        fontWeight: "bold",
+        color: stampColor,
+        opacity: 0.9,
+        letterSpacing: Math.round(stampSize * 0.1),
+        textShadow: `0 0 ${Math.max(1, Math.round(stampSize * 0.3))}px ${stampColor}`,
+        whiteSpace: "nowrap",
       },
-      children: [
-        {
-          type: "image",
-          src: photoBase64,
-          width: Math.round(cw),
-          height: Math.round(ch),
-          style: {
-            position: "absolute",
-            left: Math.round(left),
-            top: Math.round(top),
-          },
-        },
-      ],
-    };
-  })();
+    });
+  }
+
+  // The photo always sits in a clipping frame: it carries the radius (so a
+  // cover crop is clipped to it), the shadow, and the date stamp.
+  const shadow = Math.min(100, Math.max(0, cfg.photoShadow ?? 0));
+  const photoFrame: RenderNode = {
+    type: "container",
+    tagName: "div",
+    style: {
+      position: "relative",
+      display: "flex",
+      width: boxW,
+      height: boxH,
+      overflow: "hidden",
+      borderRadius,
+      ...(shadow > 0 && {
+        boxShadow: `0 ${px(shadow * 0.25)}px ${px(shadow * 0.7)}px rgba(0, 0, 0, ${(0.15 + shadow * 0.0035).toFixed(3)})`,
+      }),
+    },
+    children: photoChildren,
+  };
 
   children.push({
     type: "container",
     tagName: "div",
     style: {
-      flex: 1,
+      position: "relative",
+      // Fixed to the computed photo box, so a footer that renders a few px
+      // taller than estimated can only eat into its own band, never the photo
+      height: geo.paddingTop + geo.availH + geo.paddingBottom,
+      flexShrink: 0,
+      boxSizing: "border-box",
       display: "flex",
       justifyContent: "center",
       alignItems: "center",
-      paddingTop,
-      paddingBottom,
-      paddingLeft: paddingH,
-      paddingRight: paddingH,
+      paddingTop: geo.paddingTop,
+      paddingBottom: geo.paddingBottom,
+      paddingLeft: geo.paddingH,
+      paddingRight: geo.paddingH,
     },
-    children: [photoNode],
+    children: [photoFrame],
   });
 
+  const mkText = (text: string, style: Record<string, unknown>): RenderNode => ({
+    type: "text",
+    text,
+    style: { fontFamily, ...trackingStyle, ...style },
+  });
+
+  const logoNode: RenderNode = logoImageUrl
+    ? {
+        type: "image",
+        src: logoImageUrl,
+        width: logoImageW,
+        height: logoImageH,
+        style: { objectFit: "contain" },
+      }
+    : mkText(logoTxt, { fontSize: modelFontSize, fontWeight: "bold", color: fontColor });
+
   if (hasLogo || hasExif) {
-    const footerChildren: RenderNode[] = [];
-    const mkSpacer = () => ({ type: "container" as const, style: { flex: 1 } });
-
-    // Build logo node: image or text
-    const logoNode = logoImageUrl
-      ? {
-          type: "image" as const,
-          src: logoImageUrl,
-          width: logoImageW,
-          height: logoImageH,
-          style: { objectFit: "contain" as const },
-        }
-      : {
-          type: "text" as const,
-          text: logoTxt,
-          style: {
-            fontSize: modelFontSize,
-            fontWeight: "bold",
-            color: fontColor,
-            fontFamily,
-          },
-        };
-
-    const exifJustify = infoLayout === "horizontal" ? "flex-start" : "center";
-
-    const mkExifText = (text: string) => ({
-      type: "text" as const,
-      text,
+    const footerChildren: RenderNode[] =
+      cfg.captionStyle === "split" ? buildSplitCaption() : buildStackCaption();
+    children.push({
+      type: "container",
+      tagName: "div",
       style: {
-        fontSize,
-        color: fontColor,
-        fontFamily,
+        position: "relative",
+        flex: 1,
+        display: "flex",
+        alignItems: "center",
+        paddingTop: px(20),
+        paddingBottom: px(20),
+        paddingLeft: footerPaddingX,
+        paddingRight: footerPaddingX,
+        width: "100%",
+        boxSizing: "border-box",
       },
+      children: footerChildren,
     });
+  }
+
+  function buildStackCaption(): RenderNode[] {
+    const out: RenderNode[] = [];
+    const mkSpacer = () => ({ type: "container" as const, style: { flex: 1 } });
+    const mkExifText = (text: string) => mkText(text, { fontSize, color: secondaryColor });
 
     let exifNode: RenderNode;
     if (infoLayout === "list") {
@@ -534,7 +762,7 @@ export const buildRenderTree = (payload: RenderPayload): RenderTreeResult => {
           gridTemplateColumns: "repeat(2, auto)",
           justifyContent: "center",
           alignItems: "center",
-          gap: `${gridGapV}px ${Math.round(14 * scaleFactor)}px`,
+          gap: `${gridGapV}px ${px(14)}px`,
         },
         children: exifTexts.map(mkExifText),
       };
@@ -546,7 +774,7 @@ export const buildRenderTree = (payload: RenderPayload): RenderTreeResult => {
           display: "flex",
           flexDirection: "row",
           flexWrap: "wrap",
-          justifyContent: exifJustify,
+          justifyContent: "flex-start",
           alignItems: "center",
           gap: `${rowGap}px`,
         },
@@ -556,66 +784,129 @@ export const buildRenderTree = (payload: RenderPayload): RenderTreeResult => {
 
     if (hasLogo && hasExif) {
       if (logoPosition === "center") {
-        footerChildren.push({
+        out.push({
           type: "container",
           tagName: "div",
           style: {
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: `${Math.round(12 * scaleFactor)}px`,
+            gap: `${px(12)}px`,
             flex: 1,
           },
           children: [logoNode, exifNode],
         });
       } else if (logoPosition === "right") {
-        footerChildren.push(exifNode);
-        footerChildren.push(mkSpacer());
-        footerChildren.push(logoNode);
+        out.push(exifNode, mkSpacer(), logoNode);
       } else {
-        footerChildren.push(logoNode);
-        footerChildren.push(mkSpacer());
-        footerChildren.push(exifNode);
+        out.push(logoNode, mkSpacer(), exifNode);
       }
     } else if (hasLogo) {
-      if (logoPosition === "center") {
-        footerChildren.push(mkSpacer());
-        footerChildren.push(logoNode);
-        footerChildren.push(mkSpacer());
-      } else if (logoPosition === "right") {
-        footerChildren.push(mkSpacer());
-        footerChildren.push(logoNode);
-      } else {
-        footerChildren.push(logoNode);
-        footerChildren.push(mkSpacer());
-      }
+      if (logoPosition === "center") out.push(mkSpacer(), logoNode, mkSpacer());
+      else if (logoPosition === "right") out.push(mkSpacer(), logoNode);
+      else out.push(logoNode, mkSpacer());
+    } else if (logoPosition === "right") {
+      out.push(mkSpacer(), exifNode);
+    } else if (logoPosition === "left") {
+      out.push(exifNode);
     } else {
-      if (logoPosition === "right") {
-        footerChildren.push(mkSpacer());
-        footerChildren.push(exifNode);
-      } else if (logoPosition === "left") {
-        footerChildren.push(exifNode);
-      } else {
-        footerChildren.push(mkSpacer());
-        footerChildren.push(exifNode);
-        footerChildren.push(mkSpacer());
-      }
+      out.push(mkSpacer(), exifNode, mkSpacer());
     }
+    return out;
+  }
 
+  function buildSplitCaption(): RenderNode[] {
+    const rows = splitCaption(entries);
+    const fs = splitFontSizes(cfg, scaleFactor);
+    const itemGap = px(10);
+    const mkRow = (items: string[], main: boolean): RenderNode => ({
+      type: "container",
+      tagName: "div",
+      style: { display: "flex", flexDirection: "row", gap: `${itemGap}px` },
+      children: items.map((text) =>
+        mkText(text, {
+          fontSize: main ? fs.main : fs.sub,
+          fontWeight: main ? "bold" : "normal",
+          color: main ? fontColor : secondaryColor,
+          whiteSpace: "nowrap",
+        }),
+      ),
+    });
+    const mkColumn = (main: string[], sub: string[], align: "flex-start" | "flex-end") => ({
+      type: "container" as const,
+      tagName: "div",
+      style: {
+        display: "flex",
+        flexDirection: "column" as const,
+        alignItems: align,
+        gap: `${px(4)}px`,
+      },
+      children: [
+        ...(main.length ? [mkRow(main, true)] : []),
+        ...(sub.length ? [mkRow(sub, false)] : []),
+      ],
+    });
+
+    const hasLeft = rows.leftMain.length + rows.leftSub.length > 0;
+    const hasRight = rows.rightMain.length + rows.rightSub.length > 0;
+    const right: RenderNode[] = [];
+    if (hasLogo) right.push(logoNode);
+    if (hasLogo && hasRight) {
+      const mainH = rows.rightMain.length ? Math.ceil(fs.main * LINE_HEIGHT) : 0;
+      const subH = rows.rightSub.length ? Math.ceil(fs.sub * LINE_HEIGHT) : 0;
+      right.push({
+        type: "container",
+        tagName: "div",
+        style: {
+          width: Math.max(1, px(1.5)),
+          height: Math.max(mainH + subH, Math.round(modelFontSize * 1.1)),
+          backgroundColor: secondaryColor,
+          opacity: 0.6,
+        },
+      });
+    }
+    if (hasRight) right.push(mkColumn(rows.rightMain, rows.rightSub, "flex-start"));
+
+    return [
+      ...(hasLeft ? [mkColumn(rows.leftMain, rows.leftSub, "flex-start")] : []),
+      { type: "container", style: { flex: 1 } },
+      {
+        type: "container",
+        tagName: "div",
+        style: { display: "flex", flexDirection: "row", alignItems: "center", gap: `${px(14)}px` },
+        children: right,
+      },
+    ];
+  }
+
+  // Film edge marking, centred in the top border band
+  const edgeText = cfg.edgeText?.trim();
+  if (edgeText && geo.paddingTop > 0) {
     children.push({
       type: "container",
       tagName: "div",
       style: {
+        position: "absolute",
+        left: 0,
+        top: 0,
+        width: canvasWidth,
+        height: geo.paddingTop,
         display: "flex",
         alignItems: "center",
-        paddingTop: `${Math.round(20 * scaleFactor)}px`,
-        paddingBottom: `${Math.round(20 * scaleFactor)}px`,
-        paddingLeft: `${footerPaddingX}px`,
-        paddingRight: `${footerPaddingX}px`,
-        width: "100%",
+        paddingLeft: Math.max(geo.paddingH, px(20)),
         boxSizing: "border-box",
       },
-      children: footerChildren,
+      children: [
+        mkText(edgeText, {
+          fontSize: Math.min(
+            px(Math.max(10, (cfg.fontSize ?? 14) * 0.85)),
+            Math.round(geo.paddingTop * 0.5),
+          ),
+          color: secondaryColor,
+          fontWeight: "bold",
+          whiteSpace: "nowrap",
+        }),
+      ],
     });
   }
 
@@ -623,12 +914,14 @@ export const buildRenderTree = (payload: RenderPayload): RenderTreeResult => {
     type: "container",
     tagName: "div",
     style: {
+      position: "relative",
       display: "flex",
       flexDirection: "column",
       width: canvasWidth,
       height: canvasHeight,
       backgroundColor: bgColor,
       overflow: "hidden",
+      lineHeight: 1.2,
     },
     children,
   };
@@ -636,5 +929,5 @@ export const buildRenderTree = (payload: RenderPayload): RenderTreeResult => {
   const format = exportOptions?.format || "png";
   const quality = exportOptions?.quality ?? 95;
 
-  return { nodeTree, width: canvasWidth, height: canvasHeight, format, quality };
+  return { nodeTree, width: canvasWidth, height: canvasHeight, format, quality, photoFrame };
 };

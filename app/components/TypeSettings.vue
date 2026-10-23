@@ -1,10 +1,21 @@
 <script setup lang="ts">
 import { computed, h } from "vue";
-import { NCheckbox, NSelect, type SelectGroupOption, type SelectOption } from "naive-ui";
-import type { ExifFieldKey } from "~/types";
+import { NSelect, NSwitch, type SelectGroupOption, type SelectOption } from "naive-ui";
+import type { TemplateConfig } from "~/types";
 
 const { t } = useI18n();
 const { overrides, resolvedConfig, defaults, update } = useSelectedTemplate();
+
+/** Two-way binding to one template value: override → template → fallback */
+function setting<K extends keyof TemplateConfig>(key: K, fallback: NonNullable<TemplateConfig[K]>) {
+  return computed({
+    get: () =>
+      (overrides.value[key] ?? resolvedConfig.value?.[key] ?? fallback) as NonNullable<
+        TemplateConfig[K]
+      >,
+    set: (v) => update(key, v),
+  });
+}
 
 // Image logos ignore `modelFontSize` — the Scale % slider in the Logo section
 // drives the size instead. Hide the "Logo Size" row to avoid confusion.
@@ -12,48 +23,37 @@ const hasImageLogo = computed(
   () => !!(overrides.value.logoImageUrl ?? resolvedConfig.value?.logoImageUrl),
 );
 
-const fontFamily = computed({
-  get: () => overrides.value.fontFamily ?? resolvedConfig.value?.fontFamily ?? "Inter, sans-serif",
-  set: (v) => update("fontFamily", v),
+const captionStyle = setting("captionStyle", "stack");
+const fontFamily = setting("fontFamily", "Inter, sans-serif");
+const fontColor = setting("fontColor", "#000000");
+const secondaryColor = setting("secondaryColor", "#000000");
+const fontSize = setting("fontSize", 14);
+const modelFontSize = setting("modelFontSize", 20);
+const letterSpacing = setting("letterSpacing", 0);
+const infoLayout = setting("infoLayout", "horizontal");
+const dateStamp = setting("dateStamp", false);
+const dateStampColor = setting("dateStampColor", "#FF7A1A");
+
+const visibleFields = computed({
+  get: () =>
+    (overrides.value.visibleFields ?? resolvedConfig.value?.visibleFields ?? []) as string[],
+  set: (v: string[]) => update("visibleFields", v),
 });
-const fontColor = computed({
-  get: () => overrides.value.fontColor ?? resolvedConfig.value?.fontColor ?? "#000000",
-  set: (v) => update("fontColor", v),
-});
-const fontSize = computed({
-  get: () => overrides.value.fontSize ?? resolvedConfig.value?.fontSize ?? 14,
-  set: (v) => update("fontSize", v),
-});
-const modelFontSize = computed({
-  get: () => overrides.value.modelFontSize ?? resolvedConfig.value?.modelFontSize ?? 20,
-  set: (v) => update("modelFontSize", v),
-});
-const infoLayout = computed({
-  get: () => overrides.value.infoLayout ?? resolvedConfig.value?.infoLayout ?? "horizontal",
-  set: (v) => update("infoLayout", v),
-});
-const visibleFields = computed(
-  () => overrides.value.visibleFields ?? resolvedConfig.value?.visibleFields ?? [],
+
+const availableFields = computed(() =>
+  (
+    [
+      "make",
+      "model",
+      "lensModel",
+      "focalLength",
+      "fNumber",
+      "exposureTime",
+      "iso",
+      "dateTimeOriginal",
+    ] as const
+  ).map((value) => ({ label: t(`exif.labels.${value}`), value })),
 );
-
-const availableFields: { label: string; value: ExifFieldKey }[] = [
-  { label: "exif.labels.make", value: "make" },
-  { label: "exif.labels.model", value: "model" },
-  { label: "exif.labels.fNumber", value: "fNumber" },
-  { label: "exif.labels.exposureTime", value: "exposureTime" },
-  { label: "exif.labels.iso", value: "iso" },
-  { label: "exif.labels.focalLength", value: "focalLength" },
-  { label: "exif.labels.dateTimeOriginal", value: "dateTimeOriginal" },
-  { label: "exif.labels.lensModel", value: "lensModel" },
-];
-
-function toggleField(value: ExifFieldKey) {
-  const fields = [...visibleFields.value];
-  const idx = fields.indexOf(value);
-  if (idx === -1) fields.push(value);
-  else fields.splice(idx, 1);
-  update("visibleFields", fields);
-}
 
 const fontGroups: { label: string; fonts: { label: string; value: string }[] }[] = [
   {
@@ -103,16 +103,6 @@ const fontGroups: { label: string; fonts: { label: string; value: string }[] }[]
   },
 ];
 
-const layoutItems = computed(() => [
-  { label: t("typography.layoutHorizontal"), value: "horizontal" },
-  { label: t("typography.layoutList"), value: "list" },
-  { label: t("typography.layoutGrid"), value: "grid" },
-]);
-const layoutModel = computed({
-  get: () => infoLayout.value as string,
-  set: (v: string) => (infoLayout.value = v as "horizontal" | "list" | "grid"),
-});
-
 const fontOptions = computed<SelectGroupOption[]>(() =>
   fontGroups.map((g) => ({
     type: "group" as const,
@@ -127,10 +117,33 @@ function renderFontLabel(option: SelectOption) {
   if (option.type === "group") return option.label as string;
   return h("span", { style: { fontFamily: option.value as string } }, option.label as string);
 }
+
+const styleItems = computed(() => [
+  { label: t("typography.styleStack"), value: "stack" },
+  { label: t("typography.styleSplit"), value: "split" },
+]);
+const styleModel = computed({
+  get: () => captionStyle.value as string,
+  set: (v: string) => (captionStyle.value = v as "stack" | "split"),
+});
+
+const layoutItems = computed(() => [
+  { label: t("typography.layoutHorizontal"), value: "horizontal" },
+  { label: t("typography.layoutList"), value: "list" },
+  { label: t("typography.layoutGrid"), value: "grid" },
+]);
+const layoutModel = computed({
+  get: () => infoLayout.value as string,
+  set: (v: string) => (infoLayout.value = v as "horizontal" | "list" | "grid"),
+});
 </script>
 
 <template>
   <div v-if="resolvedConfig" class="flex flex-col gap-1">
+    <FieldRow :label="$t('typography.captionStyle')">
+      <div class="w-48"><SegmentedControl v-model="styleModel" :items="styleItems" /></div>
+    </FieldRow>
+
     <FieldRow :label="$t('typography.fontFamily')">
       <div class="w-48">
         <NSelect
@@ -145,6 +158,9 @@ function renderFontLabel(option: SelectOption) {
 
     <FieldRow :label="$t('typography.fontColor')">
       <ColorPicker v-model="fontColor" />
+    </FieldRow>
+    <FieldRow :label="$t('typography.secondaryColor')">
+      <ColorPicker v-model="secondaryColor" />
     </FieldRow>
 
     <ParamSlider
@@ -162,29 +178,38 @@ function renderFontLabel(option: SelectOption) {
       v-model="modelFontSize"
       :label="$t('typography.logoSize')"
       :min="14"
-      :max="48"
+      :max="64"
       suffix="px"
       :default-value="defaults?.modelFontSize"
     />
 
-    <div class="mt-2 flex flex-col gap-1.5">
+    <ParamSlider
+      v-model="letterSpacing"
+      :label="$t('typography.letterSpacing')"
+      :min="0"
+      :max="12"
+      suffix="px"
+      :default-value="defaults?.letterSpacing"
+    />
+
+    <div v-if="captionStyle === 'stack'" class="mt-2 flex flex-col gap-1.5">
       <span class="text-[13px] text-nord-4">{{ $t("typography.layout") }}</span>
       <SegmentedControl v-model="layoutModel" :items="layoutItems" />
     </div>
 
     <div class="mt-2 flex flex-col gap-1.5">
       <span class="text-[13px] text-nord-4">{{ $t("typography.visibleFields") }}</span>
-      <div class="grid grid-cols-2 gap-x-2 gap-y-1.5">
-        <NCheckbox
-          v-for="field in availableFields"
-          :key="field.value"
-          :checked="visibleFields.includes(field.value)"
-          :label="$t(field.label)"
-          size="small"
-          @update:checked="toggleField(field.value)"
-        />
-      </div>
+      <p v-if="captionStyle === 'split'" class="text-[12px] leading-snug text-nord-4/60">
+        {{ $t("typography.splitHint") }}
+      </p>
+      <FieldOrderList v-model="visibleFields" :fields="availableFields" />
     </div>
+
+    <FieldRow :label="$t('typography.dateStamp')" class="mt-2">
+      <ColorPicker v-if="dateStamp" v-model="dateStampColor" />
+      <NSwitch v-model:value="dateStamp" size="small" :aria-label="$t('typography.dateStamp')" />
+    </FieldRow>
+    <p v-if="dateStamp" class="text-[12px] text-nord-4/60">{{ $t("typography.dateStampHint") }}</p>
   </div>
   <p v-else class="py-6 text-center text-nord-4">{{ $t("border.selectPhotoFirst") }}</p>
 </template>

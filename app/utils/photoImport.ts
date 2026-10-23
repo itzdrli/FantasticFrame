@@ -1,6 +1,7 @@
 import { uuid } from "~/utils/uuid";
 import { clonePhotoStyle, type PhotoStyle } from "~/utils/photoStyle";
 import { mapLimit } from "~~/shared/mapLimit";
+import { DEFAULT_TEMPLATE_ID } from "~/composables/useTemplate";
 import type { ExifData, Photo } from "~/types";
 
 /**
@@ -119,7 +120,7 @@ export async function createPhotoFromFile(
     width,
     height,
     exif: storedExif,
-    templateId: inherited?.templateId ?? "classic",
+    templateId: inherited?.templateId ?? DEFAULT_TEMPLATE_ID,
     templateOverrides: inherited?.templateOverrides,
     crop: { fitMode: "cover", scale: 1, offsetX: 0, offsetY: 0 },
     addedAt: new Date(),

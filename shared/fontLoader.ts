@@ -1,11 +1,5 @@
 import type { FontLoader } from "takumi-js";
-import {
-  CJK_FALLBACK_FAMILY,
-  GOOGLE_FONT_BASE,
-  LXGW_FAMILY,
-  LXGW_FONT_PATH,
-  knownFamiliesIn,
-} from "./fonts";
+import { CJK_FALLBACK_FAMILY, GOOGLE_FONT_BASE, SELF_HOSTED_FONTS, knownFamiliesIn } from "./fonts";
 
 interface FontFace {
   subset: string;
@@ -58,8 +52,9 @@ export async function loadExportFonts(
   const out: FontLoader[] = [];
 
   for (const family of families) {
-    if (family === LXGW_FAMILY) {
-      out.push(`${env.origin}${LXGW_FONT_PATH}`);
+    const selfHosted = SELF_HOSTED_FONTS[family];
+    if (selfHosted) {
+      out.push(`${env.origin}${selfHosted}`);
       continue;
     }
     for (const face of manifest.families[family] ?? []) {
@@ -68,7 +63,9 @@ export async function loadExportFonts(
         name: `${family} ${face.subset}`,
         key: `${family}:${face.subset}:${face.weight}`,
         subsetOf: family,
-        weight: face.weight,
+        // No `weight`: takumi reads it from the file. An explicit weight made
+        // the faces of one family overwrite each other, so a caption came out
+        // all-regular or all-bold depending on which slice registered last.
         style: face.style,
         ranges: face.ranges,
         data: async () => {

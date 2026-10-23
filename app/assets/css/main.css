@@ -1,14 +1,22 @@
 @import "tailwindcss";
 
 /*
- * Self-hosted fonts (LXGW WenKai is not on Google Fonts).
- * Takumi exports fetch the same file via the SELF_HOSTED_FONT_PATHS list;
- * this @font-face only feeds the DOM preview. OFL-1.1 licensed.
+ * Self-hosted fonts that are not on Google Fonts. Takumi exports fetch the
+ * same files via SELF_HOSTED_FONTS (shared/fonts.ts); these @font-faces only
+ * feed the DOM preview. Both OFL-1.1 licensed.
  */
 @font-face {
   font-family: "LXGW WenKai";
   src: url("/fonts/LXGWWenKai-Regular.ttf") format("truetype");
   font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+/* Seven-segment digits for the retro date stamp */
+@font-face {
+  font-family: "DSEG7 Classic";
+  src: url("/fonts/DSEG7Classic-Bold.woff2") format("woff2");
+  font-weight: 700;
   font-style: normal;
   font-display: swap;
 }

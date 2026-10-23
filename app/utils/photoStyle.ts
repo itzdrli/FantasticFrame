@@ -24,6 +24,11 @@ export const TYPOGRAPHY_KEYS: (keyof TemplateConfig)[] = [
   "modelFontSize",
   "infoLayout",
   "visibleFields",
+  "captionStyle",
+  "secondaryColor",
+  "letterSpacing",
+  "dateStamp",
+  "dateStampColor",
 ];
 
 export const BORDER_KEYS: (keyof TemplateConfig)[] = [
@@ -32,6 +37,11 @@ export const BORDER_KEYS: (keyof TemplateConfig)[] = [
   "paddingTop",
   "paddingBottom",
   "paddingHorizontal",
+  "backgroundMode",
+  "backgroundBlur",
+  "backgroundDim",
+  "photoShadow",
+  "edgeText",
 ];
 
 export const CANVAS_KEYS: (keyof TemplateConfig)[] = ["canvasMode", "socialRatio"];

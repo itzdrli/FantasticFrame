@@ -14,6 +14,7 @@ export type {
   ExportOptions,
   RenderPayload,
   RenderTreeResult,
+  RenderNode,
   CropRect,
 } from "~~/shared/types";
 

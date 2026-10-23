@@ -1,4 +1,4 @@
-import { buildRenderTree } from "~~/shared/render";
+import { buildRenderTree, exportFontFamily } from "~~/shared/render";
 import { loadExportFonts } from "~~/shared/fontLoader";
 import type { RenderPayload } from "~~/shared/types";
 
@@ -33,7 +33,7 @@ export async function renderInBrowser(input: BrowserRenderInput): Promise<Render
   const [takumi, data, fonts] = await Promise.all([
     import("takumi-js"),
     photo.arrayBuffer(),
-    loadExportFonts(input.templateConfig.fontFamily, { origin: "" }),
+    loadExportFonts(exportFontFamily(input.templateConfig), { origin: "" }),
   ]);
   const buf = await takumi.render(
     nodeTree as any,

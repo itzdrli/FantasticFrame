@@ -52,8 +52,31 @@ const icons: Record<SectionId, Component> = {
 /** Settings a section's reset button returns to the template's values */
 const resetKeys: Partial<Record<SectionId, (keyof TemplateConfig)[]>> = {
   canvas: ["canvasMode", "socialRatio"],
-  frame: ["backgroundColor", "borderRadius", "paddingTop", "paddingBottom", "paddingHorizontal"],
-  type: ["fontFamily", "fontColor", "fontSize", "modelFontSize", "infoLayout", "visibleFields"],
+  frame: [
+    "backgroundColor",
+    "backgroundMode",
+    "backgroundBlur",
+    "backgroundDim",
+    "borderRadius",
+    "photoShadow",
+    "paddingTop",
+    "paddingBottom",
+    "paddingHorizontal",
+    "edgeText",
+  ],
+  type: [
+    "captionStyle",
+    "fontFamily",
+    "fontColor",
+    "secondaryColor",
+    "fontSize",
+    "modelFontSize",
+    "letterSpacing",
+    "infoLayout",
+    "visibleFields",
+    "dateStamp",
+    "dateStampColor",
+  ],
   logo: ["showLogo", "logoPosition", "logoText", "logoImageUrl", "logoScale", "logoAspect"],
 };
 

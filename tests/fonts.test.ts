@@ -66,4 +66,17 @@ describe("loadExportFonts", () => {
     expect(calls.at(-1)).toBe("http://x/fonts/google/inter-latin-400.woff2");
     expect(calls.every((c) => c.startsWith("http://x/"))).toBe(true);
   });
+
+  it("leaves the weight to the font file (regression: explicit weights overwrote each other)", async () => {
+    const fonts = await loadExportFonts("Inter", { origin: "http://x", fetch: fakeFetch });
+    for (const f of fonts) expect(f).not.toHaveProperty("weight");
+  });
+
+  it("serves the date-stamp face from our own origin", async () => {
+    const fonts = await loadExportFonts("Inter, DSEG7 Classic", {
+      origin: "http://x",
+      fetch: fakeFetch,
+    });
+    expect(fonts).toContain("http://x/fonts/DSEG7Classic-Bold.woff2");
+  });
 });

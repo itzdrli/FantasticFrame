@@ -30,6 +30,9 @@ const positionModel = computed({
   get: () => logoPosition.value as string,
   set: (v: string) => (logoPosition.value = v as "left" | "center" | "right"),
 });
+const isSplit = computed(
+  () => (overrides.value.captionStyle ?? resolvedConfig.value?.captionStyle) === "split",
+);
 const logoText = computed({
   get: () => overrides.value.logoText ?? resolvedConfig.value?.logoText ?? "",
   set: (v) => update("logoText", v),
@@ -183,7 +186,8 @@ function onSvgPaste(e: ClipboardEvent) {
 
 <template>
   <div class="flex flex-col gap-2">
-    <FieldRow :label="$t('border.position')">
+    <p v-if="isSplit" class="text-[12px] text-nord-4/60">{{ $t("border.logoSplitHint") }}</p>
+    <FieldRow v-else :label="$t('border.position')">
       <div class="w-48"><SegmentedControl v-model="positionModel" :items="positionItems" /></div>
     </FieldRow>
     <p v-if="!showLogo" class="text-[12px] text-nord-4/60">{{ $t("border.logoHiddenHint") }}</p>

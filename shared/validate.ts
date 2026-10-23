@@ -9,6 +9,8 @@
 const CANVAS_MODES = ["original", "social"] as const;
 const INFO_LAYOUTS = ["grid", "list", "horizontal"] as const;
 const LOGO_POSITIONS = ["left", "center", "right"] as const;
+const BACKGROUND_MODES = ["solid", "blur"] as const;
+const CAPTION_STYLES = ["stack", "split"] as const;
 
 const STRING_FIELDS = [
   "backgroundColor",
@@ -17,6 +19,9 @@ const STRING_FIELDS = [
   "fontFamily",
   "fontColor",
   "socialRatio",
+  "secondaryColor",
+  "dateStampColor",
+  "edgeText",
 ] as const;
 
 const NUMERIC_FIELDS = [
@@ -30,7 +35,18 @@ const NUMERIC_FIELDS = [
   "logoAspect",
 ] as const;
 
-const BOOLEAN_FIELDS = ["showLogo"] as const;
+const BOOLEAN_FIELDS = ["showLogo", "dateStamp"] as const;
+
+/**
+ * Effect fields get tight ranges: a blur radius in the thousands would make
+ * the server rasterize an enormous filter kernel.
+ */
+const BOUNDED_FIELDS: Record<string, [number, number]> = {
+  backgroundBlur: [0, 200],
+  backgroundDim: [0, 90],
+  photoShadow: [0, 100],
+  letterSpacing: [-10, 50],
+};
 
 const MAX_STRING_LEN = 200;
 /** Generous bound on any layout number (px at the 1080 base, or a percentage) */
@@ -62,6 +78,14 @@ export function validateTemplateConfig(value: unknown): ValidationResult {
     else if (Math.abs(v) > MAX_LAYOUT_VALUE) errors.push(`${f} is out of range`);
   }
 
+  for (const [f, [min, max]] of Object.entries(BOUNDED_FIELDS)) {
+    const v = cfg[f];
+    if (v === undefined) continue;
+    if (typeof v !== "number" || !Number.isFinite(v) || v < min || v > max) {
+      errors.push(`${f} must be a number between ${min} and ${max}`);
+    }
+  }
+
   // The renderer fetches any http(s) image src itself, so a remote logo URL
   // would let a caller make the server request arbitrary addresses (SSRF).
   // The app only ever produces data URLs (uploaded / pasted logos).
@@ -87,6 +111,8 @@ export function validateTemplateConfig(value: unknown): ValidationResult {
   inList(CANVAS_MODES)(cfg.canvasMode, "canvasMode");
   inList(INFO_LAYOUTS)(cfg.infoLayout, "infoLayout");
   inList(LOGO_POSITIONS)(cfg.logoPosition, "logoPosition");
+  inList(BACKGROUND_MODES)(cfg.backgroundMode, "backgroundMode");
+  inList(CAPTION_STYLES)(cfg.captionStyle, "captionStyle");
 
   const vf = cfg.visibleFields;
   if (vf !== undefined) {

@@ -58,6 +58,29 @@ export interface TemplateConfig {
   canvasMode: "original" | "social";
   /** Output aspect ratio (W:H), e.g. "1:1", "16:9", "7:5" */
   socialRatio?: string;
+  /** "solid" fills with backgroundColor; "blur" fills with the photo itself, blurred */
+  backgroundMode?: "solid" | "blur";
+  /** Blur radius of the "blur" background (1080-base px) */
+  backgroundBlur?: number;
+  /** How much the "blur" background is darkened, 0–90 % */
+  backgroundDim?: number;
+  /** Drop shadow under the photo, 0 (none) – 100 */
+  photoShadow?: number;
+  /**
+   * "stack": logo and EXIF placed by logoPosition / infoLayout.
+   * "split": the camera-watermark bar — model and lens on the left; logo, a
+   * divider, then exposure over date/location on the right.
+   */
+  captionStyle?: "stack" | "split";
+  /** Colour of secondary text (EXIF in "stack", second lines in "split") */
+  secondaryColor?: string;
+  /** Tracking for caption and edge text (1080-base px) */
+  letterSpacing?: number;
+  /** Retro LCD date stamp in the photo's bottom-right corner */
+  dateStamp?: boolean;
+  dateStampColor?: string;
+  /** Film edge marking printed in the top border, e.g. "KODAK PORTRA 400" */
+  edgeText?: string;
 }
 
 /** Per-photo crop/zoom applied inside the frame */
@@ -100,6 +123,8 @@ export interface RenderTreeResult {
   height: number;
   format: ExportFormat;
   quality: number;
+  /** The photo's clipping frame inside nodeTree (the preview hangs crop dragging on it) */
+  photoFrame: RenderNode;
 }
 
 /** Cover-crop geometry for a box */

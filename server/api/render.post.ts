@@ -1,7 +1,7 @@
 import { defineEventHandler, createError } from "h3";
 import { renderServer } from "../utils/takumiServer";
 import { enforceRateLimit, withRenderSlot } from "../utils/guard";
-import { buildRenderTree } from "../../shared/render";
+import { buildRenderTree, exportFontFamily } from "../../shared/render";
 import type { RenderPayload } from "../../shared/types";
 import { validateTemplateConfig } from "../../shared/validate";
 import { readImageSize } from "../../shared/imageSize";
@@ -75,7 +75,11 @@ export default defineEventHandler(async (event) => {
     if (width * height > MAX_OUTPUT_PIXELS) throw tooBig("Output", MAX_OUTPUT_PIXELS / 1e6);
 
     const imageBuffer = await withRenderSlot(() =>
-      renderServer(nodeTree, { width, height, format, quality }, payload.templateConfig.fontFamily),
+      renderServer(
+        nodeTree,
+        { width, height, format, quality },
+        exportFontFamily(payload.templateConfig),
+      ),
     );
 
     const buf = Buffer.from(imageBuffer);

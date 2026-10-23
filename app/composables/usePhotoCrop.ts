@@ -51,33 +51,6 @@ export const usePhotoCrop = (
     updateCrop({ scale: 1, offsetX: 0, offsetY: 0 });
   }
 
-  const croppedImageStyle = computed(() => {
-    const layout = photoLayout.value;
-    if (!layout || !photo.value) return {};
-    const ps = previewScale.value;
-    const boxW = Math.round(layout.availW * ps);
-    const boxH = Math.round(layout.availH * ps);
-    const { left, top, width, height } = coverCropRect(
-      boxW,
-      boxH,
-      photo.value.width / photo.value.height,
-      cropScale.value,
-      cropOffsetX.value,
-      cropOffsetY.value,
-    );
-    return {
-      position: "absolute" as const,
-      left: `${left}px`,
-      top: `${top}px`,
-      width: `${Math.round(width)}px`,
-      height: `${Math.round(height)}px`,
-      display: "block" as const,
-      maxWidth: "none" as const,
-      userSelect: "none" as const,
-      pointerEvents: "none" as const,
-    };
-  });
-
   const dragging = ref(false);
   const dragStart = ref({ x: 0, y: 0, ox: 0, oy: 0 });
 
@@ -153,7 +126,6 @@ export const usePhotoCrop = (
     cropScale,
     dragging,
     canPan,
-    croppedImageStyle,
     setFitMode,
     setZoom,
     onZoomInput,
