@@ -97,6 +97,10 @@ export default defineNuxtConfig({
         },
       ],
       link: [
+        // SVG first for modern browsers; favicon.ico (PNG-in-ICO) for the rest
+        { rel: "icon", type: "image/svg+xml", href: "/logo.svg" },
+        { rel: "icon", href: "/favicon.ico", sizes: "48x48" },
+        { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
         {
           // Google families are self-hosted: scripts/fetch-fonts.mjs downloads
           // them into public/fonts/google at build time, so visitors never

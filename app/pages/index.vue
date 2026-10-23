@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { NButton, NCard, NIcon, NModal, NProgress, NTooltip, useMessage } from "naive-ui";
-import { Download, ExternalLink, Frame, ShieldCheck } from "@lucide/vue";
+import { Download, ExternalLink, ShieldCheck } from "@lucide/vue";
 import { usePhotoStore } from "~/composables/usePhotoStore";
 import { useImageRender } from "~/composables/useImageRender";
 import { prefetchAutoLogos, renderConfigFor } from "~/composables/useLogoLibrary";
@@ -105,12 +105,7 @@ const batchExportDisabled = computed(
     <header
       class="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-nord-3 bg-nord-1 px-3"
     >
-      <div class="flex min-w-0 items-center gap-2">
-        <NIcon :size="16" class="shrink-0 text-nord-8"><Frame /></NIcon>
-        <span class="truncate text-[13px] font-bold tracking-[0.16em] text-nord-6 uppercase">
-          Fantastic Frame
-        </span>
-      </div>
+      <AppLogo class="aspect-[414/80] h-8 w-auto shrink-0 text-nord-6" />
 
       <div class="flex shrink-0 items-center gap-1.5">
         <AppearanceMenu />

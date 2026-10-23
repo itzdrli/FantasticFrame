@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Fantastic Frame",
+    "name": "FantasticFrame",
     "settings": "Settings",
     "exif": "EXIF",
     "exportAll": "Export All ({n})",
@@ -92,7 +92,7 @@
     "reset": "Reset",
     "useFontColor": "Use Font Color",
     "logoText": "Logo Text (Leave blank to use camera brand)",
-    "logoTextPlaceholder": "e.g. Fantastic Frame",
+    "logoTextPlaceholder": "e.g. FantasticFrame",
     "selectPhotoFirst": "Please select a photo first",
     "fill": "Fill",
     "fillSolid": "Solid",
