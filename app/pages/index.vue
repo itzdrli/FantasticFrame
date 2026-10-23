@@ -192,14 +192,15 @@ const batchExportDisabled = computed(
                 <p class="text-nord-4">{{ $t("app.emptyDesc") }}</p>
               </div>
               <PhotoUploader />
-              <span class="self-start">
+              <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
                 <NButton text size="tiny" @click="showPrivacyModal = true">
                   <template #icon>
                     <NIcon><ShieldCheck /></NIcon>
                   </template>
                   {{ $t("app.privacyNotice") }}
                 </NButton>
-              </span>
+                <PoweredBy class="aspect-[544/43] h-3.5 w-auto text-nord-4" />
+              </div>
             </div>
           </div>
         </div>

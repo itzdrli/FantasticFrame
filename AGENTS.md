@@ -60,7 +60,8 @@ Always run `bun run lint`, `bun run fmt:check`, `bun run test` and
   editable value), `FieldRow`, `SegmentedControl`, `ColorPicker`,
   `FieldOrderList` (drag/arrow reordering of visible EXIF fields). Elsewhere:
   `PreviewPanel`/`PreviewToolbar`, `PhotoUploader`, `PhotoList`, `AppearanceMenu`,
-  `AppLogo` (header lockup, outlined SVG from Figma; mark = `public/logo.svg`)
+  `AppLogo` (header lockup, outlined SVG from Figma; mark = `public/logo.svg`),
+  `PoweredBy` (FantasticSpoon credit: welcome screen + desktop panel footer)
 - `app/components/RenderNodeView.vue` — draws a takumi node tree as DOM. The
   live preview and the preset thumbnails render `buildRenderTree()` output
   through it, so there is no second layout implementation: a new template

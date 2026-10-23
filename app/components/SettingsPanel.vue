@@ -231,6 +231,11 @@ watch(
       </template>
 
       <div v-else class="px-4 py-3"><ExifPanel /></div>
+
+      <!-- Desktop only: the phone sheet is too small to spare the row -->
+      <div v-if="!props.mobile" class="flex justify-center px-3 pt-6 pb-4">
+        <PoweredBy class="aspect-[544/43] h-3.5 w-auto text-nord-4/70" />
+      </div>
     </div>
   </div>
 </template>
