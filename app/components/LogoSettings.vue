@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { NButton, NIcon, NInput } from "naive-ui";
+import { NButton, NIcon, NInput, NSwitch, useMessage } from "naive-ui";
 import { ClipboardPaste, ImageUp } from "@lucide/vue";
 import {
   applySvgColor,
@@ -8,6 +8,9 @@ import {
   encodeSvgDataUrl,
   extractSvgAspect,
 } from "~/utils/svgLogo";
+import { loadLibraryLogo } from "~/composables/useLogoLibrary";
+import { LOGO_LIBRARY, matchLogoId } from "~~/shared/logos";
+import { usePhotoStore } from "~/composables/usePhotoStore";
 
 const { t } = useI18n();
 const { overrides, resolvedConfig, update, updateMany } = useSelectedTemplate();
@@ -30,6 +33,35 @@ const positionModel = computed({
   get: () => logoPosition.value as string,
   set: (v: string) => (logoPosition.value = v as "left" | "center" | "right"),
 });
+const photoStore = usePhotoStore();
+const message = useMessage();
+
+const logoAuto = computed({
+  get: () => overrides.value.logoAuto ?? resolvedConfig.value?.logoAuto ?? false,
+  set: (v) => update("logoAuto", v),
+});
+/** What auto mode does for the selected photo, shown under the switch */
+const autoStatus = computed(() => {
+  if (logoImageUrl.value) return t("border.logoAutoOverridden");
+  if (logoText.value) return t("border.logoAutoTextWins");
+  const exif = photoStore.selectedPhoto?.exif;
+  const id = matchLogoId(exif?.make, exif?.model);
+  const name = LOGO_LIBRARY.find((l) => l.id === id)?.name;
+  return name ? t("border.logoAutoHit", { name }) : t("border.logoAutoMiss");
+});
+
+// A library logo is a pasted SVG that starts out in the caption colour, so it
+// reads on dark templates too; "Reset" brings back the original colours.
+async function pickLibraryLogo(id: string) {
+  try {
+    const svg = await loadLibraryLogo(id);
+    loadSvg(svg);
+    svgColor.value = fontColor.value;
+  } catch {
+    message.error(t("border.logoLoadFailed"));
+  }
+}
+
 const isSplit = computed(
   () => (overrides.value.captionStyle ?? resolvedConfig.value?.captionStyle) === "split",
 );
@@ -194,6 +226,12 @@ function onSvgPaste(e: ClipboardEvent) {
 
     <template v-if="showLogo">
       <div class="flex flex-col gap-2">
+        <FieldRow :label="$t('border.logoAuto')">
+          <NSwitch v-model:value="logoAuto" size="small" :aria-label="$t('border.logoAuto')" />
+        </FieldRow>
+        <p v-if="logoAuto" class="-mt-1 text-[12px] leading-snug text-nord-4/60">
+          {{ autoStatus }}
+        </p>
         <span class="text-[13px] text-nord-4">{{ $t("border.logoImage") }}</span>
 
         <div
@@ -208,7 +246,8 @@ function onSvgPaste(e: ClipboardEvent) {
           </span>
         </div>
         <template v-else>
-          <div class="grid grid-cols-2 gap-1.5">
+          <div class="grid grid-cols-3 gap-1.5">
+            <LogoLibraryPicker @pick="pickLibraryLogo" />
             <NButton size="tiny" block @click="logoImageInput?.click()">
               <template #icon>
                 <NIcon><ImageUp /></NIcon>

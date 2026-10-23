@@ -15,6 +15,7 @@ export const LOGO_KEYS: (keyof TemplateConfig)[] = [
   "logoImageUrl",
   "logoScale",
   "logoAspect",
+  "logoAuto",
 ];
 
 export const TYPOGRAPHY_KEYS: (keyof TemplateConfig)[] = [

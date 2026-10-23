@@ -1,5 +1,5 @@
 import { computed, type ComputedRef } from "vue";
-import { getResolvedConfig } from "~/composables/useTemplate";
+import { renderConfigFor } from "~/composables/useLogoLibrary";
 import { computeFrameGeometry, exifEntriesFor } from "~~/shared/render";
 import type { Photo } from "~/types";
 
@@ -9,10 +9,7 @@ import type { Photo } from "~/types";
  * preview can never drift from the exported image.
  */
 export const usePreviewLayout = (photo: ComputedRef<Photo | null>) => {
-  const templateConfig = computed(() => {
-    if (!photo.value) return null;
-    return getResolvedConfig(photo.value.templateId, photo.value.templateOverrides);
-  });
+  const templateConfig = computed(() => (photo.value ? renderConfigFor(photo.value) : null));
 
   const geometry = computed(() => {
     const p = photo.value;

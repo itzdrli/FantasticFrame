@@ -3,7 +3,7 @@ import { NButton, NCard, NIcon, NModal, NProgress, NTooltip, useMessage } from "
 import { Download, ExternalLink, Frame, ShieldCheck } from "@lucide/vue";
 import { usePhotoStore } from "~/composables/usePhotoStore";
 import { useImageRender } from "~/composables/useImageRender";
-import { getResolvedConfig } from "~/composables/useTemplate";
+import { prefetchAutoLogos, renderConfigFor } from "~/composables/useLogoLibrary";
 import { useIsMobile } from "~/composables/useIsMobile";
 
 useHead({
@@ -35,7 +35,8 @@ watch(error, (msg) => {
 async function handleExport() {
   const photo = photoStore.selectedPhoto;
   if (!photo) return;
-  const templateConfig = getResolvedConfig(photo.templateId, photo.templateOverrides);
+  await prefetchAutoLogos([photo]);
+  const templateConfig = renderConfigFor(photo);
   const res = await renderImage({
     photo: photo.file,
     exifData: photo.exif,
@@ -53,11 +54,12 @@ async function handleBatchExport() {
 
   isBatchExporting.value = true;
 
+  await prefetchAutoLogos(photoStore.photos);
   const items = photoStore.photos.map((photo) => ({
     input: {
       photo: photo.file,
       exifData: photo.exif,
-      templateConfig: getResolvedConfig(photo.templateId, photo.templateOverrides),
+      templateConfig: renderConfigFor(photo),
       photoWidth: photo.width,
       photoHeight: photo.height,
       crop: photo.crop,

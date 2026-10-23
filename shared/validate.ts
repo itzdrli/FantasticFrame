@@ -35,7 +35,7 @@ const NUMERIC_FIELDS = [
   "logoAspect",
 ] as const;
 
-const BOOLEAN_FIELDS = ["showLogo", "dateStamp"] as const;
+const BOOLEAN_FIELDS = ["showLogo", "dateStamp", "logoAuto"] as const;
 
 /**
  * Effect fields get tight ranges: a blur radius in the thousands would make

@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import { usePhotoStore } from "~/composables/usePhotoStore";
 import { PRESET_LIST, getResolvedConfig } from "~/composables/useTemplate";
+import { withAutoLogo } from "~/composables/useLogoLibrary";
 import { buildRenderTree, computeCanvasDims, exifEntriesFor } from "~~/shared/render";
 
 const photoStore = usePhotoStore();
@@ -15,7 +16,7 @@ const groups = computed(() => {
   const p = selectedPhoto.value;
   const cards = PRESET_LIST.map((preset) => {
     if (!p) return { ...preset, thumb: null };
-    const cfg = getResolvedConfig(preset.id);
+    const cfg = withAutoLogo(getResolvedConfig(preset.id), p.exif);
     const full = computeCanvasDims({
       cfg,
       photoWidth: p.width,

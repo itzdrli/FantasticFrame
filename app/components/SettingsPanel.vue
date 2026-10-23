@@ -77,7 +77,15 @@ const resetKeys: Partial<Record<SectionId, (keyof TemplateConfig)[]>> = {
     "dateStamp",
     "dateStampColor",
   ],
-  logo: ["showLogo", "logoPosition", "logoText", "logoImageUrl", "logoScale", "logoAspect"],
+  logo: [
+    "showLogo",
+    "logoAuto",
+    "logoPosition",
+    "logoText",
+    "logoImageUrl",
+    "logoScale",
+    "logoAspect",
+  ],
 };
 
 const editSections = computed<SectionId[]>(() => [

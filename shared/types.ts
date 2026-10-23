@@ -49,6 +49,12 @@ export interface TemplateConfig {
   logoImageUrl?: string;
   logoScale?: number;
   logoAspect?: number;
+  /**
+   * Use the library logo matching the photo's EXIF make when no logo image is
+   * set. Resolved in the app (see app/composables/useLogoLibrary.ts) into a
+   * plain logoImageUrl before rendering; the renderer never reads it.
+   */
+  logoAuto?: boolean;
   infoLayout: "grid" | "list" | "horizontal";
   visibleFields: ExifFieldKey[] | string[];
   fontFamily: string;

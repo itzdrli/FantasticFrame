@@ -103,7 +103,21 @@
     "edgeText": "胶片边码",
     "edgeTextPlaceholder": "例如：KODAK PORTRA 400",
     "edgeTextHint": "印在顶部边框里，顶部留白为 0 时不显示",
-    "logoSplitHint": "分栏样式下 Logo 固定在右侧分隔线前"
+    "logoSplitHint": "分栏样式下 Logo 固定在右侧分隔线前",
+    "logoLibrary": "Logo 库",
+    "searchLogo": "搜索品牌",
+    "logoGroups": {
+      "camera": "相机",
+      "phone": "手机"
+    },
+    "noLogoMatch": "没有匹配的品牌",
+    "logoTrademark": "Logo 为各品牌商标，仅用于标注该品牌设备拍摄的照片。",
+    "logoAuto": "按相机品牌自动匹配",
+    "logoAutoOverridden": "已设置 Logo 图片，优先使用图片",
+    "logoAutoTextWins": "已填写 Logo 文字，优先显示文字",
+    "logoAutoHit": "当前照片使用 {name} 标志",
+    "logoAutoMiss": "未识别当前照片的品牌，显示文字",
+    "logoLoadFailed": "Logo 加载失败，请重试"
   },
   "typography": {
     "sectionTitle": "字体排版",

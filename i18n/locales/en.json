@@ -103,7 +103,21 @@
     "edgeText": "Film edge code",
     "edgeTextPlaceholder": "e.g. KODAK PORTRA 400",
     "edgeTextHint": "Printed in the top border; hidden when top padding is 0",
-    "logoSplitHint": "In split style the logo sits before the divider on the right"
+    "logoSplitHint": "In split style the logo sits before the divider on the right",
+    "logoLibrary": "Library",
+    "searchLogo": "Search brands",
+    "logoGroups": {
+      "camera": "Cameras",
+      "phone": "Phones"
+    },
+    "noLogoMatch": "No matching brand",
+    "logoTrademark": "Logos are trademarks of their owners, used here to label photos taken with that brand's device.",
+    "logoAuto": "Match camera brand",
+    "logoAutoOverridden": "A logo image is set and takes priority",
+    "logoAutoTextWins": "Logo text is set and takes priority",
+    "logoAutoHit": "This photo uses the {name} logo",
+    "logoAutoMiss": "This photo's brand isn't in the library; showing text",
+    "logoLoadFailed": "Couldn't load the logo, try again"
   },
   "typography": {
     "sectionTitle": "Typography",

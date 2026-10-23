@@ -101,7 +101,7 @@ Always run `bun run lint`, `bun run fmt:check`, `bun run test` and
   `formatExif()`, `coverCropRect()` (cover crop/zoom geometry), and the
   layout math (`computeFrameGeometry`, `estimateFooterLayout`,
   `computeCanvasDims`, `layoutScaleFactor`). `buildRenderTree(payload,
-  { scale })` builds the preview at on-screen size; the footer is estimated at
+{ scale })` builds the preview at on-screen size; the footer is estimated at
   full size and scaled so the preview never drifts from the export. Template
   effects: blurred-photo background (stacked sharp→blurred layers, since
   takumi clips a filter before blurring), photo shadow, `captionStyle`
@@ -114,6 +114,13 @@ Always run `bun run lint`, `bun run fmt:check`, `bun run test` and
 - `shared/fonts.ts` / `shared/fontLoader.ts` — font list (single source of
   truth), `knownFamiliesIn()`, and `loadExportFonts()` which builds takumi
   `FontLoader`s (lazy, unicode-range sliced) from our own `/fonts/google/`
+- `shared/logos.ts` — brand logo library (`LOGO_LIBRARY`, `matchLogoId()`
+  from EXIF make). Files are normalised single-colour SVGs in `public/logos/`
+  (sources and licences in `public/logos/SOURCES.md`; a new logo must carry
+  no scripts, styles or external refs — `tests/logos.test.ts` checks).
+  `logoAuto` is resolved in the app (`app/composables/useLogoLibrary.ts`,
+  `renderConfigFor()` / `prefetchAutoLogos()`) into a plain recoloured
+  `logoImageUrl` before preview or export; the renderer never sees it.
 - `shared/mapLimit.ts` — bounded-concurrency mapper (photo import)
 - `server/utils/limits.ts` — capped body reader (h3 has no body limit); the
   render endpoints reject oversized uploads with a clear 413
