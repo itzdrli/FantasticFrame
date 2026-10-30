@@ -4,7 +4,8 @@ import { Download, ExternalLink, ShieldCheck } from "@lucide/vue";
 import { usePhotoStore } from "~/composables/usePhotoStore";
 import { useImageRender } from "~/composables/useImageRender";
 import { prefetchAutoLogos, renderConfigFor } from "~/composables/useLogoLibrary";
-import { useIsMobile } from "~/composables/useIsMobile";
+import { useIsMobile, useSheetLayout } from "~/composables/useIsMobile";
+import { useAutoLocation } from "~/composables/useAutoLocation";
 
 useHead({
   title: "FantasticFrame",
@@ -16,10 +17,12 @@ const { t } = useI18n();
 const { renderImage, saveImage, batchExport, isRendering, error, batchProgress } = useImageRender();
 
 const isMobile = useIsMobile();
-/** Phone sheet: starts collapsed so a freshly opened photo is fully visible */
+const isSheet = useSheetLayout();
+/** Bottom sheet: starts collapsed so a freshly opened photo is fully visible */
 const panelCollapsed = ref(true);
 
 const message = useMessage();
+useAutoLocation();
 const showPrivacyModal = ref(false);
 
 const isBatchExporting = ref(false);
@@ -179,7 +182,7 @@ const batchExportDisabled = computed(
       :border-radius="0"
     />
 
-    <div class="flex min-h-0 flex-1 flex-col md:flex-row">
+    <div class="flex min-h-0 flex-1 flex-col docked:flex-row">
       <main class="flex min-h-0 min-w-0 flex-1 flex-col">
         <div class="relative min-h-0 flex-1 overflow-hidden">
           <!-- PreviewPanel is its own pan/zoom viewport: it fits the canvas to the
@@ -214,10 +217,10 @@ const batchExportDisabled = computed(
 
       <aside
         v-if="photoStore.hasPhotos"
-        class="shrink-0 border-t border-nord-3 bg-nord-1 max-md:pb-[env(safe-area-inset-bottom)] md:w-[360px] xl:w-[400px] 2xl:w-[440px] md:border-t-0 md:border-l"
-        :class="isMobile && !panelCollapsed ? 'h-[42dvh]' : ''"
+        class="shrink-0 border-t border-nord-3 bg-nord-1 sheet:pb-[env(safe-area-inset-bottom)] docked:w-[360px] docked:border-t-0 docked:border-l docked:xl:w-[400px] docked:2xl:w-[440px]"
+        :class="isSheet && !panelCollapsed ? 'h-[42dvh]' : ''"
       >
-        <SettingsPanel v-model:collapsed="panelCollapsed" :mobile="isMobile" />
+        <SettingsPanel v-model:collapsed="panelCollapsed" :mobile="isSheet" />
       </aside>
     </div>
 
@@ -234,6 +237,7 @@ const batchExportDisabled = computed(
           <p class="text-nord-4">{{ $t("app.privacyModal.p1") }}</p>
           <p>{{ $t("app.privacyModal.p2") }}</p>
           <p>{{ $t("app.privacyModal.p3") }}</p>
+          <p>{{ $t("app.privacyModal.p4") }}</p>
         </div>
         <template #action>
           <div class="flex justify-end">

@@ -71,6 +71,8 @@ export default defineNuxtConfig({
 
   nitro: {
     preset: "bun",
+    // Pre-compressed .gz/.br next to text assets
+    compressPublicAssets: { gzip: true, brotli: true },
     rollupConfig: {
       plugins: [
         {

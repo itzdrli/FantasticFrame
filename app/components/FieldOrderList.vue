@@ -76,7 +76,7 @@ function onDragOver(i: number, e: DragEvent) {
         <NCheckbox checked size="small" class="min-w-0 flex-1" @update:checked="remove(value)">
           {{ labelOf(value) }}
         </NCheckbox>
-        <span class="flex opacity-60 group-hover/row:opacity-100 max-md:opacity-100">
+        <span class="flex opacity-60 group-hover/row:opacity-100 pointer-coarse:opacity-100">
           <NButton
             text
             size="tiny"

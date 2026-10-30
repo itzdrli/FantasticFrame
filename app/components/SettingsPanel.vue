@@ -18,7 +18,7 @@ import { usePhotoStore } from "~/composables/usePhotoStore";
 import type { TemplateConfig } from "~/types";
 
 const props = defineProps<{ mobile: boolean }>();
-/** Phones only: the sheet shrinks to its tab bar so the photo gets the whole screen */
+/** Sheet layout only: shrinks to its tab bar so the photo gets the whole screen */
 const collapsed = defineModel<boolean>("collapsed", { default: true });
 
 const { t } = useI18n();
@@ -188,8 +188,8 @@ watch(
     </div>
 
     <div v-show="!props.mobile || !collapsed" class="min-h-0 flex-1 overflow-y-auto">
-      <!-- Phone: only the active section -->
-      <div v-if="props.mobile" class="px-4 py-3">
+      <!-- Sheet: only the active section; capped so tablet-wide rows stay readable -->
+      <div v-if="props.mobile" class="mx-auto max-w-2xl px-4 py-3">
         <component :is="bodies[phoneTab as SectionId]" />
       </div>
 

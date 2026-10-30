@@ -109,6 +109,17 @@ export const usePhotoStore = defineStore("photos", () => {
     }
   }
 
+  /**
+   * Sets the text of the "location" field. It lives on the photo's EXIF (not
+   * its template overrides) because it describes the photo, so style sync
+   * and template switches leave it alone. `undefined` id = every photo.
+   */
+  function setPhotoLocation(id: string | undefined, location: string | undefined) {
+    for (const p of photos.value) {
+      if (id === undefined || p.id === id) p.exif = { ...p.exif, location };
+    }
+  }
+
   function mergeOverrides(photo: Photo, overrides: Partial<TemplateConfig>) {
     photo.templateOverrides = mergeTemplateOverrides(photo.templateOverrides, overrides);
   }
@@ -222,6 +233,7 @@ export const usePhotoStore = defineStore("photos", () => {
     updatePhotoOverrides,
     updatePhotoTemplate,
     setPhotoCrop,
+    setPhotoLocation,
     applyTemplateToAll,
     applyStyleToAll,
     toggleSyncCategory,

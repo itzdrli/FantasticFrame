@@ -6,6 +6,10 @@ Fantastic Frame — a photo framing tool: add a border and an EXIF caption foote
 (camera, aperture, shutter, ISO, focal length, date) under photos. Templates are
 just saved configs; presets exist but everything is settable by hand.
 
+- Editor layout: side panel only on landscape screens ≥1024px wide (or any
+  ≥1366px); phones and portrait tablets get preview + bottom sheet. One
+  query, two places: the `sheet`/`docked` variants in `main.css` and
+  `SHEET_QUERY` in `useIsMobile.ts`.
 - Single **and batch** export render **client-side in the browser** via
   takumi-js WASM inside a Web Worker (photo never leaves the device); batch zips
   in the browser with fflate. Only when the browser render throws does that one
@@ -13,8 +17,11 @@ just saved configs; presets exist but everything is settable by hand.
   DB, no accounts). The privacy policy at legal.itzdrli.cc (separate repo) and
   the in-app privacy modal describe exactly this — keep them in sync if the
   data flow changes.
-- No third-party requests at runtime: fonts are self-hosted, emoji come from the
-  loaded fonts (`emoji: "from-font"`), CSP is `default-src 'self'`.
+- No third-party requests from the browser: fonts are self-hosted, emoji come
+  from the loaded fonts (`emoji: "from-font"`), CSP is `default-src 'self'`.
+  The one outside service is OSM Nominatim for the location field, reached
+  only through our server with ~1 km-rounded coordinates, and only when the
+  user uses that field (privacy modal `p4` + legal site §3.2/§5 say so).
 - Hosted at ff.itzdrli.cc; server in Germany (GDPR).
 
 ## Stack
@@ -126,6 +133,16 @@ Always run `bun run lint`, `bun run fmt:check`, `bun run test` and
   `logoAuto` is resolved in the app (`app/composables/useLogoLibrary.ts`,
   `renderConfigFor()` / `prefetchAutoLogos()`) into a plain recoloured
   `logoImageUrl` before preview or export; the renderer never sees it.
+- Location field: `ExifData.location` ("City, Country" or the user's own
+  text, editable per photo in `ExifPanel` via `photoStore.setPhotoLocation`).
+  Filled from GPS only on demand (`useAutoLocation` once a photo's caption
+  shows the field, or the "use GPS" button): `app/utils/geocode.ts` →
+  `GET /api/geocode` (`server/api/geocode.get.ts`, own rate limit) →
+  `server/utils/nominatim.ts` (OSM Nominatim: ≤1 req/s queue, in-memory
+  cache, identifying User-Agent per their usage policy). Coordinates are
+  rounded to ~1 km (`shared/geocode.ts`, again server-side) and never logged;
+  `placeFromAddress()` maps the address (Chinese municipalities/Tokyo wards →
+  the city, Hong Kong/Macau standalone).
 - `shared/mapLimit.ts` — bounded-concurrency mapper (photo import)
 - `server/utils/limits.ts` — capped body reader (h3 has no body limit); the
   render endpoints reject oversized uploads with a clear 413

@@ -8,6 +8,8 @@ import {
   formatDateStamp,
   splitCaption,
   layoutScaleFactor,
+  computeFrameGeometry,
+  exifEntriesFor,
 } from "../shared/render";
 import type { RenderPayload } from "../shared/types";
 
@@ -418,6 +420,43 @@ describe("template effects", () => {
       }).nodeTree;
     expect(texts(build(40))).toContain("PORTRA 400");
     expect(texts(build(0))).not.toContain("PORTRA 400");
+  });
+
+  describe("bottom band never thinner than the top border", () => {
+    // Gallery-like: thin paddingBottom that the caption is meant to fill
+    const cfg = {
+      ...baseCfg,
+      paddingTop: 72,
+      paddingBottom: 6,
+      paddingHorizontal: 72,
+      visibleFields: ["model", "fNumber", "iso"],
+    };
+    const geo = (exifData: typeof exif | undefined, w: number, h: number, c = cfg) =>
+      computeFrameGeometry({
+        cfg: c,
+        photoWidth: w,
+        photoHeight: h,
+        exifEntries: exifEntriesFor(exifData, cfg.visibleFields),
+      });
+
+    it("no EXIF (no caption): the bottom padding matches the top", () => {
+      const g = geo(undefined, 4000, 3000);
+      expect(g.footer.footerH).toBe(0);
+      expect(g.paddingBottom).toBe(g.paddingTop);
+    });
+
+    it("portrait: the caption band grows to match the top border", () => {
+      const g = geo(exif, 3000, 4000);
+      expect(g.paddingBottom + g.footer.footerH).toBe(g.paddingTop);
+      // canvas height accounts for the grown band (photo fills the box)
+      expect(g.canvasH).toBe(g.paddingTop + g.imgH + g.paddingBottom + g.footer.footerH);
+    });
+
+    it("landscape with a caption taller than the top border is left alone", () => {
+      const g = geo(exif, 4000, 3000, { ...cfg, infoLayout: "list" });
+      expect(g.paddingBottom).toBe(Math.round(6 * (4000 / 1080)));
+      expect(g.paddingBottom + g.footer.footerH).toBeGreaterThan(g.paddingTop);
+    });
   });
 
   it("a preview-scale tree is the export tree shrunk, not re-laid-out", () => {

@@ -1,23 +1,14 @@
 import { createError, type H3Event } from "h3";
 
 /**
- * Abuse guards for the public render endpoint: a per-client rate limit and a
- * cap on concurrent renders. In-memory only (single instance, no state kept
- * beyond a few counters).
+ * Abuse guards for the public endpoints: per-client rate limits and a cap on
+ * concurrent renders. In-memory only (single instance, no state kept beyond a
+ * few counters).
  */
 
 const WINDOW_MS = 60_000;
-const MAX_REQUESTS_PER_WINDOW = 20;
 const MAX_CONCURRENT_RENDERS = 2;
 const MAX_QUEUED_RENDERS = 6;
-
-const hits = new Map<string, { count: number; resetAt: number }>();
-
-const sweep = setInterval(() => {
-  const now = Date.now();
-  for (const [key, v] of hits) if (v.resetAt <= now) hits.delete(key);
-}, WINDOW_MS);
-sweep.unref?.();
 
 /**
  * Client address for rate limiting. Behind a reverse proxy the LEFT-most
@@ -31,21 +22,37 @@ function clientKey(event: H3Event): string {
   return last || event.node.req.socket?.remoteAddress || "unknown";
 }
 
-export function enforceRateLimit(event: H3Event) {
-  const key = clientKey(event);
-  const now = Date.now();
-  const entry = hits.get(key);
-  if (!entry || entry.resetAt <= now) {
-    hits.set(key, { count: 1, resetAt: now + WINDOW_MS });
-    return;
-  }
-  if (++entry.count > MAX_REQUESTS_PER_WINDOW) {
-    throw createError({
-      statusCode: 429,
-      message: "Too many render requests — wait a minute and try again",
-    });
-  }
+/** A per-client limit of `max` requests a minute, with its own counters */
+function rateLimiter(max: number, message: string) {
+  const hits = new Map<string, { count: number; resetAt: number }>();
+  const sweep = setInterval(() => {
+    const now = Date.now();
+    for (const [key, v] of hits) if (v.resetAt <= now) hits.delete(key);
+  }, WINDOW_MS);
+  sweep.unref?.();
+
+  return (event: H3Event) => {
+    const key = clientKey(event);
+    const now = Date.now();
+    const entry = hits.get(key);
+    if (!entry || entry.resetAt <= now) {
+      hits.set(key, { count: 1, resetAt: now + WINDOW_MS });
+      return;
+    }
+    if (++entry.count > max) throw createError({ statusCode: 429, message });
+  };
 }
+
+export const enforceRateLimit = rateLimiter(
+  20,
+  "Too many render requests — wait a minute and try again",
+);
+
+/** Place-name lookups: a batch import of GPS photos asks once per ~1 km cell */
+export const enforceGeocodeRateLimit = rateLimiter(
+  60,
+  "Too many location lookups — wait a minute and try again",
+);
 
 let running = 0;
 const waiting: (() => void)[] = [];

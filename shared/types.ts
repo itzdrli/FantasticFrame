@@ -14,7 +14,8 @@ export type ExifFieldKey =
   | "focalLength"
   | "dateTimeOriginal"
   | "lensModel"
-  | "gps";
+  | "gps"
+  | "location";
 
 /** EXIF metadata extracted from a photo (or sent to the renderer) */
 export interface ExifData {
@@ -31,6 +32,12 @@ export interface ExifData {
   lensModel?: string;
   latitude?: number;
   longitude?: number;
+  /**
+   * Place shown by the "location" field: the nearest city to the GPS position
+   * ("Kyoto, Japan", looked up offline in app/utils/geocode.ts) or the user's
+   * own text. Not an EXIF tag; the app fills it in after parsing.
+   */
+  location?: string;
   exposureBias?: number;
   /** Raw exifr parse result (app-side only; ignored by the renderer) */
   raw?: Record<string, unknown>;

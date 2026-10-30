@@ -21,6 +21,15 @@
   font-display: swap;
 }
 
+/*
+ * Editor layout. "sheet": preview on top, settings in a bottom sheet —
+ * phones, and portrait tablets, where a 360px side panel would leave the
+ * photo a narrow strip. "docked": side panel. Exact complements; the same
+ * query drives SHEET_QUERY in app/composables/useIsMobile.ts.
+ */
+@custom-variant sheet (@media (max-width: 1023px), (orientation: portrait) and (max-width: 1365px));
+@custom-variant docked (@media (min-width: 1024px) and (orientation: landscape), (min-width: 1366px));
+
 @theme {
   /* Default "Graphite" — neutral grey like a photo editor, so the photo's
      colour is the only colour on screen. The names stay nord-* (they are
@@ -164,11 +173,11 @@ input[type="number"] {
 }
 
 /*
- * Phones: form controls must be 16px or iOS Safari zooms the page on focus,
- * and hover-only affordances (e.g. the filmstrip delete button) are
- * unreachable on touch.
+ * Phones and touch tablets: form controls must be 16px or iOS Safari zooms
+ * the page on focus, and hover-only affordances (e.g. the filmstrip delete
+ * button) are unreachable on touch.
  */
-@media (max-width: 767px) {
+@media (max-width: 767px), (pointer: coarse) {
   input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
   select,
   textarea {

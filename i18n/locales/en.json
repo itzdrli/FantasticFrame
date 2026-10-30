@@ -19,7 +19,8 @@
       "title": "Privacy Notice",
       "p1": "Your photos are processed entirely in your browser. Single and batch exports are rendered locally via WASM and never leave your device.",
       "p2": "Only if your browser cannot render a photo does that one photo go to our server as a fallback. It is kept in server memory for the duration of the request, never written to disk or a database, and discarded right after.",
-      "p3": "No accounts, cookies, ads or tracking, and no third-party requests: fonts are self-hosted. Your theme and language are saved in your browser only. Server location: Germany, EU (GDPR).",
+      "p3": "No accounts, cookies, ads or tracking, and your browser makes no third-party requests: fonts are self-hosted. Your theme and language are saved in your browser only. Server location: Germany, EU (GDPR).",
+      "p4": "Only when you use the Location field on a photo with GPS data is its position, rounded to about 1 km, sent through our server to OpenStreetMap Nominatim to find the city name. Your IP address and the photo are not passed on.",
       "fullPolicy": "View Full Policy"
     }
   },
@@ -54,7 +55,17 @@
       "focalLengthIn35mm": "35mm Focal Length",
       "exposureBias": "Exposure Bias",
       "dateTimeOriginal": "Date",
-      "gps": "GPS"
+      "gps": "GPS",
+      "location": "Location"
+    },
+    "location": {
+      "placeholder": "City, country or any place name",
+      "auto": "Use the GPS location",
+      "applyAll": "Apply to all photos",
+      "failed": "Couldn't look up the location — try again later",
+      "notFound": "No place name found for this photo's GPS position",
+      "hint": "To show it in the caption, tick Location under Caption → Visible Fields.",
+      "credit": "Place names © OpenStreetMap contributors. To look one up, the GPS position rounded to about 1 km is sent through our server to OpenStreetMap Nominatim."
     },
     "noData": "No EXIF information available"
   },

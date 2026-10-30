@@ -65,18 +65,33 @@ function onZoomInput(n: number | null) {
           <NIcon><Minus /></NIcon>
         </template>
       </NButton>
-      <NInputNumber
-        :value="Math.round(props.cropScale * 100)"
-        :min="100"
-        :max="500"
-        :show-button="false"
-        size="tiny"
-        :input-props="zoomInputProps"
-        class="w-14"
-        aria-label="Zoom percent"
-        @update:value="onZoomInput"
-      />
-      <span class="text-[12px] text-nord-4/60">%</span>
+      <!-- Phones: a read-out that resets the crop when tapped, in place of the
+           editable field, % sign and Reset button, so the bar fits a 360px screen -->
+      <span class="flex shrink-0 md:hidden">
+        <NButton
+          size="tiny"
+          quaternary
+          class="font-mono tabular-nums"
+          :aria-label="$t('preview.resetCrop')"
+          @click="emit('resetCrop')"
+        >
+          {{ Math.round(props.cropScale * 100) }}%
+        </NButton>
+      </span>
+      <!-- Wrapped: as a flex item in the scrolling bar Naive's root would shrink to nothing -->
+      <span class="w-14 shrink-0 max-md:hidden">
+        <NInputNumber
+          :value="Math.round(props.cropScale * 100)"
+          :min="100"
+          :max="500"
+          :show-button="false"
+          size="tiny"
+          :input-props="zoomInputProps"
+          aria-label="Zoom percent"
+          @update:value="onZoomInput"
+        />
+      </span>
+      <span class="text-[12px] text-nord-4/60 max-md:hidden">%</span>
       <NButton
         size="tiny"
         :aria-label="$t('preview.zoomIn')"
@@ -86,14 +101,16 @@ function onZoomInput(n: number | null) {
           <NIcon><Plus /></NIcon>
         </template>
       </NButton>
-      <NTooltip :delay="500">
-        <template #trigger>
-          <NButton size="tiny" quaternary @click="emit('resetCrop')">
-            {{ $t("preview.reset") }}
-          </NButton>
-        </template>
-        {{ $t("preview.resetCrop") }}
-      </NTooltip>
+      <span class="flex max-md:hidden">
+        <NTooltip :delay="500">
+          <template #trigger>
+            <NButton size="tiny" quaternary @click="emit('resetCrop')">
+              {{ $t("preview.reset") }}
+            </NButton>
+          </template>
+          {{ $t("preview.resetCrop") }}
+        </NTooltip>
+      </span>
     </template>
 
     <!-- Workspace zoom: desktop only (phones pinch). Wrapped because Naive's
@@ -125,11 +142,16 @@ function onZoomInput(n: number | null) {
     </div>
     <NTooltip :delay="500">
       <template #trigger>
-        <NButton size="tiny" quaternary @click="emit('resetView')">
+        <NButton
+          size="tiny"
+          quaternary
+          :aria-label="$t('preview.fitView')"
+          @click="emit('resetView')"
+        >
           <template #icon>
             <NIcon><Scan /></NIcon>
           </template>
-          {{ $t("preview.fitView") }}
+          <span class="max-md:hidden">{{ $t("preview.fitView") }}</span>
         </NButton>
       </template>
       {{ $t("preview.fitViewTitle") }}

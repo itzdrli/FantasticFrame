@@ -51,6 +51,7 @@ const availableFields = computed(() =>
       "exposureTime",
       "iso",
       "dateTimeOriginal",
+      "location",
     ] as const
   ).map((value) => ({ label: t(`exif.labels.${value}`), value })),
 );

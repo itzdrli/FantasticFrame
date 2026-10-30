@@ -61,6 +61,8 @@ export const formatExif = (data: ExifData | null | undefined, field: string): st
       return data.latitude != null && data.longitude != null
         ? `${Number(data.latitude).toFixed(6)}, ${Number(data.longitude).toFixed(6)}`
         : "";
+    case "location":
+      return data.location?.trim() || "";
     default:
       return String((data as Record<string, unknown>)[field] || "");
   }
@@ -191,7 +193,8 @@ export function splitCaption(entries: ExifEntry[]): SplitCaption {
   for (const { key, value } of entries) {
     if (key === "make" || key === "model") out.leftMain.push(value);
     else if (key === "lensModel") out.leftSub.push(value);
-    else if (key === "dateTimeOriginal" || key === "gps") out.rightSub.push(value);
+    else if (key === "dateTimeOriginal" || key === "gps" || key === "location")
+      out.rightSub.push(value);
     else out.rightMain.push(value);
   }
   return out;
@@ -347,6 +350,28 @@ export function estimateFooterLayout(input: FooterLayoutInput): FooterLayout {
   };
 }
 
+/**
+ * Keeps the band under the photo (bottom padding + caption) at least as tall
+ * as the top border. Presets give paddingBottom only a few px and let the
+ * caption make up the rest, which fell short twice: a photo without EXIF has
+ * no caption, so the bottom border all but vanished; and a portrait photo's
+ * caption scales by width (captionScale) while the top border scales by the
+ * long edge, so the top outweighed the bottom. The shortfall goes to the
+ * caption band when there is one (its content is centred in it), otherwise
+ * to the bottom padding.
+ */
+export function balanceBottomBand(
+  paddingTop: number,
+  paddingBottom: number,
+  footerH: number,
+): { paddingBottom: number; footerH: number } {
+  const shortfall = paddingTop - paddingBottom - footerH;
+  if (shortfall <= 0) return { paddingBottom, footerH };
+  return footerH > 0
+    ? { paddingBottom, footerH: footerH + shortfall }
+    : { paddingBottom: paddingBottom + shortfall, footerH };
+}
+
 export interface CanvasDimsInput {
   cfg: TemplateConfig;
   photoWidth: number;
@@ -377,14 +402,17 @@ export function computeCanvasDims(input: CanvasDimsInput): { w: number; h: numbe
   });
   const paddingH = Math.round((cfg.paddingHorizontal ?? 0) * scaleFactor);
   const paddingTop = Math.round((cfg.paddingTop ?? 0) * scaleFactor);
-  const paddingBottom = Math.round((cfg.paddingBottom ?? 0) * scaleFactor);
-  const { footerH } = estimateFooterLayout({
-    cfg,
-    scaleFactor,
-    canvasW: w,
-    exifEntries: input.exifEntries ?? [],
-    makeFallback: input.makeFallback,
-  });
+  const { paddingBottom, footerH } = balanceBottomBand(
+    paddingTop,
+    Math.round((cfg.paddingBottom ?? 0) * scaleFactor),
+    estimateFooterLayout({
+      cfg,
+      scaleFactor,
+      canvasW: w,
+      exifEntries: input.exifEntries ?? [],
+      makeFallback: input.makeFallback,
+    }).footerH,
+  );
   const availW = w - paddingH * 2;
   const pAspect = photoWidth && photoHeight && photoHeight > 0 ? photoWidth / photoHeight : 1;
   const imgH = availW / pAspect;
@@ -478,7 +506,7 @@ export function computeFrameGeometry(input: FrameGeometryInput): FrameGeometry {
     exifEntries: input.exifEntries,
     makeFallback: input.makeFallback,
   });
-  const footer: FooterLayout =
+  const scaledFooter: FooterLayout =
     k === 1
       ? fullFooter
       : {
@@ -492,7 +520,13 @@ export function computeFrameGeometry(input: FrameGeometryInput): FrameGeometry {
         };
 
   const paddingTop = Math.round((cfg.paddingTop ?? 0) * scaleFactor);
-  const paddingBottom = Math.round((cfg.paddingBottom ?? 0) * scaleFactor);
+  const balanced = balanceBottomBand(
+    paddingTop,
+    Math.round((cfg.paddingBottom ?? 0) * scaleFactor),
+    scaledFooter.footerH,
+  );
+  const paddingBottom = balanced.paddingBottom;
+  const footer: FooterLayout = { ...scaledFooter, footerH: balanced.footerH };
   const paddingH = Math.round((cfg.paddingHorizontal ?? 0) * scaleFactor);
   const availW = canvasW - paddingH * 2;
   const availH = Math.max(1, canvasH - footer.footerH - paddingTop - paddingBottom);
